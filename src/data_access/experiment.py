@@ -1,23 +1,50 @@
 import os
 import yaml
+from yaml import CLoader as Loader
 import json
 import torch
 import torch.nn as nn
-
-from locations import LOC
+from os import walk
+from datetime import datetime
+from data_access.locations import LOC
+from train import train
+from data_access.csqa_dataset import CsqaDataset
+from models.random_clf import RandomClassifier
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
+# TODO
+#   - implement a synonym for searching/loading
 class Experiment():
 
-    def __init__(self, eid=None, parameters=None, preprocessed=None, model=None, predictions=None, viz=None):
+    def __init__(self, 
+            eid=None, 
+            level=0,
+            date=datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
+            edited=None,
+            parameters=None, 
+            model=None, 
+            dataset=None, 
+            preprocessed=None, 
+            train_predictions=None, 
+            predictions=None, 
+            viz=None):
+
+        # meta
         self.eid = None
-        self.date = None # TODO init date string + time, also start/end date?
-        self.parameters = None # TODO define default parameters somewhere... (probably this file)
-        self.preprocessed = None
-        self.model = None
-        self.predictions = None
-        self.viz = None
+        self.level = level
+        self.date = date
+        self.edited = None
+        # model relevant
+        self.parameters = parameters 
+        self.model = model
+        # data
+        self.dataset = dataset
+        self.preprocessed = preprocessed
+        self.train_predictions = train_predictions
+        self.predictions = predictions
+        # learnings
+        self.viz = viz
     
     def hash_id(self, as_str=True):
         dirs = next(os.walk(LOC['experiments_dir']))[1]
@@ -26,70 +53,115 @@ class Experiment():
         else: 
             if as_str: return str(hash_id)
             else: return hash_id
-
-    # TODO do proper checks (for len, types, etc.)
-    # TODO make this return the progress (how far was the model progressed?)
-    #       init(main) -> preprocessing(preproc) -> model(training) -> predictions(eval) -> visualizations(viz)
-    def check(self):
-        if self.eid == None: print('no eid'); return False
-        if self.date == None: print('no date'); return False
-        if self.parameters == None: print('no params'); return False
-        if self.preprocessed == None: print('no preprocessed'); return False
-        if self.model == None: print('no model'); return False
-        if self.viz == None: print('no viz'); return False
-        if self.predictions == None: print('no predictions'); return False
-
+        
+    # TODO check & save level (progress in the experiment)
+    def calc_level(self):
+        return '?'
 
     def save(self):
         dic = {}
-
-        # save date
+        # meta
+        dic['level'] = self.calc_level()
         dic['date'] = self.date
-
-        # save parameters
+        dic['edited'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S") 
+        # model
         dic['parameters'] = self.parameters
+        dic['model'] = self.save_model()
+        dic['model_type'] = self.model.TYPE
+        # save data
+        dic['dataset'] = self.dataset.location 
+        dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
+        dic['predictions'] = self.save_json(self.predictions, type='predictions')
 
-        # save preprocessed
-        preproc_save_loc = LOC['preprocessed_data'] + str(hash(self.preprocessed)) + '.jsonl'
-        with open(preproc_save_loc, 'w') as outfile:
-            json.dump(self.preprocessed, outfile)
-        dic['preprocessed'] = preproc_save_loc
-    
-        # save model
-        model_save_loc = LOC['models_dir'] + str(hash(self.model)) + '.pth'
-        if type(self.model) == nn.Module: torch.save(clf.state_dict(), model_save_loc)
-        else: pass # TODO use other method of saving the model (prob pickle or sth)
-        dic['model'] = model_save_loc
+        if self.check(self.train_predictions):  # TODO this transformation shouldnt be necessary ...
+            dic['train_predictions'] = self.save_json([x.squeeze().tolist() for x in self.train_predictions], type='train_predictions')
+        else: 
+            dic['train_predictions'] = None
 
         # save viz
         dic['viz'] = 'Not Implemented'
 
-        # save predictions
-        predictions_save_loc = LOC['predictions'] + str(hash(self.model)) + '.jsonl'
-        with open(predictions_save_loc, 'w') as outfile:
-            json.dump(self.predictions, outfile)
-        dic['predictions'] = predictions_save_loc
-
         # save all paths in yaml!
-        #with open(r'data\.yaml', 'w') as file:
-        with open(LOC['experiments_dir'] + self.hash_id() + '.yaml', 'w') as file:
-            yaml_file = yaml.dump(dic, file)
+        return self.save_yaml(dic)
+    
+    def save_model(self):
+        assert self.model != None
+        model_save_loc = LOC['models_dir'] + str(hash(self.model)) + '.pth'
 
+        torch.save(self.model.state_dict(), model_save_loc)
+        return model_save_loc
+
+    def save_json(self, obj, type=None): # type = 'preprocessed_data' | 'train_predictions' | 'predictions'
+        if obj == None: return None
+        if type == 'train_predictions':
+            save_loc = LOC['predictions'] + str(hash((set(x) for x in obj))) + '_train.jsonl'
+        else:
+            save_loc = LOC[type] + str(hash(obj)) + '.jsonl'
+
+        with open(save_loc, 'w') as outfile:
+            json.dump(obj, outfile)
+        return save_loc
+    
+    def save_yaml(self, dic):
+        if self.eid == None: filename =  LOC['experiments_dir'] + self.hash_id() + '.yaml'
+        else: filename = LOC['experiments_dir'] + self.eid + '.yaml'
+
+        with open(filename, 'w') as file:
+            yaml_file = yaml.dump(dic, file)
         return yaml_file
 
-    @staticmethod
-    def load(self, obj):
-        return None
-    
-    def copy(self):
-        return None
-    
-    def run(self):
-        return None
+    def load(self, eid:str):
+        filename = str(eid) + '.yaml'
+        path = LOC['experiments_dir'] + filename
+        files_in_dir = next(walk(LOC['experiments_dir']), (None, None, []))[2]
+        if filename in files_in_dir:
+            with open(path, 'r') as file:
+                exp_yaml = yaml.load(file, Loader=Loader)
 
+        # init the experiment
+        new = Experiment()
+        # meta
+        new.eid = filename
+        new.level = self.check(exp_yaml['level'])
+        new.date = self.check(exp_yaml['date'])
+        new.edited = self.check(exp_yaml['edited'])
+        # model
+        new.parameters = self.check(exp_yaml['parameters'])
+        new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
+        # data
+        new.dataset = self.check(CsqaDataset(exp_yaml['dataset'])) # TODO de-hardcode
+        new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
+        new.train_predictions = self.check(self.load_json(exp_yaml['train_predictions']))
+        new.predictions = self.check(self.load_json(exp_yaml['predictions']))
+        # learnings
+        new.viz = self.check(None)
 
-if __name__ == '__main__':
-    exp = Experiment()
-    exp.parameters = {'this':0, 'is':1, 'a':2, 'test':3}
-    exp.save()
-    print('done')
+        return new
+    
+    def check(self,obj):
+        if obj == None: return None
+        else: return obj
+    
+    def load_model(self,path:str, type=str):
+        if type == 'RandomClassifier':
+            model = RandomClassifier(69)
+        else:
+            assert False
+        model.load_state_dict(torch.load(path))
+        return model
+    
+    def load_json(self,path:str):
+        if path == None: return None
+        self.data = []
+        with open(path, 'r') as json_file:
+            json_list = list(json_file)
+            for json_str in json_list:
+                result = json.loads(json_str)
+                self.data.append(result)
+        return self.data
+
+    def train(self):
+        t_out = train(self.parameters, self.dataset, self.model)
+        self.model = t_out['model']
+        self.train_predictions = t_out['outputs']
+        return t_out

@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 class CsqaDataset(Dataset):
 
     def __init__(self, path_to_raw:str, limit=-1):
+        self.location = path_to_raw
         self.data = []
 
         with open(path_to_raw, 'r') as json_file:
