@@ -11,11 +11,14 @@ from train import train, predict
 from data_access.csqa_dataset import CsqaDataset
 from models.random_clf import RandomClassifier
 import eval
+import pickle
+import viz as viz
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
 # TODO
-#   - implement a synonym for searching/loading
+#   - implement synonym searching/loading
+#   - state id of previous saves, if new id is made...
 class Experiment():
 
     def __init__(self, 
@@ -32,16 +35,20 @@ class Experiment():
             test_predictions=None, 
             evaluation_mode=['accuracy', 'precision', 'recall'],
             evaluation_results = None,
+            viz_mode=['loss'],
+            viz_data={},
             viz=None):
 
         # meta
-        self.eid = None
+        assert model != None
+        assert parameters != None
+        self.eid = self.hash_id(str(model) + str(parameters))
         self.level = level
         self.date = date
         self.edited = None
         # model relevant
         self.parameters = parameters 
-        self.model = model
+        self.model = model # model type is in dic, but not here!
         # data
         self.dataset = dataset
         self.testset = testset
@@ -51,11 +58,13 @@ class Experiment():
         # learnings
         self.evaluation_mode = evaluation_mode
         self.evaluation_results = evaluation_results
+        self.viz_mode = viz_mode
+        self.viz_data = viz_data
         self.viz = viz
     
     def hash_id(self, as_str=True):
         dirs = next(os.walk(LOC['experiments_dir']))[1]
-        hash_id = hash(self)
+        hash_id = abs(hash(self))
         if hash_id in dirs: return False
         else: 
             if as_str: return str(hash_id)
@@ -80,40 +89,54 @@ class Experiment():
         dic['testset'] = self.testset.location
         dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
         dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
-        dic['test_predictions'] = self.save_json(self.test_predictions, type='predictions')
+        dic['test_predictions'] = self.save_json(self.test_predictions, type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
-        dic['viz'] = 'Not Implemented'
+        dic['viz_mode'] = self.viz_mode
+        if len(self.viz_data.keys()) != 0: dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift check into save_pickle()
+        dic['viz'] = self.viz
 
         # save all paths in yaml!
         return self.save_yaml(dic)
     
     def save_model(self):
         assert self.model != None
-        model_save_loc = LOC['models_dir'] + str(hash(self.model)) + '.pth'
+        model_save_loc = LOC['models_dir'] + str(self.eid) + '.pth'
 
         torch.save(self.model.state_dict(), model_save_loc)
         return model_save_loc
 
+    # only for predictions
     def save_json(self, obj, type=None): # type = 'preprocessed_data' | 'train_predictions' | 'predictions'
         if obj == None: return None
         if type == 'train_predictions':
-            save_loc = LOC['predictions'] + str(hash((set(x) for x in obj))) + '_train.jsonl'
+            save_loc = LOC['predictions'] + str(self.eid) + '_train.jsonl'
+        elif type == 'test_predictions':
+            save_loc = LOC['predictions'] + str(self.eid) + '_test.jsonl'
         else:
-            save_loc = LOC[type] + str(hash(obj)) + '.jsonl'
+            print('json type "' + type + '" unknown')
+            assert False
 
         with open(save_loc, 'w') as outfile:
             json.dump(obj, outfile)
         return save_loc
     
+    # only for experiment yamls!
     def save_yaml(self, dic):
-        if self.eid == None: filename =  LOC['experiments_dir'] + self.hash_id() + '.yaml'
-        else: filename = LOC['experiments_dir'] + self.eid + '.yaml'
+        assert self.eid != None
+        filename = LOC['experiments_dir'] + str(self.eid) + '.yaml'
 
         with open(filename, 'w') as file:
             yaml_file = yaml.dump(dic, file)
         return yaml_file
+    
+    def save_pickle(self, obj, save_loc=LOC['viz_data_dir']):
+        filename = str(self.eid) + '.pickle'
+
+        with open(save_loc + filename, 'wb') as f:
+            pickle.dump(obj, f)
+        return save_loc + filename
 
     def load(self, eid:str):
         filename = str(eid) + '.yaml'
@@ -144,7 +167,9 @@ class Experiment():
         # learnings
         new.evaluation_mode = self.check(exp_yaml['evaluation_mode'])
         new.evaluation_results = self.check(exp_yaml['evaluation_results'])
-        new.viz = self.check(None)
+        new.viz_data = self.check(self.load_pickle(exp_yaml['viz_data']))
+        new.viz_mode = self.check(exp_yaml['viz_mode'])
+        new.viz = self.check(exp_yaml['viz'])
 
         return new
     
@@ -169,16 +194,26 @@ class Experiment():
                 result = json.loads(json_str)
                 self.data.append(result)
         return self.data
+    
+    def load_pickle(self, path:str):
+        if path == None: return None
+        with open(path, 'rb') as f:
+            result = pickle.load(f)
+        return result
+
 
     def train(self, output_softmax=False): # TODO shift output_softmax parameter to train.train()!
         t_out = train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
+        self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
+
         if output_softmax:
             self.train_predictions = t_out['outputs']
         else:
             self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']]
         return t_out
     
+    # TODO input should be list!
     def evaluate(self):
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
@@ -188,6 +223,7 @@ class Experiment():
             elif mode == 'test':
                 gold = [int(x) for x in self.testset.get_labels(limit=-1)]
                 pred = predict(self.parameters, self.model, self.testset)
+                self.test_predictions = pred
             
             # do the evaluation
             if self.evaluation_mode == 'explainability':
@@ -200,3 +236,17 @@ class Experiment():
                 result[mode] = 'unknown mode!'
 
         self.evaluation_results = result
+    
+    def visualize(self, show=False):
+        # create viz_directory
+        newpath = LOC['viz_dir'] + str(self.eid) + "/"
+        if not os.path.exists(newpath):
+            os.makedirs(newpath)
+
+        for mode in self.viz_mode:
+            if mode == 'loss':
+                viz.loss_plot(self.viz_data['train_loss'], save_loc=newpath, show=show)
+            else:
+                'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
+        
+        self.viz = newpath

@@ -18,11 +18,13 @@ exp = Experiment(
     dataset = CsqaDataset(LOC['csqa_train'], limit=parameters['limit']),
     testset = CsqaDataset(LOC['csqa_test'], limit=-1),
     model = RandomClassifier(parameters['random_seed']),
-    evaluation_mode='competence'
+    evaluation_mode='competence',
+    viz_mode=['loss']
 )
 
 exp.train()
 exp.evaluate()
+exp.visualize()
 
 exp.save()
 print('done')

@@ -32,8 +32,9 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
 
             PRINT_EVERY = P['print_every']
             if i % PRINT_EVERY == (PRINT_EVERY-1):
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / PRINT_EVERY:.3f}')
-                epoch_losses.append(running_loss)
+                mean_loss = running_loss / PRINT_EVERY
+                print(f'[{epoch + 1}, {i + 1:5d}] loss: {mean_loss:.3f}')
+                epoch_losses.append(mean_loss)
                 running_loss = 0.0
             
             all_outputs.append(output)
