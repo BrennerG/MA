@@ -7,9 +7,10 @@ import torch.nn as nn
 from os import walk
 from datetime import datetime
 from data_access.locations import LOC
-from train import train
+from train import train, predict
 from data_access.csqa_dataset import CsqaDataset
 from models.random_clf import RandomClassifier
+import eval
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
@@ -25,9 +26,12 @@ class Experiment():
             parameters=None, 
             model=None, 
             dataset=None, 
+            testset=None,
             preprocessed=None, 
             train_predictions=None, 
-            predictions=None, 
+            test_predictions=None, 
+            evaluation_mode=['accuracy', 'precision', 'recall'],
+            evaluation_results = None,
             viz=None):
 
         # meta
@@ -40,10 +44,13 @@ class Experiment():
         self.model = model
         # data
         self.dataset = dataset
+        self.testset = testset
         self.preprocessed = preprocessed
         self.train_predictions = train_predictions
-        self.predictions = predictions
+        self.test_predictions = test_predictions
         # learnings
+        self.evaluation_mode = evaluation_mode
+        self.evaluation_results = evaluation_results
         self.viz = viz
     
     def hash_id(self, as_str=True):
@@ -70,15 +77,13 @@ class Experiment():
         dic['model_type'] = self.model.TYPE
         # save data
         dic['dataset'] = self.dataset.location 
+        dic['testset'] = self.testset.location
         dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
-        dic['predictions'] = self.save_json(self.predictions, type='predictions')
-
-        if self.check(self.train_predictions):  # TODO this transformation shouldnt be necessary ...
-            dic['train_predictions'] = self.save_json([x.squeeze().tolist() for x in self.train_predictions], type='train_predictions')
-        else: 
-            dic['train_predictions'] = None
-
-        # save viz
+        dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
+        dic['test_predictions'] = self.save_json(self.test_predictions, type='predictions')
+        # save learnings
+        dic['evaluation_mode'] = self.evaluation_mode
+        dic['evaluation_results'] = self.evaluation_results
         dic['viz'] = 'Not Implemented'
 
         # save all paths in yaml!
@@ -117,6 +122,8 @@ class Experiment():
         if filename in files_in_dir:
             with open(path, 'r') as file:
                 exp_yaml = yaml.load(file, Loader=Loader)
+        else:
+            exp_yaml = None
 
         # init the experiment
         new = Experiment()
@@ -130,10 +137,13 @@ class Experiment():
         new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
         # data
         new.dataset = self.check(CsqaDataset(exp_yaml['dataset'])) # TODO de-hardcode
+        new.testset = self.check(CsqaDataset(exp_yaml['testset'])) # above?
         new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
         new.train_predictions = self.check(self.load_json(exp_yaml['train_predictions']))
-        new.predictions = self.check(self.load_json(exp_yaml['predictions']))
+        new.test_predictions = self.check(self.load_json(exp_yaml['test_predictions']))
         # learnings
+        new.evaluation_mode = self.check(exp_yaml['evaluation_mode'])
+        new.evaluation_results = self.check(exp_yaml['evaluation_results'])
         new.viz = self.check(None)
 
         return new
@@ -160,8 +170,33 @@ class Experiment():
                 self.data.append(result)
         return self.data
 
-    def train(self):
+    def train(self, output_softmax=False): # TODO shift output_softmax parameter to train.train()!
         t_out = train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
-        self.train_predictions = t_out['outputs']
+        if output_softmax:
+            self.train_predictions = t_out['outputs']
+        else:
+            self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']]
         return t_out
+    
+    def evaluate(self):
+        result = {'train':[], 'test':[]}
+        for mode in result.keys():
+            if mode == 'train':
+                gold = [int(x) for x in self.dataset.get_labels(limit=self.parameters['limit'])]
+                pred = self.train_predictions
+            elif mode == 'test':
+                gold = [int(x) for x in self.testset.get_labels(limit=-1)]
+                pred = predict(self.parameters, self.model, self.testset)
+            
+            # do the evaluation
+            if self.evaluation_mode == 'explainability':
+                pass
+            elif self.evaluation_mode == 'efficiency':
+                pass
+            elif self.evaluation_mode == 'competence':
+                result[mode] = eval.competence(gold, pred)
+            else:
+                result[mode] = 'unknown mode!'
+
+        self.evaluation_results = result

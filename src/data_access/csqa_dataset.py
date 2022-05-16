@@ -35,6 +35,7 @@ class CsqaDataset(Dataset):
         #label_tensor = torch.zeros(5)
         #label_tensor[label] = 1
         return question, context, answer, float(label)
-
-
-# if __name__ == "__main__":
+    
+    def get_labels(self, limit):
+        for i in range(len(self)):
+            yield self.__getitem__(i)[3]

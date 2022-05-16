@@ -43,3 +43,15 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
         'outputs': all_outputs,
         'losses': epoch_losses
     }
+
+
+def predict(P:{}, clf:nn.Module(), ds:Dataset(), output_softmax=False):
+    predictions = []
+
+    with torch.no_grad():
+        for i, (question, context, answers, label) in enumerate(ds):
+            output = clf(question, context, answers).view(P['batch_size'],-1)
+            predictions.append(output)
+
+    if output_softmax: return predictions
+    else: return [int(torch.argmax(x).item()) for x in predictions]

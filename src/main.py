@@ -9,17 +9,20 @@ parameters = {
     'print_every': 1000,
     'batch_size': 1,
     'lr': 0.001,
-    'momentum': 0.9
+    'momentum': 0.9,
+    'random_seed':69
 }
 
 exp = Experiment(
     parameters=parameters,
     dataset = CsqaDataset(LOC['csqa_train'], limit=parameters['limit']),
-    # preprocessed = CsqaDataset(LOC['csqa_train'], limit=parameters['limit']),
-    model = RandomClassifier(69)
+    testset = CsqaDataset(LOC['csqa_test'], limit=-1),
+    model = RandomClassifier(parameters['random_seed']),
+    evaluation_mode='competence'
 )
 
-#exp.train()
+exp.train()
+exp.evaluate()
+
 #exp.save()
-loaded = Experiment().load('8754302436654')
 print('done')
