@@ -24,5 +24,5 @@ exp = Experiment(
 exp.train()
 exp.evaluate()
 
-#exp.save()
+exp.save()
 print('done')

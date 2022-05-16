@@ -180,7 +180,7 @@ class Experiment():
         return t_out
     
     def evaluate(self):
-        result = {'train':[], 'test':[]}
+        result = {'train':{}, 'test':{}}
         for mode in result.keys():
             if mode == 'train':
                 gold = [int(x) for x in self.dataset.get_labels(limit=self.parameters['limit'])]
@@ -195,7 +195,7 @@ class Experiment():
             elif self.evaluation_mode == 'efficiency':
                 pass
             elif self.evaluation_mode == 'competence':
-                result[mode] = eval.competence(gold, pred)
+                result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
             else:
                 result[mode] = 'unknown mode!'
 

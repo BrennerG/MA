@@ -4,7 +4,7 @@ from sklearn.metrics import recall_score as rec
 
 
 # returns accuracy, precision, recall
-def competence(gold_labels:[], predictions:[]):
-    return (acc(gold_labels, predictions), 
-            pre(gold_labels, predictions, average='macro'),
-            rec(gold_labels, predictions, average='macro'))
+def competence(gold_labels:[], predictions:[], rounded=3):
+    return [float(round(acc(gold_labels, predictions), rounded)), 
+            float(round(pre(gold_labels, predictions, average='macro'), rounded)),
+            float(round(rec(gold_labels, predictions, average='macro'), rounded))]
