@@ -12,7 +12,7 @@ from data_access.csqa_dataset import CsqaDataset
 from models.random_clf import RandomClassifier
 import eval
 import pickle
-import viz as viz
+import evaluation.visualizations.viz as viz
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
