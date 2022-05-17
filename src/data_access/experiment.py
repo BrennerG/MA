@@ -39,10 +39,12 @@ class Experiment():
             viz_data={},
             viz=None):
 
-        # meta
         assert model != None
         assert parameters != None
-        self.eid = self.hash_id(str(model) + str(parameters))
+
+        # meta
+        if eid != None: self.eid = eid
+        else: self.eid = self.hash_id(str(model) + str(parameters))
         self.level = level
         self.date = date
         self.edited = None
