@@ -1,0 +1,3 @@
+[submodule "src/evaluation/eraserbenchmark"]
+	path = src/evaluation/eraserbenchmark
+	url = git@github.com:jayded/eraserbenchmark.git
