@@ -1,0 +1,8 @@
+This data comes in two forms:
+* One for scoring, the data in the "cose" directory.
+  This data includes labels and the rationale as from the question. The various
+  potential answers are all in query; the question itself is the document
+* A "simplified" version for training. This separates each of the original COSE
+  questions into five, one per potential answer. The answer itself is stored in
+  the query text, and the truth as to whether or it matches is stored as a true/
+  false classification on the annotation

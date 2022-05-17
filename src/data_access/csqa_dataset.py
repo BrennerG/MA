@@ -32,8 +32,6 @@ class CsqaDataset(Dataset):
         context = self.data[idx]['question']['question_concept']
         label_map = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         label = label_map[self.data[idx]['answerKey']]
-        #label_tensor = torch.zeros(5)
-        #label_tensor[label] = 1
         return question, context, answer, float(label)
     
     def get_labels(self, limit):
