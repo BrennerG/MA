@@ -15,6 +15,7 @@ import eval
 import pickle
 import evaluation.visualizations.viz as viz
 import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
+import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
@@ -47,7 +48,7 @@ class Experiment():
 
         assert model != None
         assert parameters != None
-        assert dataset == 'csqa_train'
+        assert dataset == 'csqa_train' # TODO reminder to change loading!
         assert testset == 'csqa_test'
         assert rationales == 'cose_train'
         assert test_rationales == 'cose_test'
@@ -68,13 +69,12 @@ class Experiment():
         # TODO UNNECESSARY BULLSHIT - WHY DOES THE CONSTRUCTOR RETURN A 1 ELEMENT TUPLE
         self.dataset = self.dataset[0]
         self.testset = self.testset[0]
+        # END UNNECESSARY BULLSHIT
 
-        self.rationales = CoseDataset(ids=self.dataset.get_ids(), path_to_raw=LOC[rationales], path_to_docs=LOC['cose_docs']),
-        self.test_rationales = CoseDataset(ids=self.testset.get_ids(), path_to_raw=LOC[test_rationales], path_to_docs=LOC['cose_docs']),
-        # TODO UNNECESSARY BULLSHIT - WHY DOES THE CONSTRUCTOR RETURN A 1 ELEMENT TUPLE
-        self.rationales = self.rationales[0]
-        self.test_rationales = self.test_rationales[0]
-        # FUCK
+        #self.rationales = CoseDataset(ids=self.dataset.get_ids(), path_to_raw=LOC[rationales], path_to_docs=LOC['cose_docs'], return_original_form=True),
+        #self.test_rationales = CoseDataset(ids=self.testset.get_ids(), path_to_raw=LOC[test_rationales], path_to_docs=LOC['cose_docs'], return_original_form=True),
+        self.rationales = EU.annotations_from_jsonl(LOC['cose_train'])
+        self.test_rationales = EU.annotations_from_jsonl(LOC['cose_test'])
 
         self.preprocessed = preprocessed
         self.train_predictions = train_predictions
@@ -112,8 +112,8 @@ class Experiment():
         # save data
         dic['dataset'] = self.dataset.location 
         dic['testset'] = self.testset.location
-        dic['rationales'] = self.rationales.location
-        dic['test_rationales'] = self.test_rationales
+        dic['rationales'] = 'cose_train' # TODO de-hardcode
+        dic['test_rationales'] = 'cose_test' # TODO de-hardcode
         if not self.NOWRITE:
             dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
             dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
@@ -260,8 +260,7 @@ class Experiment():
             
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
-                thresholds = None # TODO Add parameter
-                result[mode]['partial_match_score'] = EM.partial_match_score(gold, pred, thresholds)
+                result[mode]['partial_match_score'] = eval.rationale_match(self.rationales, self.rationales)
 
             if 'efficiency' in self.evaluation_mode:
                 pass

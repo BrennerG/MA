@@ -4,6 +4,11 @@ from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
 from data_access.experiment import Experiment
 
+
+# TODO 
+#   TEST LOADING AGAIN
+
+
 parameters = {
     'limit': -1,
     'epochs': 1,
@@ -31,5 +36,5 @@ exp.train()
 exp.evaluate()
 exp.visualize()
 
-exp.save()
+yaml = exp.save()
 print('done')
