@@ -37,3 +37,9 @@ class CsqaDataset(Dataset):
     def get_labels(self, limit):
         for i in range(len(self)):
             yield self.__getitem__(i)[3]
+    
+    def get_ids(self):
+        result = []
+        for x in self.data:
+            result.append(x['id'])
+        return result

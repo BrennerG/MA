@@ -9,6 +9,7 @@ from datetime import datetime
 from data_access.locations import LOC
 from train import train, predict
 from data_access.csqa_dataset import CsqaDataset
+from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
 import eval
 import pickle
@@ -31,8 +32,10 @@ class Experiment():
             NOWRITE=False,
             parameters=None, 
             model=None, 
-            dataset=None, 
-            testset=None,
+            dataset='csqa_train', 
+            testset='csqa_test',
+            rationales='cose_train',
+            test_rationales='cose_test',
             preprocessed=None, 
             train_predictions=None, 
             test_predictions=None, 
@@ -44,6 +47,10 @@ class Experiment():
 
         assert model != None
         assert parameters != None
+        assert dataset == 'csqa_train'
+        assert testset == 'csqa_test'
+        assert rationales == 'cose_train'
+        assert test_rationales == 'cose_test'
 
         # meta
         if eid != None: self.eid = eid
@@ -56,8 +63,19 @@ class Experiment():
         self.parameters = parameters 
         self.model = model # model type is in dic, but not here!
         # data
-        self.dataset = dataset
-        self.testset = testset
+        self.dataset = CsqaDataset(LOC[dataset], limit=self.parameters['limit']),
+        self.testset = CsqaDataset(LOC[testset], limit=-1),
+        # TODO UNNECESSARY BULLSHIT - WHY DOES THE CONSTRUCTOR RETURN A 1 ELEMENT TUPLE
+        self.dataset = self.dataset[0]
+        self.testset = self.testset[0]
+
+        self.rationales = CoseDataset(ids=self.dataset.get_ids(), path_to_raw=LOC[rationales], path_to_docs=LOC['cose_docs']),
+        self.test_rationales = CoseDataset(ids=self.testset.get_ids(), path_to_raw=LOC[test_rationales], path_to_docs=LOC['cose_docs']),
+        # TODO UNNECESSARY BULLSHIT - WHY DOES THE CONSTRUCTOR RETURN A 1 ELEMENT TUPLE
+        self.rationales = self.rationales[0]
+        self.test_rationales = self.test_rationales[0]
+        # FUCK
+
         self.preprocessed = preprocessed
         self.train_predictions = train_predictions
         self.test_predictions = test_predictions
@@ -94,6 +112,8 @@ class Experiment():
         # save data
         dic['dataset'] = self.dataset.location 
         dic['testset'] = self.testset.location
+        dic['rationales'] = self.rationales.location
+        dic['test_rationales'] = self.test_rationales
         if not self.NOWRITE:
             dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
             dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
@@ -103,7 +123,7 @@ class Experiment():
         dic['evaluation_results'] = self.evaluation_results
         dic['viz_mode'] = self.viz_mode
         if not self.NOWRITE and len(self.viz_data.keys()) != 0: 
-            dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift check into save_pickle()
+            dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift second check into save_pickle()
         dic['viz'] = self.viz
 
         # save all paths in yaml!
@@ -171,8 +191,10 @@ class Experiment():
         new.parameters = self.check(exp_yaml['parameters'])
         new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
         # data
-        new.dataset = self.check(CsqaDataset(exp_yaml['dataset'])) # TODO de-hardcode
-        new.testset = self.check(CsqaDataset(exp_yaml['testset'])) # above?
+        new.dataset = self.check(CsqaDataset(exp_yaml['dataset']))
+        new.testset = self.check(CsqaDataset(exp_yaml['testset']))
+        new.rationales = self.check(CoseDataset(exp_yaml['rationales']))
+        new.test_rationales = self.check(CoseDataset(exp_yaml['test_rationales']))
         new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
         new.train_predictions = self.check(self.load_json(exp_yaml['train_predictions']))
         new.test_predictions = self.check(self.load_json(exp_yaml['test_predictions']))
@@ -225,7 +247,6 @@ class Experiment():
             self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']]
         return t_out
     
-    # TODO input should be list!
     def evaluate(self):
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
@@ -238,14 +259,15 @@ class Experiment():
                 self.test_predictions = pred
             
             # do the evaluation
-            if self.evaluation_mode == 'explainability':
+            if 'explainability' in self.evaluation_mode:
+                thresholds = None # TODO Add parameter
+                result[mode]['partial_match_score'] = EM.partial_match_score(gold, pred, thresholds)
+
+            if 'efficiency' in self.evaluation_mode:
                 pass
-            elif self.evaluation_mode == 'efficiency':
-                pass
-            elif self.evaluation_mode == 'competence':
+
+            if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
-            else:
-                result[mode] = 'unknown model!'
 
         self.evaluation_results = result
     

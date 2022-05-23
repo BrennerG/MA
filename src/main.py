@@ -1,5 +1,6 @@
 from data_access.locations import LOC
 from data_access.csqa_dataset import CsqaDataset
+from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
 from data_access.experiment import Experiment
 
@@ -17,10 +18,12 @@ exp = Experiment(
     eid='default',
     NOWRITE=True,
     parameters=parameters,
-    dataset = CsqaDataset(LOC['csqa_train'], limit=parameters['limit']),
-    testset = CsqaDataset(LOC['csqa_test'], limit=-1),
+    dataset = 'csqa_train',
+    testset = 'csqa_test',
+    rationales = 'cose_train',
+    test_rationales = 'cose_test',
     model = RandomClassifier(parameters['random_seed']),
-    evaluation_mode='competence',
+    evaluation_mode=['competence', 'explainability'],
     viz_mode=['loss']
 )
 
