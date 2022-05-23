@@ -13,12 +13,14 @@ from models.random_clf import RandomClassifier
 import eval
 import pickle
 import evaluation.visualizations.viz as viz
+import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
 # TODO
 #   - implement synonym searching/loading
 #   - state id of previous saves, if new id is made...
+#   - NO_SAVE option - never write to disk, but only return objects
 class Experiment():
 
     def __init__(self, 
@@ -26,6 +28,7 @@ class Experiment():
             level=0,
             date=datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
             edited=None,
+            NOWRITE=False,
             parameters=None, 
             model=None, 
             dataset=None, 
@@ -48,6 +51,7 @@ class Experiment():
         self.level = level
         self.date = date
         self.edited = None
+        self.NOWRITE = NOWRITE
         # model relevant
         self.parameters = parameters 
         self.model = model # model type is in dic, but not here!
@@ -84,23 +88,29 @@ class Experiment():
         dic['edited'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S") 
         # model
         dic['parameters'] = self.parameters
-        dic['model'] = self.save_model()
+        if not self.NOWRITE:
+            dic['model'] = self.save_model()
         dic['model_type'] = self.model.TYPE
         # save data
         dic['dataset'] = self.dataset.location 
         dic['testset'] = self.testset.location
-        dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
-        dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
-        dic['test_predictions'] = self.save_json(self.test_predictions, type='test_predictions')
+        if not self.NOWRITE:
+            dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
+            dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
+            dic['test_predictions'] = self.save_json(self.test_predictions, type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
         dic['viz_mode'] = self.viz_mode
-        if len(self.viz_data.keys()) != 0: dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift check into save_pickle()
+        if not self.NOWRITE and len(self.viz_data.keys()) != 0: 
+            dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift check into save_pickle()
         dic['viz'] = self.viz
 
         # save all paths in yaml!
-        return self.save_yaml(dic)
+        if not self.NOWRITE:
+            return self.save_yaml(dic)
+        else:
+            return dic
     
     def save_model(self):
         assert self.model != None
@@ -235,20 +245,23 @@ class Experiment():
             elif self.evaluation_mode == 'competence':
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
             else:
-                result[mode] = 'unknown mode!'
+                result[mode] = 'unknown model!'
 
         self.evaluation_results = result
     
     def visualize(self, show=False):
         # create viz_directory
-        newpath = LOC['viz_dir'] + str(self.eid) + "/"
-        if not os.path.exists(newpath):
-            os.makedirs(newpath)
+        if not self.NOWRITE:
+            newpath = LOC['viz_dir'] + str(self.eid) + "/"
+            if not os.path.exists(newpath):
+                os.makedirs(newpath)
 
-        for mode in self.viz_mode:
-            if mode == 'loss':
-                viz.loss_plot(self.viz_data['train_loss'], save_loc=newpath, show=show)
-            else:
-                'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
-        
-        self.viz = newpath
+            for mode in self.viz_mode:
+                if mode == 'loss':
+                    viz.loss_plot(self.viz_data['train_loss'], save_loc=newpath, show=show)
+                else:
+                    'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
+            
+            self.viz = newpath
+        else:
+            pass # TODO save this fig in Experiment?

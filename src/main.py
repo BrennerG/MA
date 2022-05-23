@@ -15,6 +15,7 @@ parameters = {
 
 exp = Experiment(
     eid='default',
+    NOWRITE=True,
     parameters=parameters,
     dataset = CsqaDataset(LOC['csqa_train'], limit=parameters['limit']),
     testset = CsqaDataset(LOC['csqa_test'], limit=-1),
