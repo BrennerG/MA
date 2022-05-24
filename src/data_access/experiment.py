@@ -22,6 +22,8 @@ import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 # TODO
 #   - implement synonym searching/loading
 #   - state id of previous saves, if new id is made...
+#   - create ExperimentPersistor Class here, just for saving & loading of the experiment class
+
 class Experiment():
 
     def __init__(self, 
@@ -34,8 +36,8 @@ class Experiment():
             model=None, 
             dataset='csqa_train', 
             testset='csqa_test',
-            rationales='cose_train',
-            test_rationales='cose_test',
+            #rationales='cose_train',
+            #test_rationales='cose_test',
             preprocessed=None, 
             train_predictions=None, 
             test_predictions=None, 
@@ -47,10 +49,6 @@ class Experiment():
 
         assert model != None
         assert parameters != None
-        assert dataset == 'csqa_train' # TODO reminder to change loading!
-        assert testset == 'csqa_test'
-        assert rationales == 'cose_train'
-        assert test_rationales == 'cose_test'
 
         # meta
         if eid != None: self.eid = eid
@@ -63,18 +61,8 @@ class Experiment():
         self.parameters = parameters 
         self.model = model # model type is in dic, but not here!
         # data
-        self.dataset = CsqaDataset(LOC[dataset], limit=self.parameters['limit']),
-        self.testset = CsqaDataset(LOC[testset], limit=-1),
-        # TODO UNNECESSARY BULLSHIT - WHY DOES THE CONSTRUCTOR RETURN A 1 ELEMENT TUPLE
-        self.dataset = self.dataset[0]
-        self.testset = self.testset[0]
-        # END UNNECESSARY BULLSHIT
-
-        #self.rationales = CoseDataset(ids=self.dataset.get_ids(), path_to_raw=LOC[rationales], path_to_docs=LOC['cose_docs'], return_original_form=True),
-        #self.test_rationales = CoseDataset(ids=self.testset.get_ids(), path_to_raw=LOC[test_rationales], path_to_docs=LOC['cose_docs'], return_original_form=True),
-        self.rationales = EU.annotations_from_jsonl(LOC['cose_train'])
-        self.test_rationales = EU.annotations_from_jsonl(LOC['cose_test'])
-
+        self.dataset = CoseDataset(mode='train')
+        self.testset = CoseDataset(mode='val')
         self.preprocessed = preprocessed
         self.train_predictions = train_predictions
         self.test_predictions = test_predictions
@@ -111,8 +99,8 @@ class Experiment():
         # save data
         dic['dataset'] = self.dataset.location 
         dic['testset'] = self.testset.location
-        dic['rationales'] = 'cose_train' # TODO de-hardcode
-        dic['test_rationales'] = 'cose_test' # TODO de-hardcode
+        #dic['rationales'] = 'cose_train' # TODO de-hardcode
+        #dic['test_rationales'] = 'cose_test' # TODO de-hardcode
         if not self.NOWRITE:
             dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
             dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
@@ -192,8 +180,8 @@ class Experiment():
         # data
         new.dataset = self.check(CsqaDataset(exp_yaml['dataset']))
         new.testset = self.check(CsqaDataset(exp_yaml['testset']))
-        new.rationales = self.check(CoseDataset(exp_yaml['rationales']))
-        new.test_rationales = self.check(CoseDataset(exp_yaml['test_rationales']))
+        #new.rationales = self.check(CoseDataset(exp_yaml['rationales'])) # TODO change this!
+        #new.test_rationales = self.check(CoseDataset(exp_yaml['test_rationales'])) # TODO change this!
         new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
         new.train_predictions = self.check(self.load_json(exp_yaml['train_predictions']))
         new.test_predictions = self.check(self.load_json(exp_yaml['test_predictions']))
@@ -249,19 +237,24 @@ class Experiment():
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
             if mode == 'train':
-                gold = [int(x) for x in self.dataset.get_labels(limit=self.parameters['limit'])]
+                gold = [int(x) for x in self.dataset.labels]
                 pred, attn = self.train_predictions
+                doc_ids = [x for x in self.dataset.docids] # TODO unncesseary!
+
             elif mode == 'test':
-                gold = [int(x) for x in self.testset.get_labels(limit=-1)]
+                gold = [int(x) for x in self.testset.labels]
                 pred, attn = predict(self.parameters, self.model, self.testset)
                 self.test_predictions = pred
-            
+                doc_ids = [x for x in self.testset.docids] # TODO unncesseary!
+
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
-                # soft rationales
-                # TODO CURRENT
-                # hard rationales
-                result[mode]['partial_match_score'] = eval.rationale_match(self.rationales, self.rationales)
+                # agreement
+                attn_detached = [x.detach().numpy() for x in attn]
+                er_results = eval.create_results(doc_ids, pred, attn_detached)
+                result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
+                # TODO faithfulness
+                # TODO comprehensiveness
 
             if 'efficiency' in self.evaluation_mode:
                 pass

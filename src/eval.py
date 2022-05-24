@@ -1,7 +1,10 @@
 from sklearn.metrics import accuracy_score as acc
 from sklearn.metrics import precision_score as pre
 from sklearn.metrics import recall_score as rec
+
+from data_access.locations import LOC
 import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
+import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
 
 # returns accuracy, precision, recall
@@ -16,6 +19,45 @@ def rationale_match(gold, pred, thresholds=[0.5]):
     transformed_pred = [EM.Rationale.from_annotation(ann) for ann in pred][0]
     return EM.partial_match_score(truth=transformed_gold, pred=transformed_pred, thresholds=thresholds)
 
+def soft_scores(results, docids):
+    # TODO create an EraserEvaluation Class where all of the follwing stuff is stored!
+    # annotations, flattened_documents, etc
+    flattened_documents = EM.load_flattened_documents(LOC['cose'], docids=None)
+    annotations = EU.annotations_from_jsonl(LOC['cose_train'])
+    paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
+    return EM.score_soft_tokens(paired_scoring)
+
+# TODO this assuemes that the order of docids never changed init of the 'experiment' class
+def create_results(docids, predictions, attentions):
+    result = []
+    parselabel = ['A','B','C','D','E']
+
+    for i, docid in enumerate(docids):
+        dic = {
+            'annotation_id': docid, # str
+            'rationales': [
+                {
+                    'docid': docid, # str
+                    'soft_rationale_predictions': attentions[i] # List[float]
+                }
+            ],
+            'classification': parselabel[predictions[i]], # str
+
+            #'classification_scores': None, # Dict[str,float],
+            #'comprehensiveness_classification_scores': None, # Dict[str, float]
+            #'sufficiency_classification_scores': None, # Dict[str, float]
+            #'tokens_to_flip': None, # int
+            #"thresholded_scores": [
+            #    {
+            #    "threshold": None, # float, required,
+            #    "comprehensiveness_classification_scores": None, # like "classification_scores"
+            #    "sufficiency_classification_scores": None, # like "classification_scores"
+            #    }
+            #] # optional. if present, then "classification" and "classification_scores" must be present
+        }
+        result.append(dic)
+
+    return result
 
 '''
 THE FOLLOWING TEXT DESCRIBES THE SHAPE OF 'INSTANCES' AS EG FOUND IN METRICS.COMPUTE_AOPC_SCORES(INSTANCES, THRESHOLDS)

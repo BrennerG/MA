@@ -19,7 +19,7 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
         all_attentions = []
         running_loss = 0
 
-        for i, (question, context, answers, label) in enumerate(ds):
+        for i, (question, context, answers, label, evidence) in enumerate(ds):
             optimizer.zero_grad()
 
             output, attn = clf(question, context, answers)
