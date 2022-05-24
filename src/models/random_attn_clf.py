@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class RandomClassifier(nn.Module):
+class RandomAttentionClassifier(nn.Module):
 
     def __init__(self, seed:int):
         super().__init__()
-        self.TYPE = "RandomClassifier"
+        self.TYPE = "RandomAttentionClassifier"
         self.seed = seed
         self.lin = nn.Linear(3, 1)
         torch.manual_seed(self.seed)
@@ -15,4 +15,6 @@ class RandomClassifier(nn.Module):
         rnd = torch.rand(len(answers))
         out = torch.softmax(rnd, 0)
         out.requires_grad = True
-        return out, None # output, attn
+        attn = torch.rand(len(question.split()))
+        attn.requires_grad = True
+        return out, attn

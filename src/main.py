@@ -2,12 +2,13 @@ from data_access.locations import LOC
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
+from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
 
 
 # TODO 
 #   TEST LOADING AGAIN
-
+#   READ ABOUT HARD VS SOFT RATIONALES
 
 parameters = {
     'limit': -1,
@@ -27,7 +28,7 @@ exp = Experiment(
     testset = 'csqa_test',
     rationales = 'cose_train',
     test_rationales = 'cose_test',
-    model = RandomClassifier(parameters['random_seed']),
+    model = RandomAttentionClassifier(parameters['random_seed']),
     evaluation_mode=['competence', 'explainability'],
     viz_mode=['loss']
 )

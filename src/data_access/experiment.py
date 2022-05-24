@@ -22,7 +22,6 @@ import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 # TODO
 #   - implement synonym searching/loading
 #   - state id of previous saves, if new id is made...
-#   - NO_SAVE option - never write to disk, but only return objects
 class Experiment():
 
     def __init__(self, 
@@ -241,10 +240,9 @@ class Experiment():
         self.model = t_out['model']
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
 
-        if output_softmax:
-            self.train_predictions = t_out['outputs']
-        else:
-            self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']]
+        # return
+        if output_softmax: self.train_predictions = t_out['outputs'], t_out['attentions']
+        else: self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']], t_out['attentions']
         return t_out
     
     def evaluate(self):
@@ -252,14 +250,17 @@ class Experiment():
         for mode in result.keys():
             if mode == 'train':
                 gold = [int(x) for x in self.dataset.get_labels(limit=self.parameters['limit'])]
-                pred = self.train_predictions
+                pred, attn = self.train_predictions
             elif mode == 'test':
                 gold = [int(x) for x in self.testset.get_labels(limit=-1)]
-                pred = predict(self.parameters, self.model, self.testset)
+                pred, attn = predict(self.parameters, self.model, self.testset)
                 self.test_predictions = pred
             
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
+                # soft rationales
+                # TODO CURRENT
+                # hard rationales
                 result[mode]['partial_match_score'] = eval.rationale_match(self.rationales, self.rationales)
 
             if 'efficiency' in self.evaluation_mode:

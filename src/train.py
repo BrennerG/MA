@@ -16,12 +16,14 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
 
     for epoch in range(P['epochs']):
         all_outputs = []
+        all_attentions = []
         running_loss = 0
 
         for i, (question, context, answers, label) in enumerate(ds):
             optimizer.zero_grad()
 
-            output = clf(question, context, answers).view(P['batch_size'],-1)
+            output, attn = clf(question, context, answers)
+            output = output.view(P['batch_size'],-1)
             label = torch.tensor([label], requires_grad=True).long()
 
             loss = criterion(output, label)
@@ -38,21 +40,25 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
                 running_loss = 0.0
             
             all_outputs.append(output)
+            all_attentions.append(attn)
     
     return {
         'model': clf,
         'outputs': all_outputs,
+        'attentions': all_attentions,
         'losses': epoch_losses
     }
 
-
 def predict(P:{}, clf:nn.Module(), ds:Dataset(), output_softmax=False):
     predictions = []
+    attentions = []
 
     with torch.no_grad():
         for i, (question, context, answers, label) in enumerate(ds):
-            output = clf(question, context, answers).view(P['batch_size'],-1)
+            output, attn = clf(question, context, answers)
+            output = output.view(P['batch_size'],-1)
             predictions.append(output)
+            attentions.append(attn)
 
-    if output_softmax: return predictions
-    else: return [int(torch.argmax(x).item()) for x in predictions]
+    if output_softmax: return predictions, attentions
+    else: return [int(torch.argmax(x).item()) for x in predictions], attentions
