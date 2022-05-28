@@ -7,7 +7,7 @@ import torch.nn as nn
 from os import walk
 from datetime import datetime
 from data_access.locations import LOC
-from train import train, predict
+from train import train, predict, from_softmax
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
@@ -62,7 +62,7 @@ class Experiment():
         self.model = model # model type is in dic, but not here!
         # data
         self.dataset = CoseDataset(mode='train')
-        self.testset = CoseDataset(mode='val')
+        self.testset = CoseDataset(mode='test')
         self.preprocessed = preprocessed
         self.train_predictions = train_predictions
         self.test_predictions = test_predictions
@@ -227,11 +227,9 @@ class Experiment():
         t_out = train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
-
         # return
-        if output_softmax: self.train_predictions = t_out['outputs'], t_out['attentions']
-        else: self.train_predictions = [int(torch.argmax(x).item()) for x in t_out['outputs']], t_out['attentions']
-        return t_out
+        self.train_predictions = t_out['outputs'], t_out['attentions']
+        return self.train_predictions
     
     def evaluate(self):
         result = {'train':{}, 'test':{}}
@@ -253,8 +251,7 @@ class Experiment():
                 attn_detached = [x.detach().numpy() for x in attn]
                 er_results = eval.create_results(doc_ids, pred, attn_detached)
                 result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
-                # TODO faithfulness
-                # TODO comprehensiveness
+                result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 
             if 'efficiency' in self.evaluation_mode:
                 pass

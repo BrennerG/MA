@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
 from data_access.locations import LOC
@@ -49,16 +50,28 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
         'losses': epoch_losses
     }
 
-def predict(P:{}, clf:nn.Module(), ds:Dataset(), output_softmax=False):
+def predict(P:{}, clf:nn.Module(), ds:Dataset()):
     predictions = []
     attentions = []
 
     with torch.no_grad():
-        for i, (question, context, answers, label) in enumerate(ds):
+        for i, (question, context, answers, label, evidence) in enumerate(ds):
             output, attn = clf(question, context, answers)
             output = output.view(P['batch_size'],-1)
             predictions.append(output)
             attentions.append(attn)
 
-    if output_softmax: return predictions, attentions
-    else: return [int(torch.argmax(x).item()) for x in predictions], attentions
+    return predictions, attentions
+
+def from_softmax(softmax_predictions=None, to:str='int'): # or STR
+    letters = ['A','B','C','D','E']
+    intform = [x.squeeze().tolist() for x in softmax_predictions]
+    amax = [np.argmax(x) for x in intform]
+    if to == 'int':
+        return amax
+    elif to == 'str':
+        return [letters[x] for x in amax]
+    elif to == 'dict':
+        return [{k:v for k,v in zip(letters, x)} for x in intform]
+    else:
+        raise ValueError('"to" must be "int","str" or "dict"!')

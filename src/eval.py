@@ -5,10 +5,12 @@ from sklearn.metrics import recall_score as rec
 from data_access.locations import LOC
 import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
+from train import from_softmax
 
 
 # returns accuracy, precision, recall
 def competence(gold_labels:[], predictions:[], rounded=3):
+    predictions = from_softmax(predictions, to='int')
     return [float(round(acc(gold_labels, predictions), rounded)), 
             float(round(pre(gold_labels, predictions, average='macro'), rounded)),
             float(round(rec(gold_labels, predictions, average='macro'), rounded))]
@@ -20,17 +22,30 @@ def rationale_match(gold, pred, thresholds=[0.5]):
     return EM.partial_match_score(truth=transformed_gold, pred=transformed_pred, thresholds=thresholds)
 
 def soft_scores(results, docids):
-    # TODO create an EraserEvaluation Class where all of the follwing stuff is stored!
-    # annotations, flattened_documents, etc
+    # TODO store these somewhere else!
     flattened_documents = EM.load_flattened_documents(LOC['cose'], docids=None)
     annotations = EU.annotations_from_jsonl(LOC['cose_train'])
     paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
     return EM.score_soft_tokens(paired_scoring)
 
+def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
+    # TODO store these somewhere else!
+    if mode == 'train':
+        annotations = EU.annotations_from_jsonl(LOC['cose_train'])
+    else:
+        annotations = EU.annotations_from_jsonl(LOC['cose_test'])
+
+    docs = EU.load_documents(LOC['cose'])
+    # TODO check for IDs and overlap
+    return EM.score_classifications(results, annotations, docs, aopc_thresholds)
+
 # TODO this assuemes that the order of docids never changed init of the 'experiment' class
-def create_results(docids, predictions, attentions):
+def create_results(docids, predictions, attentions, aopc_thresholds = [0.01, 0.05, 0.1, 0.2, 0.5]):
+    assert len(docids) == len(predictions) == len(attentions)
+
     result = []
-    parselabel = ['A','B','C','D','E']
+    labels = from_softmax(predictions, to='str')
+    dicprics = from_softmax(predictions, to='dict')
 
     for i, docid in enumerate(docids):
         dic = {
@@ -41,19 +56,21 @@ def create_results(docids, predictions, attentions):
                     'soft_rationale_predictions': attentions[i] # List[float]
                 }
             ],
-            'classification': parselabel[predictions[i]], # str
+            'classification': labels[i], # str
 
-            #'classification_scores': None, # Dict[str,float],
-            #'comprehensiveness_classification_scores': None, # Dict[str, float]
-            #'sufficiency_classification_scores': None, # Dict[str, float]
+            # TODO what about the following fields? are they necessary? - if so for which metrics?
+
+            'classification_scores': dicprics[i], # Dict[str,float],
+            'comprehensiveness_classification_scores': dicprics[i], # Dict[str, float] # TODO retrain without top k%%
+            'sufficiency_classification_scores': dicprics[i], # Dict[str, float] # TODO retrain with only top K%%
             #'tokens_to_flip': None, # int
-            #"thresholded_scores": [
-            #    {
-            #    "threshold": None, # float, required,
-            #    "comprehensiveness_classification_scores": None, # like "classification_scores"
-            #    "sufficiency_classification_scores": None, # like "classification_scores"
-            #    }
-            #] # optional. if present, then "classification" and "classification_scores" must be present
+            "thresholded_scores": [
+                {
+                "threshold": x, # float, required,
+                "comprehensiveness_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain leaving out top x%% of tokens by importance
+                "sufficiency_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain with only the top x%% of tokens by importance
+                }
+                for x in aopc_thresholds] # optional. if present, then "classification" and "classification_scores" must be present
         }
         result.append(dic)
 

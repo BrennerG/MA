@@ -7,8 +7,8 @@ from data_access.experiment import Experiment
 
 
 # TODO 
+#   CURRENT: CREATE RE_TRAINING! (train.retrain())
 #   TEST LOADING AGAIN
-#   READ ABOUT HARD VS SOFT RATIONALES
 
 parameters = {
     'limit': -1,
