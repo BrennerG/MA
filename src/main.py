@@ -9,6 +9,7 @@ from data_access.experiment import Experiment
 # TODO 
 #   CURRENT: CREATE RE_TRAINING! (train.retrain())
 #   TEST LOADING AGAIN
+#   - ? discretized overlap & do hard predictions
 
 parameters = {
     'limit': -1,
@@ -17,7 +18,8 @@ parameters = {
     'batch_size': 1,
     'lr': 0.001,
     'momentum': 0.9,
-    'random_seed':69
+    'random_seed': 69,
+    'eraser_k': -1
 }
 
 exp = Experiment(

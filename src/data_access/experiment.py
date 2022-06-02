@@ -235,26 +235,31 @@ class Experiment():
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
             if mode == 'train':
-                gold = [int(x) for x in self.dataset.labels]
+                dataset = self.dataset
                 pred, attn = self.train_predictions
-                doc_ids = [x for x in self.dataset.docids] # TODO unncesseary!
 
             elif mode == 'test':
-                gold = [int(x) for x in self.testset.labels]
-                pred, attn = predict(self.parameters, self.model, self.testset)
-                self.test_predictions = pred
-                doc_ids = [x for x in self.testset.docids] # TODO unncesseary!
+                dataset = self.testset
+                pred, attn = self.test_predictions = predict(self.parameters, self.model, self.testset)
+            
+            gold = dataset.labels
+            doc_ids = dataset.docids
 
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
-                # agreement
-                attn_detached = [x.detach().numpy() for x in attn]
+                attn_detached = [x.detach().numpy() for x in attn] # model should return detached attn and predictions!
+                # TODO put retraining somewhere else (probably eval)
+                comp_data = dataset.erase(attn, mode='comprehensiveness')
+                suff_data = dataset.erase(attn, mode='sufficiency')
+                comp_predictions = predict(self.parameters, self.model, comp_data)
+                suff_predictions = predict(self.parameters, self.model, suff_data)
+                # TODO CURRENT include these predictions in er_results
                 er_results = eval.create_results(doc_ids, pred, attn_detached)
                 result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
                 result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 
             if 'efficiency' in self.evaluation_mode:
-                pass
+                pass # TODO
 
             if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
