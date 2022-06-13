@@ -251,10 +251,10 @@ class Experiment():
                 # TODO put retraining somewhere else (probably eval)
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
-                comp_predictions = predict(self.parameters, self.model, comp_data)
-                suff_predictions = predict(self.parameters, self.model, suff_data)
+                comp_predictions, _ = predict(self.parameters, self.model, comp_data) # _ is attn vector
+                suff_predictions, _ = predict(self.parameters, self.model, suff_data) # _ is attn vector
                 # TODO CURRENT include these predictions in er_results
-                er_results = eval.create_results(doc_ids, pred, attn_detached)
+                er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached)
                 result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
                 result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 

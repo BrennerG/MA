@@ -39,13 +39,15 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
     # TODO check for IDs and overlap
     return EM.score_classifications(results, annotations, docs, aopc_thresholds)
 
-# TODO this assuemes that the order of docids never changed init of the 'experiment' class
-def create_results(docids, predictions, attentions, aopc_thresholds = [0.01, 0.05, 0.1, 0.2, 0.5]):
+# TODO this assumes that the order of docids never changed init of the 'experiment' class
+def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholds = [0.01, 0.05, 0.1, 0.2, 0.5]):
     assert len(docids) == len(predictions) == len(attentions)
 
     result = []
     labels = from_softmax(predictions, to='str')
     dicprics = from_softmax(predictions, to='dict')
+    comp_dicprics = from_softmax(comp_predicitons, to='dict')
+    suff_dicprics = from_softmax(suff_predictions, to='dict')
 
     for i, docid in enumerate(docids):
         dic = {
@@ -58,19 +60,20 @@ def create_results(docids, predictions, attentions, aopc_thresholds = [0.01, 0.0
             ],
             'classification': labels[i], # str
 
-            # TODO what about the following fields? are they necessary? - if so for which metrics?
-
             'classification_scores': dicprics[i], # Dict[str,float],
-            'comprehensiveness_classification_scores': dicprics[i], # Dict[str, float] # TODO retrain without top k%%
-            'sufficiency_classification_scores': dicprics[i], # Dict[str, float] # TODO retrain with only top K%%
+            'comprehensiveness_classification_scores': comp_dicprics[i], # Dict[str, float] # retrained without top k%%
+            'sufficiency_classification_scores': suff_dicprics[i], # Dict[str, float] # retrained with only top K%%
+
             #'tokens_to_flip': None, # int
-            "thresholded_scores": [
-                {
-                "threshold": x, # float, required,
-                "comprehensiveness_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain leaving out top x%% of tokens by importance
-                "sufficiency_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain with only the top x%% of tokens by importance
-                }
-                for x in aopc_thresholds] # optional. if present, then "classification" and "classification_scores" must be present
+
+            # TODO retrain without top {0.01, 0.05, 0.1, 0.2, 0.5} tokens? probably ...
+            #"thresholded_scores": [
+            #    {
+            #    "threshold": x, # float, required,
+            #    "comprehensiveness_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain leaving out top x%% of tokens by importance
+            #    "sufficiency_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain with only the top x%% of tokens by importance
+            #    }
+            #   for x in aopc_thresholds] # optional. if present, then "classification" and "classification_scores" must be present
         }
         result.append(dic)
 

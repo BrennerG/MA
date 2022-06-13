@@ -14,6 +14,7 @@ class CoseDataset(Dataset):
     def __init__(self, mode='train'):
         self.parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         self.mode = mode
+        self.location = 'cose'
         # data
         self.train, self.val, self.test = EU.load_datasets(LOC['cose'])
         if mode == 'train': self.annotations = self.train
