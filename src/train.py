@@ -63,6 +63,16 @@ def predict(P:{}, clf:nn.Module(), ds:Dataset()):
 
     return predictions, attentions
 
+
+# TODO CURRENT retrain for aopc_thresholds!
+def predict_aopc_thresholded(P:{}, clf:nn.Module(), ds:Dataset()):
+    aopc_thresholds = P['aopc_thresholds'] # TODO put them into P{}
+
+    for aopc in aopc_thresholds:
+        pass
+
+    return None
+
 def from_softmax(softmax_predictions=None, to:str='int'): # or STR
     letters = ['A','B','C','D','E']
     intform = [x.squeeze().tolist() for x in softmax_predictions]
