@@ -28,6 +28,8 @@ class CoseDataset(Dataset):
         self.data = []
         for X in self.annotations:
             self.data.append((self.docs[X.annotation_id], X.query_type, X.query.split(' [sep] '), float(self.parselabel[X.classification]), list(X.evidences)[0][0]))
+
+        self.avg_evidence_len = round(np.mean([len(x[4].text.split()) for x in self]))
         
     def __len__(self):
         return len(self.data)

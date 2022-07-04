@@ -7,7 +7,7 @@ import torch.nn as nn
 from os import walk
 from datetime import datetime
 from data_access.locations import LOC
-from train import train, predict, from_softmax
+import train as T
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
@@ -224,7 +224,7 @@ class Experiment():
 
 
     def train(self, output_softmax=False): # TODO shift output_softmax parameter to train.train()!
-        t_out = train(self.parameters, self.dataset, self.model)
+        t_out = T.train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
         # return
@@ -240,7 +240,7 @@ class Experiment():
 
             elif mode == 'test':
                 dataset = self.testset
-                pred, attn = self.test_predictions = predict(self.parameters, self.model, self.testset)
+                pred, attn = self.test_predictions = T.predict(self.parameters, self.model, self.testset)
             
             gold = dataset.labels
             doc_ids = dataset.docids
@@ -248,13 +248,16 @@ class Experiment():
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
                 attn_detached = [x.detach().numpy() for x in attn] # model should return detached attn and predictions!
+
                 # TODO put retraining somewhere else (probably eval)
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
-                comp_predictions, _ = predict(self.parameters, self.model, comp_data) # _ is attn vector
-                suff_predictions, _ = predict(self.parameters, self.model, suff_data) # _ is attn vector
+                comp_predictions, _ = T.predict(self.parameters, self.model, comp_data) # _ is attn vector
+                suff_predictions, _ = T.predict(self.parameters, self.model, suff_data) # _ is attn vector
+                # CURRENT
+                aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
                 # TODO CURRENT include these predictions in er_results
-                er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached)
+                er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
                 result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
                 result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 

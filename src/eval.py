@@ -28,7 +28,7 @@ def soft_scores(results, docids):
     paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
     return EM.score_soft_tokens(paired_scoring)
 
-def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
+def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]): # TODO aopc thresholds are now in the parameters
     # TODO store these somewhere else!
     if mode == 'train':
         annotations = EU.annotations_from_jsonl(LOC['cose_train'])
@@ -40,7 +40,7 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
     return EM.score_classifications(results, annotations, docs, aopc_thresholds)
 
 # TODO this assumes that the order of docids never changed init of the 'experiment' class
-def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholds = [0.01, 0.05, 0.1, 0.2, 0.5]):
+def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholded_scores):
     assert len(docids) == len(predictions) == len(attentions)
 
     result = []
@@ -66,14 +66,7 @@ def create_results(docids, predictions, comp_predicitons, suff_predictions, atte
 
             #'tokens_to_flip': None, # int
 
-            # TODO retrain without top {0.01, 0.05, 0.1, 0.2, 0.5} tokens? probably ...
-            #"thresholded_scores": [
-            #    {
-            #    "threshold": x, # float, required,
-            #    "comprehensiveness_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain leaving out top x%% of tokens by importance
-            #    "sufficiency_classification_scores": dicprics[i], # like "classification_scores" # TODO retrain with only the top x%% of tokens by importance
-            #    }
-            #   for x in aopc_thresholds] # optional. if present, then "classification" and "classification_scores" must be present
+            "thresholded_scores": aopc_thresholded_scores[i]
         }
         result.append(dic)
 

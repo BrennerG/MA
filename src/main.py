@@ -19,7 +19,8 @@ parameters = {
     'lr': 0.001,
     'momentum': 0.9,
     'random_seed': 69,
-    'eraser_k': -1
+    'eraser_k': -1,
+    'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5],
 }
 
 exp = Experiment(
