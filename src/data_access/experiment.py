@@ -10,17 +10,19 @@ import train as T
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
 from models.random_clf import RandomClassifier
+from models.random_attn_clf import RandomAttentionClassifier
 import eval
 import pickle
 import evaluation.visualizations.viz as viz
 
-# An Experiment is stored as a yaml, linking all essential paths:
-#   parameters, model_path, preproc_path, viz_path
 # TODO
+#   - create folder if they dont exist!
 #   - implement synonym searching/loading
 #   - state id of previous saves, if new id is made...
 #   - create ExperimentPersistor Class here, just for saving & loading of the experiment class
 
+# An Experiment is stored as a yaml, linking all essential paths:
+#   parameters, model_path, preproc_path, viz_path
 class Experiment():
 
     def __init__(self, 
@@ -43,9 +45,6 @@ class Experiment():
             viz_mode=['loss'],
             viz_data={},
             viz=None):
-
-        assert model != None
-        assert parameters != None
 
         # meta
         if eid != None: self.eid = eid
@@ -100,8 +99,8 @@ class Experiment():
         #dic['test_rationales'] = 'cose_test' # TODO de-hardcode
         if not self.NOWRITE:
             dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
-            dic['train_predictions'] = self.save_json(self.train_predictions, type='train_predictions')
-            dic['test_predictions'] = self.save_json(self.test_predictions, type='test_predictions')
+            dic['train_predictions'] = self.save_json([T.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
+            dic['test_predictions'] = self.save_json([T.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
@@ -175,13 +174,13 @@ class Experiment():
         new.parameters = self.check(exp_yaml['parameters'])
         new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
         # data
-        new.dataset = self.check(CsqaDataset(exp_yaml['dataset']))
-        new.testset = self.check(CsqaDataset(exp_yaml['testset']))
-        #new.rationales = self.check(CoseDataset(exp_yaml['rationales'])) # TODO change this!
-        #new.test_rationales = self.check(CoseDataset(exp_yaml['test_rationales'])) # TODO change this!
+        new.dataset = self.check(CoseDataset(mode='train'))
+        new.testset = self.check(CoseDataset(mode='test'))
         new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
-        new.train_predictions = self.check(self.load_json(exp_yaml['train_predictions']))
-        new.test_predictions = self.check(self.load_json(exp_yaml['test_predictions']))
+        train_predictions, train_attention = self.check(self.load_json(exp_yaml['train_predictions']))[0] # squeeze due to json
+        test_predictions, test_attention = self.check(self.load_json(exp_yaml['test_predictions']))[0] # squeeze due to json
+        new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
+        new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
         # learnings
         new.evaluation_mode = self.check(exp_yaml['evaluation_mode'])
         new.evaluation_results = self.check(exp_yaml['evaluation_results'])
@@ -191,15 +190,19 @@ class Experiment():
 
         return new
     
+    # TODO wait... what does this actually do? this should at least throw sth...
     def check(self,obj):
         if obj == None: return None
         else: return obj
     
     def load_model(self,path:str, type=str):
         if type == 'RandomClassifier':
-            model = RandomClassifier(69)
+            model = RandomClassifier(420) # TODO this seed is constant! (BUT model state is loaded anyways...?)
+        if type == 'RandomAttentionClassifier':
+            model = RandomAttentionClassifier(420)
         else:
             assert False
+
         model.load_state_dict(torch.load(path))
         return model
     
@@ -266,6 +269,7 @@ class Experiment():
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
 
         self.evaluation_results = result
+        return result
     
     def visualize(self, show=False):
         # create viz_directory

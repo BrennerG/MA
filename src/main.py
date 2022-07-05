@@ -2,9 +2,9 @@ from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
 
 
-# TODO 
-#   TEST LOADING AGAIN
-#   - ? discretized overlap & do hard predictions
+# TODO s 
+# TEST LOADING AGAIN
+# initiate all folders if not present in init! (besides data folders!)
 
 parameters = {
     'limit': -1,
@@ -20,18 +20,21 @@ parameters = {
 
 exp = Experiment(
     eid='default',
-    NOWRITE=True,
+    #NOWRITE=True,
     parameters=parameters,
     dataset = 'cose_train',
     testset = 'cose_test',
     model = RandomAttentionClassifier(parameters['random_seed']),
-    evaluation_mode=['competence', 'explainability'],
+    evaluation_mode = ['competence', 'explainability'], # ['competence', 'explainability']
     viz_mode=['loss']
 )
 
 exp.train()
 exp.evaluate()
 exp.visualize()
+exp.save()
+print('saved')
 
-yaml = exp.save()
-print(yaml)
+loaded = exp.load('default')
+evaluation = loaded.evaluate()
+print('loaded')

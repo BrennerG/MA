@@ -11,6 +11,8 @@ class CsqaDataset(Dataset):
         self.location = path_to_raw
         self.data = []
 
+        # TODO CURRENT since cose_dataset, path has now become dataset id! change that and probably names!
+        ## are we still using CsqaDataset tho? ... 
         with open(path_to_raw, 'r') as json_file:
             json_list = list(json_file)
 

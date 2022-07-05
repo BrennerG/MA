@@ -109,3 +109,6 @@ def from_softmax(softmax_predictions=None, to:str='int'): # or STR
         return [{k:v for k,v in zip(letters, x)} for x in intform]
     else:
         raise ValueError('"to" must be "int","str" or "dict"!')
+
+def parse_tensor_list(tensor_list:[]):
+    return [x.squeeze().tolist() for x in tensor_list]
