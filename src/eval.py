@@ -39,7 +39,7 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
     # TODO check for IDs and overlap
     return EM.score_classifications(results, annotations, docs, aopc_thresholds)
 
-# TODO this assumes that the order of docids never changed init of the 'experiment' class
+# TODO this assumes that the order of docids never changed since init of the 'experiment' class
 def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholded_scores):
     assert len(docids) == len(predictions) == len(attentions)
 

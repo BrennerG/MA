@@ -1,13 +1,8 @@
-from data_access.locations import LOC
-from data_access.csqa_dataset import CsqaDataset
-from data_access.cose_dataset import CoseDataset
-from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
 
 
 # TODO 
-#   CURRENT: CREATE RE_TRAINING! (train.retrain())
 #   TEST LOADING AGAIN
 #   - ? discretized overlap & do hard predictions
 
@@ -39,4 +34,4 @@ exp.evaluate()
 exp.visualize()
 
 yaml = exp.save()
-print('done')
+print(yaml)

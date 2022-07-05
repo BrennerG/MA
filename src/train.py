@@ -5,7 +5,6 @@ import torch.optim as optim
 import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
-from data_access.locations import LOC
 
 def train(P:{}, ds:Dataset, clf:nn.Module):
     epoch_losses = []
@@ -110,8 +109,3 @@ def from_softmax(softmax_predictions=None, to:str='int'): # or STR
         return [{k:v for k,v in zip(letters, x)} for x in intform]
     else:
         raise ValueError('"to" must be "int","str" or "dict"!')
-
-def retrain(P:{}, clf:nn.Module(), ds:Dataset(), weights:[]):
-    # 1 create cut_ds (cutting top-k entries from text) (as Dataset?)
-    # 2 return predict cut_ds
-    return None

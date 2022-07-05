@@ -3,7 +3,8 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-# TODO would transforms be useful here? (e.g. transforming to BERT, masking, ...)
+# would transforms be useful here? (e.g. transforming to BERT, masking, ...)
+## probably not... stuff like that should go into the preprocessing module
 class CsqaDataset(Dataset):
 
     def __init__(self, path_to_raw:str, limit=-1):

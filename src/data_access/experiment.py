@@ -3,7 +3,6 @@ import yaml
 from yaml import CLoader as Loader
 import json
 import torch
-import torch.nn as nn
 from os import walk
 from datetime import datetime
 from data_access.locations import LOC
@@ -14,8 +13,6 @@ from models.random_clf import RandomClassifier
 import eval
 import pickle
 import evaluation.visualizations.viz as viz
-import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
-import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
 # An Experiment is stored as a yaml, linking all essential paths:
 #   parameters, model_path, preproc_path, viz_path
@@ -55,7 +52,7 @@ class Experiment():
         else: self.eid = self.hash_id(str(model) + str(parameters))
         self.level = level
         self.date = date
-        self.edited = None
+        self.edited = None # TODO usee this!
         self.NOWRITE = NOWRITE
         # model relevant
         self.parameters = parameters 
@@ -173,7 +170,7 @@ class Experiment():
         new.eid = filename
         new.level = self.check(exp_yaml['level'])
         new.date = self.check(exp_yaml['date'])
-        new.edited = self.check(exp_yaml['edited'])
+        new.edited = self.check(exp_yaml['edited']) # TODO use this!
         # model
         new.parameters = self.check(exp_yaml['parameters'])
         new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
@@ -222,8 +219,9 @@ class Experiment():
             result = pickle.load(f)
         return result
 
-
-    def train(self, output_softmax=False): # TODO shift output_softmax parameter to train.train()!
+    # TODO shift output_softmax parameter to train.train()!
+    # TODO is this param really needed?
+    def train(self, output_softmax=False): 
         t_out = T.train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
