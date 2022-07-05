@@ -3,7 +3,7 @@ from data_access.experiment import Experiment
 import data_access.locations as LOC
 
 # TODO s 
-# initiate all folders if not present in init! (besides data folders!)
+# make yaml evaluation part human readable!
 
 # initialize relevant folders
 LOC.init_locations()
@@ -22,6 +22,7 @@ parameters = {
 }
 
 # set the parameters of the experiment
+# TODO put all of this into parameters probably - so there is only on dict not two ...!
 exp = Experiment(
     eid='default',
     #NOWRITE=True,

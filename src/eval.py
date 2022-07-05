@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn.metrics import accuracy_score as acc
 from sklearn.metrics import precision_score as pre
 from sklearn.metrics import recall_score as rec
@@ -26,7 +28,8 @@ def soft_scores(results, docids):
     flattened_documents = EM.load_flattened_documents(LOC['cose'], docids=None)
     annotations = EU.annotations_from_jsonl(LOC['cose_train'])
     paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
-    return EM.score_soft_tokens(paired_scoring)
+    scores = EM.score_soft_tokens(paired_scoring)
+    return {k:float(v) for k,v in scores.items()}
 
 def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]): # TODO aopc thresholds are now in the parameters
     # TODO store these somewhere else!
@@ -35,9 +38,19 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
     else:
         annotations = EU.annotations_from_jsonl(LOC['cose_test'])
 
-    docs = EU.load_documents(LOC['cose'])
     # TODO check for IDs and overlap
-    return EM.score_classifications(results, annotations, docs, aopc_thresholds)
+    docs = EU.load_documents(LOC['cose'])
+    classifications = EM.score_classifications(results, annotations, docs, aopc_thresholds)
+
+    # parse classification scores from numpy64 to float (for yaml readability!)
+    # TODO this might also go into experiments...
+    ret = {}
+    for k,v, in classifications.items():
+        if isinstance(v, np.float64):
+            ret[k] = float(v)
+        else:
+            ret[k] = v
+    return ret
 
 # TODO this assumes that the order of docids never changed since init of the 'experiment' class
 def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholded_scores):
