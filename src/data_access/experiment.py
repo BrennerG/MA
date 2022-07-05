@@ -22,7 +22,6 @@ class Experiment():
 
     def __init__(self, 
             eid=None, 
-            level=0,
             date=datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
             edited=None,
             NOWRITE=False,
@@ -30,8 +29,6 @@ class Experiment():
             model=None, 
             dataset='csqa_train', 
             testset='csqa_test',
-            #rationales='cose_train',
-            #test_rationales='cose_test',
             preprocessed=None, 
             train_predictions=None, 
             test_predictions=None, 
@@ -44,7 +41,6 @@ class Experiment():
         # meta
         if eid != None: self.eid = eid
         else: self.eid = P.hash_id(str(model) + str(parameters))
-        self.level = level
         self.date = date
         self.edited = None # TODO usee this!
         self.NOWRITE = NOWRITE
@@ -64,14 +60,9 @@ class Experiment():
         self.viz_data = viz_data
         self.viz = viz
     
-    # TODO check & save level (progress in the experiment)
-    def calc_level(self):
-        return '?'
-
     def save(self):
         dic = {}
         # meta
-        dic['level'] = self.calc_level()
         dic['date'] = self.date
         dic['edited'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S") 
         # model
@@ -116,32 +107,26 @@ class Experiment():
         new = Experiment()
         # meta
         new.eid = filename
-        new.level = self.check(exp_yaml['level'])
-        new.date = self.check(exp_yaml['date'])
-        new.edited = self.check(exp_yaml['edited']) # TODO use this!
+        new.date = (exp_yaml['date'])
+        new.edited = exp_yaml['edited'] # TODO use this!
         # model
-        new.parameters = self.check(exp_yaml['parameters'])
-        new.model = self.check(P.load_model(exp_yaml['model'], exp_yaml['model_type']))
+        new.parameters = exp_yaml['parameters']
+        new.model = P.load_model(exp_yaml['model'], exp_yaml['model_type'])
         # data
-        new.dataset = self.check(CoseDataset(mode='train'))
-        new.testset = self.check(CoseDataset(mode='test'))
-        new.preprocessed = self.check(P.load_json(exp_yaml['preprocessed']))
-        train_predictions, train_attention = self.check(P.load_json(exp_yaml['train_predictions']))[0] # squeeze due to json
-        test_predictions, test_attention = self.check(P.load_json(exp_yaml['test_predictions']))[0] # squeeze due to json
+        new.dataset = CoseDataset(mode='train')
+        new.testset = CoseDataset(mode='test')
+        new.preprocessed = P.load_json(exp_yaml['preprocessed'])
+        train_predictions, train_attention = P.load_json(exp_yaml['train_predictions'])[0] # squeeze due to json
+        test_predictions, test_attention = P.load_json(exp_yaml['test_predictions'])[0] # squeeze due to json
         new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
         new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
         # learnings
-        new.evaluation_mode = self.check(exp_yaml['evaluation_mode'])
-        new.evaluation_results = self.check(exp_yaml['evaluation_results'])
-        new.viz_data = self.check(self.load_pickle(exp_yaml['viz_data']))
-        new.viz_mode = self.check(exp_yaml['viz_mode'])
-        new.viz = self.check(exp_yaml['viz'])
+        new.evaluation_mode = exp_yaml['evaluation_mode']
+        new.evaluation_results = exp_yaml['evaluation_results']
+        new.viz_data = P.load_pickle(exp_yaml['viz_data'])
+        new.viz_mode = exp_yaml['viz_mode']
+        new.viz = exp_yaml['viz']
         return new
-    
-    # TODO remove this
-    def check(self,obj):
-        if obj == None: return None
-        else: return obj
     
     # TODO shift output_softmax parameter to train.train()!
     # TODO is this param really needed?

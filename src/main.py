@@ -2,6 +2,19 @@ from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
 import data_access.locations as LOC
 
+
+
+# ***************************** MAIN FILE ******************************** #
+# Grand Description incoming! ^.~
+
+#      ************************** TODO *****************************       #
+# UNITE PARAMETERS AND EXPERIMENT INPUT!
+# - Experiment could take only parameters dict
+# - do more sophisticated structure
+# - read and write it as .yaml - from the experiment folder? (do a folder with plans or sth?)
+# ************************************************************************ #
+
+
 # initialize relevant folders
 LOC.init_locations()
 
@@ -27,7 +40,7 @@ exp = Experiment(
     dataset = 'cose_train',
     testset = 'cose_test',
     model = RandomAttentionClassifier(parameters['random_seed']),
-    evaluation_mode = ['competence'], # ['competence', 'explainability']
+    evaluation_mode = ['competence', 'explainability'], # ['competence', 'explainability']
     viz_mode=['loss']
 )
 
