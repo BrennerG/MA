@@ -12,6 +12,10 @@ import data_access.locations as LOC
 # - Experiment could take only parameters dict
 # - do more sophisticated structure
 # - read and write it as .yaml - from the experiment folder? (do a folder with plans or sth?)
+# FIND OUT WHY AUPCR_AGREEMENT GIVES NAN FOR TESTSET!
+# DOCUMENT PARAMETERS, MAIN AND EXPERIMENT CLASS
+# SHARE WITH GABOR
+# ADD EFFICIENCY EVALUATION METRICS!
 # ************************************************************************ #
 
 

@@ -14,9 +14,6 @@ import pickle
 import evaluation.visualizations.viz as viz
 import data_access.persist as P
 
-# TODO
-#   - state id of previous saves, if new id is made...
-
 
 class Experiment():
 
@@ -42,11 +39,11 @@ class Experiment():
         if eid != None: self.eid = eid
         else: self.eid = P.hash_id(str(model) + str(parameters))
         self.date = date
-        self.edited = None # TODO usee this!
+        self.edited = None # TODO use this!
         self.NOWRITE = NOWRITE
         # model relevant
         self.parameters = parameters 
-        self.model = model # model type is in dic, but not here!
+        self.model = model 
         # data
         self.dataset = CoseDataset(mode='train')
         self.testset = CoseDataset(mode='test')
@@ -73,8 +70,6 @@ class Experiment():
         # save data
         dic['dataset'] = self.dataset.location 
         dic['testset'] = self.testset.location
-        #dic['rationales'] = 'cose_train' # TODO de-hardcode
-        #dic['test_rationales'] = 'cose_test' # TODO de-hardcode
         if not self.NOWRITE:
             dic['preprocessed'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
             dic['train_predictions'] = P.save_json(self, [T.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
@@ -108,7 +103,7 @@ class Experiment():
         # meta
         new.eid = filename
         new.date = (exp_yaml['date'])
-        new.edited = exp_yaml['edited'] # TODO use this!
+        new.edited = exp_yaml['edited']
         # model
         new.parameters = exp_yaml['parameters']
         new.model = P.load_model(exp_yaml['model'], exp_yaml['model_type'])
@@ -128,8 +123,6 @@ class Experiment():
         new.viz = exp_yaml['viz']
         return new
     
-    # TODO shift output_softmax parameter to train.train()!
-    # TODO is this param really needed?
     def train(self, output_softmax=False): 
         t_out = T.train(self.parameters, self.dataset, self.model)
         self.model = t_out['model']
@@ -155,21 +148,18 @@ class Experiment():
             # do the evaluation
             if 'explainability' in self.evaluation_mode:
                 attn_detached = [x.detach().numpy() for x in attn] # model should return detached attn and predictions!
-
-                # TODO put retraining somewhere else (probably eval)
+                # retrain for comp and suff:
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
                 comp_predictions, _ = T.predict(self.parameters, self.model, comp_data) # _ is attn vector
                 suff_predictions, _ = T.predict(self.parameters, self.model, suff_data) # _ is attn vector
-                # CURRENT
                 aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
-                # TODO CURRENT include these predictions in er_results
                 er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
                 result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids) # TODO avg_precision and roc_auc_score NaN, but only for testset!
                 result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 
             if 'efficiency' in self.evaluation_mode:
-                pass # TODO
+                pass # TODO do me next!
 
             if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
@@ -192,4 +182,4 @@ class Experiment():
             
             self.viz = newpath
         else:
-            pass # TODO save this fig in Experiment?
+            print('NOWRITE param set: not even pictures will be exported!')
