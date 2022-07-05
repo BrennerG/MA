@@ -9,20 +9,15 @@ from data_access.locations import LOC
 import train as T
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
-from models.random_clf import RandomClassifier
-from models.random_attn_clf import RandomAttentionClassifier
 import eval
 import pickle
 import evaluation.visualizations.viz as viz
+import data_access.persist as P
 
 # TODO
-#   - create folder if they dont exist!
-#   - implement synonym searching/loading
 #   - state id of previous saves, if new id is made...
-#   - create ExperimentPersistor Class here, just for saving & loading of the experiment class
 
-# An Experiment is stored as a yaml, linking all essential paths:
-#   parameters, model_path, preproc_path, viz_path
+
 class Experiment():
 
     def __init__(self, 
@@ -48,7 +43,7 @@ class Experiment():
 
         # meta
         if eid != None: self.eid = eid
-        else: self.eid = self.hash_id(str(model) + str(parameters))
+        else: self.eid = P.hash_id(str(model) + str(parameters))
         self.level = level
         self.date = date
         self.edited = None # TODO usee this!
@@ -69,14 +64,6 @@ class Experiment():
         self.viz_data = viz_data
         self.viz = viz
     
-    def hash_id(self, as_str=True):
-        dirs = next(os.walk(LOC['experiments_dir']))[1]
-        hash_id = abs(hash(self))
-        if hash_id in dirs: return False
-        else: 
-            if as_str: return str(hash_id)
-            else: return hash_id
-        
     # TODO check & save level (progress in the experiment)
     def calc_level(self):
         return '?'
@@ -90,7 +77,7 @@ class Experiment():
         # model
         dic['parameters'] = self.parameters
         if not self.NOWRITE:
-            dic['model'] = self.save_model()
+            dic['model'] = P.save_model(self)
         dic['model_type'] = self.model.TYPE
         # save data
         dic['dataset'] = self.dataset.location 
@@ -98,61 +85,23 @@ class Experiment():
         #dic['rationales'] = 'cose_train' # TODO de-hardcode
         #dic['test_rationales'] = 'cose_test' # TODO de-hardcode
         if not self.NOWRITE:
-            dic['preprocessed'] = self.save_json(self.preprocessed, type='preprocessed_data')
-            dic['train_predictions'] = self.save_json([T.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
-            dic['test_predictions'] = self.save_json([T.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
+            dic['preprocessed'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
+            dic['train_predictions'] = P.save_json(self, [T.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
+            dic['test_predictions'] = P.save_json(self, [T.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
         dic['viz_mode'] = self.viz_mode
         if not self.NOWRITE and len(self.viz_data.keys()) != 0: 
-            dic['viz_data'] = self.save_pickle(self.viz_data) # TODO shift second check into save_pickle()
+            dic['viz_data'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
         dic['viz'] = self.viz
 
         # save all paths in yaml!
         if not self.NOWRITE:
-            return self.save_yaml(dic)
+            return P.save_yaml(self, dic)
         else:
             return dic
     
-    def save_model(self):
-        assert self.model != None
-        model_save_loc = LOC['models_dir'] + str(self.eid) + '.pth'
-
-        torch.save(self.model.state_dict(), model_save_loc)
-        return model_save_loc
-
-    # only for predictions
-    def save_json(self, obj, type=None): # type = 'preprocessed_data' | 'train_predictions' | 'predictions'
-        if obj == None: return None
-        if type == 'train_predictions':
-            save_loc = LOC['predictions'] + str(self.eid) + '_train.jsonl'
-        elif type == 'test_predictions':
-            save_loc = LOC['predictions'] + str(self.eid) + '_test.jsonl'
-        else:
-            print('json type "' + type + '" unknown')
-            assert False
-
-        with open(save_loc, 'w') as outfile:
-            json.dump(obj, outfile)
-        return save_loc
-    
-    # only for experiment yamls!
-    def save_yaml(self, dic):
-        assert self.eid != None
-        filename = LOC['experiments_dir'] + str(self.eid) + '.yaml'
-
-        with open(filename, 'w') as file:
-            yaml_file = yaml.dump(dic, file)
-        return yaml_file
-    
-    def save_pickle(self, obj, save_loc=LOC['viz_data_dir']):
-        filename = str(self.eid) + '.pickle'
-
-        with open(save_loc + filename, 'wb') as f:
-            pickle.dump(obj, f)
-        return save_loc + filename
-
     def load(self, eid:str):
         filename = str(eid) + '.yaml'
         path = LOC['experiments_dir'] + filename
@@ -172,13 +121,13 @@ class Experiment():
         new.edited = self.check(exp_yaml['edited']) # TODO use this!
         # model
         new.parameters = self.check(exp_yaml['parameters'])
-        new.model = self.check(self.load_model(exp_yaml['model'], exp_yaml['model_type']))
+        new.model = self.check(P.load_model(exp_yaml['model'], exp_yaml['model_type']))
         # data
         new.dataset = self.check(CoseDataset(mode='train'))
         new.testset = self.check(CoseDataset(mode='test'))
-        new.preprocessed = self.check(self.load_json(exp_yaml['preprocessed']))
-        train_predictions, train_attention = self.check(self.load_json(exp_yaml['train_predictions']))[0] # squeeze due to json
-        test_predictions, test_attention = self.check(self.load_json(exp_yaml['test_predictions']))[0] # squeeze due to json
+        new.preprocessed = self.check(P.load_json(exp_yaml['preprocessed']))
+        train_predictions, train_attention = self.check(P.load_json(exp_yaml['train_predictions']))[0] # squeeze due to json
+        test_predictions, test_attention = self.check(P.load_json(exp_yaml['test_predictions']))[0] # squeeze due to json
         new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
         new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
         # learnings
@@ -187,41 +136,13 @@ class Experiment():
         new.viz_data = self.check(self.load_pickle(exp_yaml['viz_data']))
         new.viz_mode = self.check(exp_yaml['viz_mode'])
         new.viz = self.check(exp_yaml['viz'])
-
         return new
     
-    # TODO wait... what does this actually do? this should at least throw sth...
+    # TODO remove this
     def check(self,obj):
         if obj == None: return None
         else: return obj
     
-    def load_model(self,path:str, type=str):
-        if type == 'RandomClassifier':
-            model = RandomClassifier(420) # TODO this seed is constant! (BUT model state is loaded anyways...?)
-        if type == 'RandomAttentionClassifier':
-            model = RandomAttentionClassifier(420)
-        else:
-            assert False
-
-        model.load_state_dict(torch.load(path))
-        return model
-    
-    def load_json(self,path:str):
-        if path == None: return None
-        self.data = []
-        with open(path, 'r') as json_file:
-            json_list = list(json_file)
-            for json_str in json_list:
-                result = json.loads(json_str)
-                self.data.append(result)
-        return self.data
-    
-    def load_pickle(self, path:str):
-        if path == None: return None
-        with open(path, 'rb') as f:
-            result = pickle.load(f)
-        return result
-
     # TODO shift output_softmax parameter to train.train()!
     # TODO is this param really needed?
     def train(self, output_softmax=False): 

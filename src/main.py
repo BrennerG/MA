@@ -2,9 +2,6 @@ from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
 import data_access.locations as LOC
 
-# TODO s 
-# make yaml evaluation part human readable!
-
 # initialize relevant folders
 LOC.init_locations()
 
@@ -30,7 +27,7 @@ exp = Experiment(
     dataset = 'cose_train',
     testset = 'cose_test',
     model = RandomAttentionClassifier(parameters['random_seed']),
-    evaluation_mode = ['competence', 'explainability'], # ['competence', 'explainability']
+    evaluation_mode = ['competence'], # ['competence', 'explainability']
     viz_mode=['loss']
 )
 
@@ -42,8 +39,7 @@ exp.save()
 print('saved')
 
 # load the experiment
-loaded = exp.load('default')
+loaded = exp.load(exp.eid)
 print('loaded')
 evaluation = loaded.evaluate()
-
 print('done')
