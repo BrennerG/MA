@@ -1,11 +1,14 @@
 from models.random_attn_clf import RandomAttentionClassifier
 from data_access.experiment import Experiment
-
+import data_access.locations as LOC
 
 # TODO s 
-# TEST LOADING AGAIN
 # initiate all folders if not present in init! (besides data folders!)
 
+# initialize relevant folders
+LOC.init_locations()
+
+# set parameters for model, training and evaluation
 parameters = {
     'limit': -1,
     'epochs': 1,
@@ -18,6 +21,7 @@ parameters = {
     'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5],
 }
 
+# set the parameters of the experiment
 exp = Experiment(
     eid='default',
     #NOWRITE=True,
@@ -29,12 +33,16 @@ exp = Experiment(
     viz_mode=['loss']
 )
 
+# run the experiment
 exp.train()
 exp.evaluate()
 exp.visualize()
 exp.save()
 print('saved')
 
+# load the experiment
 loaded = exp.load('default')
-evaluation = loaded.evaluate()
 print('loaded')
+evaluation = loaded.evaluate()
+
+print('done')

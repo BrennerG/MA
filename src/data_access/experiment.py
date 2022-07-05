@@ -259,7 +259,7 @@ class Experiment():
                 aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
                 # TODO CURRENT include these predictions in er_results
                 er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
-                result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids)
+                result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids) # TODO avg_precision and roc_auc_score NaN, but only for testset!
                 result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
 
             if 'efficiency' in self.evaluation_mode:
