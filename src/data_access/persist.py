@@ -61,16 +61,15 @@ def save_pickle(exp, obj, save_loc=LOC['viz_data_dir']):
         pickle.dump(obj, f)
     return save_loc + filename
 
-# loads torch models, first init doesnt matter, since state dict will overwrite the attributes
-def load_model(path:str, type:str):
-    if type == 'RandomClassifier':
-        model = RandomClassifier(420) # TODO this seed is constant! (BUT model state is loaded anyways...?)
-    if type == 'RandomAttentionClassifier':
-        model = RandomAttentionClassifier(420)
-    else:
-        assert False
+def model_factory(type:str, parameters:{}=None, path:str=None):
+    model = None
 
-    model.load_state_dict(torch.load(path))
+    if type == 'RandomClassifier':
+        model = RandomClassifier(parameters['random_seed'])
+    elif type == 'RandomAttentionClassifier':
+        model = RandomAttentionClassifier(parameters['random_seed'])
+
+    if path: model.load_state_dict(torch.load(path))
     return model
 
 # loads jsons for experiment class (mostyle preprocessed or prediction data)

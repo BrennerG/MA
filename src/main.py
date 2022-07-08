@@ -3,21 +3,26 @@ from data_access.experiment import Experiment
 import data_access.locations as LOC
 
 
-
+'''
 # ***************************** MAIN FILE ******************************** #
 # Grand Description incoming! ^.~
-
 #      ************************** TODO *****************************       #
-# UNITE PARAMETERS AND EXPERIMENT INPUT!
-# - Experiment could take only parameters dict
-# - do more sophisticated structure
-# - read and write it as .yaml - from the experiment folder? (do a folder with plans or sth?)
-# FIND OUT WHY AUPCR_AGREEMENT GIVES NAN FOR TESTSET!
-# DOCUMENT PARAMETERS, MAIN AND EXPERIMENT CLASS
-# SHARE WITH GABOR
-# ADD EFFICIENCY EVALUATION METRICS!
-# ************************************************************************ #
 
+UNITE PARAMETERS AND EXPERIMENT INPUT!
+- Experiment could take only parameters dict
+- do more sophisticated structure
+- read and write it as .yaml - from the experiment folder? (do a folder with plans or sth?)
+
+DOCUMENT PARAMETERS, MAIN AND EXPERIMENT CLASS
+- create reference.yaml
+
+SHARE WITH GABOR
+
+FIND OUT WHY AUPCR_AGREEMENT GIVES NAN FOR TESTSET!
+
+ADD EFFICIENCY EVALUATION METRICS!
+# ************************************************************************ #
+'''
 
 # initialize relevant folders
 LOC.init_locations()
@@ -33,17 +38,22 @@ parameters = {
     'random_seed': 69,
     'eraser_k': -1,
     'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5],
+    'NOWRITE': False,
+    'dataset': 'cose_train',
+    'testset': 'cose_test',
+    'model': 'RandomAttentionClassifier',
+    'evaluation_mode': ['competence', 'explainability'],
+    'viz_mode': ['loss']
 }
 
 # set the parameters of the experiment
-# TODO put all of this into parameters probably - so there is only on dict not two ...!
 exp = Experiment(
     eid='default',
-    #NOWRITE=True,
-    parameters=parameters,
-    dataset = 'cose_train',
-    testset = 'cose_test',
-    model = RandomAttentionClassifier(parameters['random_seed']),
+    parameters = parameters,
+    NOWRITE = parameters['NOWRITE'],
+    dataset = parameters['dataset'],
+    testset = parameters['testset'],
+    model = parameters['model'],
     evaluation_mode = ['competence', 'explainability'], # ['competence', 'explainability']
     viz_mode=['loss']
 )

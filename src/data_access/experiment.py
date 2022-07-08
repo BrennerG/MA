@@ -15,6 +15,21 @@ import evaluation.visualizations.viz as viz
 import data_access.persist as P
 
 
+''' 
+# ***************************** EXPERIMENT CLASS ******************************** #
+
+This class represents a single pass through the pipeline and provides means to reproducing
+such passes/runs by saving data such as:
+- the trained model
+- data for visualizations
+- calculated evaluation metrics ...
+
+The central piece of information from which an experiment can be reloaded is its .yaml file,
+which is located at MA/data/experiments/
+
+# ***************************** **************** ******************************** # 
+'''
+
 class Experiment():
 
     def __init__(self, 
@@ -43,7 +58,7 @@ class Experiment():
         self.NOWRITE = NOWRITE
         # model relevant
         self.parameters = parameters 
-        self.model = model 
+        self.model = P.model_factory(model, self.parameters)
         # data
         self.dataset = CoseDataset(mode='train')
         self.testset = CoseDataset(mode='test')
@@ -106,7 +121,7 @@ class Experiment():
         new.edited = exp_yaml['edited']
         # model
         new.parameters = exp_yaml['parameters']
-        new.model = P.load_model(exp_yaml['model'], exp_yaml['model_type'])
+        new.model = P.model_factory(type=exp_yaml['model_type'], parameters=self.parameters, path=exp_yaml['model'])
         # data
         new.dataset = CoseDataset(mode='train')
         new.testset = CoseDataset(mode='test')
@@ -125,10 +140,9 @@ class Experiment():
     
     def train(self, output_softmax=False): 
         t_out = T.train(self.parameters, self.dataset, self.model)
-        self.model = t_out['model']
-        self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']]
-        # return
-        self.train_predictions = t_out['outputs'], t_out['attentions']
+        self.model = t_out['model'] # updates the model
+        self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
+        self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
         return self.train_predictions
     
     def evaluate(self):
