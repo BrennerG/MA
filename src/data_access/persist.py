@@ -1,5 +1,3 @@
-from data_access.locations import LOC
-
 import os
 import torch
 import json
@@ -9,6 +7,7 @@ import pickle
 from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
 
+from data_access.locations import LOC
 
 # This modules holds utility for saving and loading of relevant data for the Experiment class
 # TODO add other persisting (e.g. for dataset modules and visualization modules)
@@ -89,3 +88,7 @@ def load_pickle(path:str):
     with open(path, 'rb') as f:
         result = pickle.load(f)
     return result
+
+# parses tensor into list format (required by .yaml)
+def parse_tensor_list(tensor_list:[]):
+    return [x.squeeze().tolist() for x in tensor_list]

@@ -5,57 +5,63 @@ import data_access.locations as LOC
 
 '''
 # ***************************** MAIN FILE ******************************** #
-# Grand Description incoming! ^.~
+
+It's the main file!
+Currently this is for handling the Experiment Class, which is the main unit of this repo.
+Here you can set the parameters of the experiment and algorithm and train, evaluate, visualize.
+You can also save and load experiments.
+
+continue reading src/data_acess/experiment.py
+
 #      ************************** TODO *****************************       #
 
-UNITE PARAMETERS AND EXPERIMENT INPUT!
-- Experiment could take only parameters dict
-- do more sophisticated structure
-- read and write it as .yaml - from the experiment folder? (do a folder with plans or sth?)
+* find out why aupcr_agreement gives nan for testset!
+* add efficiency evaluation metrics!
+* import params from .yaml
+* implement CLI
 
-DOCUMENT PARAMETERS, MAIN AND EXPERIMENT CLASS
-- create reference.yaml
-
-SHARE WITH GABOR
-
-FIND OUT WHY AUPCR_AGREEMENT GIVES NAN FOR TESTSET!
-
-ADD EFFICIENCY EVALUATION METRICS!
 # ************************************************************************ #
 '''
 
 # initialize relevant folders
 LOC.init_locations()
 
-# set parameters for model, training and evaluation
+# these are all the parameters for a single experiment (=a single pass through the pipeline)
 parameters = {
-    'limit': -1,
-    'epochs': 1,
-    'print_every': 1000,
-    'batch_size': 1,
-    'lr': 0.001,
-    'momentum': 0.9,
-    'random_seed': 69,
-    'eraser_k': -1,
-    'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5],
-    'NOWRITE': False,
-    'dataset': 'cose_train',
-    'testset': 'cose_test',
-    'model': 'RandomAttentionClassifier',
-    'evaluation_mode': ['competence', 'explainability'],
-    'viz_mode': ['loss']
+    # DATASETS PARAMS
+    'dataset': 'cose_train', # which datasets should be used for training
+    'testset': 'cose_test', # which datasets should be used for evaluation
+    'limit': -1, # how many samples should be used for the experiment (-1 means all)
+
+    # MODEL PARAMS
+    'model': 'RandomAttentionClassifier', # currently: RandomClassifier, RandomAttentionClassifier
+    'random_seed': 69, # random seed for reproducibility
+    'epochs': 1, # train for x epochs
+    'batch_size': 1, # have batches of size x (currently only bs=1) # TODO
+    'lr': 0.001, # learning rate of the optimization alg
+    'momentum': 0.9, # adam optimizer momentum
+
+    # EVALUATION PARAMS
+    'evaluation_mode': ['competence', 'explainability'], # the modes of evaluation that should be calculated and saved in the .yaml (['competence', 'explainability'])
+    'print_every': 1000, # print loss, metrics, etc. every x samples
+    'eraser_k': None, # set the k parameter for the eraser benchmark manually # TODO not implemented yet
+    'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5], # parameter for the eraser benchmark (see src/train.py: predict_aopc_thresholded())
+    'viz_mode': ['loss'], # the visualizations that should be produced and saved during the run
+
+    # META PARAMS
+    'NOWRITE': False, # do not produce any file artefacts (disables any sort of reproduciblity)
 }
 
-# set the parameters of the experiment
+# the main unit
 exp = Experiment(
-    eid='default',
+    eid='default', # experiment identifier - None for automatic name
     parameters = parameters,
     NOWRITE = parameters['NOWRITE'],
     dataset = parameters['dataset'],
     testset = parameters['testset'],
     model = parameters['model'],
-    evaluation_mode = ['competence', 'explainability'], # ['competence', 'explainability']
-    viz_mode=['loss']
+    evaluation_mode = parameters['evaluation_mode'],
+    viz_mode = parameters['viz_mode']
 )
 
 # run the experiment
@@ -65,8 +71,7 @@ exp.visualize()
 exp.save()
 print('saved')
 
-# load the experiment
+# load the experiment & evaluate again
 loaded = exp.load(exp.eid)
-print('loaded')
 evaluation = loaded.evaluate()
 print('done')

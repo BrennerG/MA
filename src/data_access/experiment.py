@@ -1,18 +1,21 @@
 import os
 import yaml
-from yaml import CLoader as Loader
 import json
 import torch
+import pickle
+
 from os import walk
 from datetime import datetime
-from data_access.locations import LOC
+from yaml import CLoader as Loader
+
 import train as T
+import eval as E
+import data_access.persist as P
+import evaluation.visualizations.viz as viz
+
+from data_access.locations import LOC
 from data_access.csqa_dataset import CsqaDataset
 from data_access.cose_dataset import CoseDataset
-import eval
-import pickle
-import evaluation.visualizations.viz as viz
-import data_access.persist as P
 
 
 ''' 
@@ -24,8 +27,18 @@ such passes/runs by saving data such as:
 - data for visualizations
 - calculated evaluation metrics ...
 
+An Experiment can be:
+- initialized
+- trained
+- evaluated
+- visualized
+- saved
+- loaded
+
 The central piece of information from which an experiment can be reloaded is its .yaml file,
-which is located at MA/data/experiments/
+which is located at data/experiments/ and named after the eid (Experiment ID).
+Due to the nature of yaml, we will not persist the objects themselves (e.g. the model),
+but rather ids or locations of the actual persisted objects (e.g. pickle file of the model).
 
 # ***************************** **************** ******************************** # 
 '''
@@ -87,8 +100,8 @@ class Experiment():
         dic['testset'] = self.testset.location
         if not self.NOWRITE:
             dic['preprocessed'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
-            dic['train_predictions'] = P.save_json(self, [T.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
-            dic['test_predictions'] = P.save_json(self, [T.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
+            dic['train_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
+            dic['test_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
@@ -138,6 +151,9 @@ class Experiment():
         new.viz = exp_yaml['viz']
         return new
     
+    # Trains the algorithms of the experiment
+    # actually a wrapper for the training module src/train.py
+    # also saves training predictions and data for training visualization
     def train(self, output_softmax=False): 
         t_out = T.train(self.parameters, self.dataset, self.model)
         self.model = t_out['model'] # updates the model
@@ -145,6 +161,9 @@ class Experiment():
         self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
         return self.train_predictions
     
+    # evaluates the algorithm trained on the testset for the given evaluation modes
+    # results are saved in the main .yaml
+    # real evaluation logic at src/evaluation/ and src/eval.py
     def evaluate(self):
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
@@ -159,28 +178,29 @@ class Experiment():
             gold = dataset.labels
             doc_ids = dataset.docids
 
-            # do the evaluation
             if 'explainability' in self.evaluation_mode:
-                attn_detached = [x.detach().numpy() for x in attn] # model should return detached attn and predictions!
+                attn_detached = [x.detach().numpy() for x in attn] # TODO model could return detached attn and predictions?
                 # retrain for comp and suff:
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
                 comp_predictions, _ = T.predict(self.parameters, self.model, comp_data) # _ is attn vector
                 suff_predictions, _ = T.predict(self.parameters, self.model, suff_data) # _ is attn vector
                 aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
-                er_results = eval.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
-                result[mode]['agreement_auprc'] = eval.soft_scores(er_results, docids=doc_ids) # TODO avg_precision and roc_auc_score NaN, but only for testset!
-                result[mode]['classification_scores'] = eval.classification_scores(results=er_results, mode=mode)
+                er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
+                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids) # TODO avg_precision and roc_auc_score NaN, but only for testset!
+                result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.parameters['aopc_thresholds'])
 
             if 'efficiency' in self.evaluation_mode:
                 pass # TODO do me next!
 
             if 'competence' in self.evaluation_mode:
-                result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = eval.competence(gold, pred)
+                result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)
 
         self.evaluation_results = result
         return result
-    
+
+    # visualizes pretty much anything from the saved data for visualization (data/viz/data)
+    # actual vizualizations go into (data/viz/<eid>)
     def visualize(self, show=False):
         # create viz_directory
         if not self.NOWRITE:

@@ -3,12 +3,11 @@ import numpy as np
 from sklearn.metrics import accuracy_score as acc
 from sklearn.metrics import precision_score as pre
 from sklearn.metrics import recall_score as rec
-
-from data_access.locations import LOC
 import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
-from train import from_softmax
 
+from data_access.locations import LOC
+from train import from_softmax
 
 # returns accuracy, precision, recall
 def competence(gold_labels:[], predictions:[], rounded=3):
@@ -17,33 +16,35 @@ def competence(gold_labels:[], predictions:[], rounded=3):
             float(round(pre(gold_labels, predictions, average='macro'), rounded)),
             float(round(rec(gold_labels, predictions, average='macro'), rounded))]
 
-# TODO what does the threshold parameter actually do?
+''' 
+# not used anymore... substituted by soft_scores
+# measures the match/overlap of the annotated and predicted rationales
 def rationale_match(gold, pred, thresholds=[0.5]):
     transformed_gold = [EM.Rationale.from_annotation(ann) for ann in gold][0]
     transformed_pred = [EM.Rationale.from_annotation(ann) for ann in pred][0]
     return EM.partial_match_score(truth=transformed_gold, pred=transformed_pred, thresholds=thresholds)
+'''
 
+# measures the aggreement between the gold rationales and predicted rationales
 def soft_scores(results, docids):
-    # TODO store these somewhere else!
     flattened_documents = EM.load_flattened_documents(LOC['cose'], docids=None)
     annotations = EU.annotations_from_jsonl(LOC['cose_train'])
     paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
     scores = EM.score_soft_tokens(paired_scoring)
     return {k:float(v) for k,v in scores.items()}
 
-def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]): # TODO aopc thresholds are now in the parameters
-    # TODO store these somewhere else!
+# classification metrics (accuracy, precision, recall, comprehensiveness, sufficiency)
+def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
     if mode == 'train':
         annotations = EU.annotations_from_jsonl(LOC['cose_train'])
     else:
         annotations = EU.annotations_from_jsonl(LOC['cose_test'])
 
-    # TODO check for IDs and overlap
+    # TODO check for IDs and overlap (are results and annotation in the same order of samples?)
     docs = EU.load_documents(LOC['cose'])
     classifications = EM.score_classifications(results, annotations, docs, aopc_thresholds)
 
     # parse classification scores from numpy64 to float (for yaml readability!)
-    # TODO this might also go into experiments...
     ret = {}
     for k,v, in classifications.items():
         if isinstance(v, np.float64):
@@ -52,7 +53,7 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
             ret[k] = v
     return ret
 
-# TODO this assumes that the order of docids never changed since init of the 'experiment' class
+# brings all of the predictions into the correct format for the methods of evaluation above (e.g. soft_scores() and classification_scores())
 def create_results(docids, predictions, comp_predicitons, suff_predictions, attentions, aopc_thresholded_scores):
     assert len(docids) == len(predictions) == len(attentions)
 
@@ -85,6 +86,8 @@ def create_results(docids, predictions, comp_predicitons, suff_predictions, atte
 
     return result
 
+# This is the input for the ERASER benchmark as described by the original implementation
+# it's here for quick reference
 '''
 THE FOLLOWING TEXT DESCRIBES THE SHAPE OF 'INSTANCES' AS EG FOUND IN METRICS.COMPUTE_AOPC_SCORES(INSTANCES, THRESHOLDS)
 

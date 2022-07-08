@@ -4,9 +4,10 @@ import torch
 import numpy as np
 
 from torch.utils.data import Dataset
-from data_access.locations import LOC
 from functools import reduce
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
+
+from data_access.locations import LOC
 
 
 class CoseDataset(Dataset):
@@ -37,8 +38,11 @@ class CoseDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx]
     
-    # modes = {'comprehensiveness', 'sufficiency'}
-    def erase(self, weights:[], k=None, mode='comprehensiveness'):
+    # relevant for ERASER benchmark
+    # returns a new dataset where every sample's top k tokens are erased!
+    # k can be manually passed, otherwise the average rationale length will be used.
+    def erase(self, weights:[], k=None, mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
+
         assert len(weights) == len(self.data)
         if k == None: k = round(np.mean([len(x[4].text.split()) for x in self]))
         weights = [tensor.detach().numpy() for tensor in weights] # TODO make models return detached vector?

@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# TODO add option to return hard rationales!
-# TODO transform into Rationales, Annotations, probably in a model_util class or sth?
+# This is an extension of the RandomClassifier.
+# In addition to labeling randomly, this Classifier returns a randomized fake attention vector.
 class RandomAttentionClassifier(nn.Module):
 
     def __init__(self, seed:int):
@@ -21,3 +21,5 @@ class RandomAttentionClassifier(nn.Module):
         attn = torch.rand(len(question))
         attn.requires_grad = True
         return out, attn
+
+# TODO add option to return hard rationales! (or write another RND classifier for that~)

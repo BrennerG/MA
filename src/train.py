@@ -1,8 +1,9 @@
 import math
 import torch
+import numpy as np
+
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
 
@@ -63,14 +64,17 @@ def predict(P:{}, clf:nn.Module(), ds:Dataset()):
 
     return predictions, attentions
 
-# TODO CURRENT retrain for aopc_thresholds!
+# this method is for the eraser benchmark
+# it allows re-predicting a given dataset by omitting the top x% of tokens,
+# where x is a number in the 'aopc_thresholds' parameter.
+# this enables evaluation for sufficiency and comprehensiveness as proposed by ERASER.
 def predict_aopc_thresholded(P:{}, clf:nn.Module(), attn:[], ds:Dataset()):
     aopc_thresholds = P['aopc_thresholds'] # TODO put them into P{}
     intermediate = {}
     result = []
 
     for aopc in aopc_thresholds:
-        # TODO calculate the aopc erases on a per_sample basis or take aopc*avg (second approach currently)
+        # TODO calculate the aopc erases on a per_sample basis or take aopc*avg_evidence_len (second approach currently)
         tokens_to_be_erased = math.ceil(aopc * ds.avg_evidence_len)
         # comp
         comp_ds = ds.erase(attn, k=tokens_to_be_erased, mode='comprehensiveness')
@@ -97,6 +101,8 @@ def predict_aopc_thresholded(P:{}, clf:nn.Module(), attn:[], ds:Dataset()):
 
     return result
 
+# enables transformation from a label_softmax output of the model
+# to a dictionary or integer form of labels/predictions
 def from_softmax(softmax_predictions=None, to:str='int'): # or STR
     letters = ['A','B','C','D','E']
     intform = [x.squeeze().tolist() for x in softmax_predictions]
@@ -109,6 +115,3 @@ def from_softmax(softmax_predictions=None, to:str='int'): # or STR
         return [{k:v for k,v in zip(letters, x)} for x in intform]
     else:
         raise ValueError('"to" must be "int","str" or "dict"!')
-
-def parse_tensor_list(tensor_list:[]):
-    return [x.squeeze().tolist() for x in tensor_list]

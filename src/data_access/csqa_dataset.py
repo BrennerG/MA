@@ -3,16 +3,16 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-# would transforms be useful here? (e.g. transforming to BERT, masking, ...)
-## probably not... stuff like that should go into the preprocessing module
+# Pure Commen Sense QA Dataset
+# since CoseDataset is an extended version of this, there is really no reason to use this instead of the CoseDataset!
 class CsqaDataset(Dataset):
 
     def __init__(self, path_to_raw:str, limit=-1):
         self.location = path_to_raw
         self.data = []
 
-        # TODO CURRENT since cose_dataset, path has now become dataset id! change that and probably names!
-        ## are we still using CsqaDataset tho? ... 
+        # TODO since cose_dataset, path has now become dataset id! change that and probably names!
+        # TODO change this should you ever want to use this class again, which you probably dont...
         with open(path_to_raw, 'r') as json_file:
             json_list = list(json_file)
 
