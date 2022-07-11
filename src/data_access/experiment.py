@@ -229,6 +229,6 @@ class Experiment():
                     'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
             
             self.viz = newpath
+            self.lvl = 3
         else:
             print('NOWRITE param set: not even pictures will be exported!')
-        self.lvl = 3
