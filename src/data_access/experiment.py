@@ -70,6 +70,7 @@ class Experiment():
         self.date = date
         self.edited = None # TODO use this!
         self.NOWRITE = NOWRITE
+        self.lvl = 0 # progress level of the experiment 0=initiated, 1=trained, 2=evaluated, 3=visualized
         # model relevant
         self.parameters = parameters 
         self.model = P.model_factory(model, self.parameters)
@@ -91,9 +92,10 @@ class Experiment():
         # meta
         dic['date'] = self.date
         dic['edited'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S") 
+        dic['lvl'] = self.lvl
         # model
         dic['parameters'] = self.parameters
-        if not self.NOWRITE:
+        if not self.NOWRITE and self.lvl>1:
             dic['model'] = P.save_model(self)
         dic['model_type'] = self.model.TYPE
         # save data
@@ -101,8 +103,8 @@ class Experiment():
         dic['testset'] = self.testset.location
         if not self.NOWRITE:
             dic['preprocessed'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
-            dic['train_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
-            dic['test_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
+            if self.train_predictions: dic['train_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
+            if self.test_predictions: dic['test_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
         # save learnings
         dic['evaluation_mode'] = self.evaluation_mode
         dic['evaluation_results'] = self.evaluation_results
@@ -133,23 +135,29 @@ class Experiment():
         new.eid = filename
         new.date = (exp_yaml['date'])
         new.edited = exp_yaml['edited']
+        new.lvl = exp_yaml['lvl']
         # model
         new.parameters = exp_yaml['parameters']
-        new.model = P.model_factory(type=exp_yaml['model_type'], parameters=self.parameters, path=exp_yaml['model'])
+        if exp_yaml['lvl'] > 0: # == the experiment was trained already 
+            new.model = P.model_factory(type=exp_yaml['model_type'], parameters=self.parameters, path=exp_yaml['model'])
         # data
         new.dataset = CoseDataset(mode='train')
         new.testset = CoseDataset(mode='test')
         new.preprocessed = P.load_json(exp_yaml['preprocessed'])
-        train_predictions, train_attention = P.load_json(exp_yaml['train_predictions'])[0] # squeeze due to json
-        test_predictions, test_attention = P.load_json(exp_yaml['test_predictions'])[0] # squeeze due to json
-        new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
-        new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
+        if 'train_predictions' in exp_yaml.keys():
+            train_predictions, train_attention = P.load_json(exp_yaml['train_predictions'])[0] # squeeze due to json
+            new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
+        if 'test_predictions' in exp_yaml.keys():
+            test_predictions, test_attention = P.load_json(exp_yaml['test_predictions'])[0] # squeeze due to json
+            new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
         # learnings
         new.evaluation_mode = exp_yaml['evaluation_mode']
         new.evaluation_results = exp_yaml['evaluation_results']
-        new.viz_data = P.load_pickle(exp_yaml['viz_data'])
         new.viz_mode = exp_yaml['viz_mode']
-        new.viz = exp_yaml['viz']
+        if 'viz_data' in exp_yaml:
+            new.viz_data = P.load_pickle(exp_yaml['viz_data'])
+        if 'viz' in exp_yaml: # TODO rename to viz_dir
+            new.viz = exp_yaml['viz']
         return new
     
     # Trains the algorithms of the experiment
@@ -160,12 +168,15 @@ class Experiment():
         self.model = t_out['model'] # updates the model
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
         self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
+        self.lvl = 1 # increase progress level of experiment
         return self.train_predictions
     
     # evaluates the algorithm trained on the testset for the given evaluation modes
     # results are saved in the main .yaml
     # real evaluation logic at src/evaluation/ and src/eval.py
     def evaluate(self):
+        assert self.train_predictions != None
+        assert self.lvl > 0
         result = {'train':{}, 'test':{}}
         for mode in result.keys():
             if mode == 'train':
@@ -199,6 +210,7 @@ class Experiment():
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)
 
         self.evaluation_results = result
+        self.lvl = 2
         return result
 
     # visualizes pretty much anything from the saved data for visualization (data/viz/data)
@@ -219,3 +231,4 @@ class Experiment():
             self.viz = newpath
         else:
             print('NOWRITE param set: not even pictures will be exported!')
+        self.lvl = 3

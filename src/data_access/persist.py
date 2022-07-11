@@ -24,6 +24,7 @@ def hash_id(exp, as_str=True):
 # save any model that is part of the experiment class
 def save_model(exp):
     assert exp.model != None
+
     model_save_loc = LOC['models_dir'] + str(exp.eid) + '.pth'
     # TODO
     #   dirty fix: remove unwanted entries from the ordereddict: 
@@ -31,7 +32,9 @@ def save_model(exp):
     #   do it similarly to eval.efficiency_metrics() w. old & new and delete difference (mb init an empty model just for the state dict!)
     unwanted = ["lin.linear.input_shape", "lin.linear.output_shape", "lin.linear.parameter_quantity", "lin.linear.inference_memory", "lin.linear.MAdd", "lin.linear.duration", "lin.linear.Flops", "lin.linear.Memory"]
     state_dict = exp.model.state_dict()
-    for u in unwanted: state_dict.pop(u)
+    for u in unwanted: 
+        if u in state_dict.keys(): 
+            state_dict.pop(u)
     torch.save(state_dict, model_save_loc)
     return model_save_loc
 
@@ -101,3 +104,40 @@ def load_pickle(path:str):
 # parses tensor into list format (required by .yaml)
 def parse_tensor_list(tensor_list:[]):
     return [x.squeeze().tolist() for x in tensor_list]
+
+def read_experiment_yaml(path:str):
+    with open(path, 'r') as stream:
+        dict = yaml.safe_load(stream)
+    return dict
+
+# these are all the parameters for a single experiment (=a single pass through the pipeline)
+# TODO this should load from a central .yaml file!
+def create_default_experiment():
+    '''
+    return {
+        'lvl':0,
+
+        # DATASETS PARAMS
+        'dataset': 'cose_train', # which datasets should be used for training
+        'testset': 'cose_test', # which datasets should be used for evaluation
+        'limit': -1, # how many samples should be used for the experiment (-1 means all)
+
+        # MODEL PARAMS
+        'model': 'RandomAttentionClassifier', # currently: RandomClassifier, RandomAttentionClassifier
+        'random_seed': 69, # random seed for reproducibility
+        'epochs': 1, # train for x epochs
+        'batch_size': 1, # have batches of size x (currently only bs=1) # TODO
+        'lr': 0.001, # learning rate of the optimization alg
+        'momentum': 0.9, # adam optimizer momentum
+
+        # EVALUATION PARAMS
+        'evaluation_mode': ['competence', 'explainability', 'efficiency'], # the modes of evaluation that should be calculated and saved in the .yaml (['competence', 'explainability', 'efficiency'])
+        'print_every': 1000, # print loss, metrics, etc. every x samples
+        'eraser_k': None, # set the k parameter for the eraser benchmark manually # TODO not implemented yet
+        'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5], # parameter for the eraser benchmark (see src/train.py: predict_aopc_thresholded())
+        'viz_mode': ['loss'], # the visualizations that should be produced and saved during the run
+
+        # META PARAMS
+        'NOWRITE': False, # do not produce any file artefacts (disables any sort of reproduciblity)
+    }
+    '''

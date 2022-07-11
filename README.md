@@ -21,7 +21,7 @@ _diagram incoming_
   * ~~rnd clf~~
   * ~~eval: competence~~
   * ~~eval: explainability~~
-  * eval: efficiency
+  * ~~eval: efficiency~~
 * __BOW__ Baseline
   * bags
   * logistic regression
