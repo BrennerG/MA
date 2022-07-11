@@ -15,7 +15,6 @@ continue reading src/data_acess/experiment.py
 
 #      ************************** TODO *****************************       #
 
-* find out why aupcr_agreement gives nan for testset!
 * add efficiency evaluation metrics!
 * import params from .yaml
 * implement CLI

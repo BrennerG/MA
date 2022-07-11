@@ -188,7 +188,7 @@ class Experiment():
                 suff_predictions, _ = T.predict(self.parameters, self.model, suff_data) # _ is attn vector
                 aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
                 er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
-                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids) # TODO avg_precision and roc_auc_score NaN, but only for testset!
+                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}') # TODO avg_precision and roc_auc_score NaN, but only for testset!
                 result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.parameters['aopc_thresholds'])
 
             if 'efficiency' in self.evaluation_mode:

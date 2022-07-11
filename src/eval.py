@@ -26,9 +26,9 @@ def rationale_match(gold, pred, thresholds=[0.5]):
 '''
 
 # measures the aggreement between the gold rationales and predicted rationales
-def soft_scores(results, docids):
+def soft_scores(results, docids, ds='cose_train'):
     flattened_documents = EM.load_flattened_documents(LOC['cose'], docids=None)
-    annotations = EU.annotations_from_jsonl(LOC['cose_train'])
+    annotations = EU.annotations_from_jsonl(LOC[ds])
     paired_scoring = EM.PositionScoredDocument.from_results(results, annotations, flattened_documents, use_tokens=True)
     scores = EM.score_soft_tokens(paired_scoring)
     return {k:float(v) for k,v in scores.items()}
