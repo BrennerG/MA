@@ -41,7 +41,7 @@ parameters = {
     'momentum': 0.9, # adam optimizer momentum
 
     # EVALUATION PARAMS
-    'evaluation_mode': ['competence', 'explainability'], # the modes of evaluation that should be calculated and saved in the .yaml (['competence', 'explainability'])
+    'evaluation_mode': ['competence', 'explainability', 'efficiency'], # the modes of evaluation that should be calculated and saved in the .yaml (['competence', 'explainability', 'efficiency'])
     'print_every': 1000, # print loss, metrics, etc. every x samples
     'eraser_k': None, # set the k parameter for the eraser benchmark manually # TODO not implemented yet
     'aopc_thresholds' : [0.01, 0.05, 0.1, 0.2, 0.5], # parameter for the eraser benchmark (see src/train.py: predict_aopc_thresholded())

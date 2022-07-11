@@ -1,13 +1,26 @@
 import numpy as np
+import torch.nn as nn
 
 from sklearn.metrics import accuracy_score as acc
 from sklearn.metrics import precision_score as pre
 from sklearn.metrics import recall_score as rec
 import evaluation.eraserbenchmark.rationale_benchmark.metrics as EM
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
+from torchstat import stat
 
 from data_access.locations import LOC
 from train import from_softmax
+
+def efficiency_metrics(model:nn.Module, input_size):
+    state_dict_keys_before = model.state_dict().keys()
+    scores = stat(model, input_size=input_size) # calculates efficiency stats and writes them into model.state_dict()
+    # TODO create additional constraints here to get rid of unwanted state_dict_keys (e.g. ends with _shape or sth... - may depend on model too!)
+    # TODO state_dict_keys_new = empty after the efficiency calcs for train, bc the state_dict is then filled with the keys already!
+    #   this shouldnt matter as the only thing differentiating test/train in this regard is the #samples...
+    state_dict_keys_new = [x for x in model.state_dict().keys() if x not in state_dict_keys_before] 
+    state_dict = model.state_dict() # updated state_dict
+    results = {k:state_dict[k].item() if state_dict[k].shape[0]==1 else state_dict[k].tolist() for k in state_dict_keys_new}
+    return results
 
 # returns accuracy, precision, recall
 def competence(gold_labels:[], predictions:[], rounded=3):

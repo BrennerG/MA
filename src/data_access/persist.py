@@ -25,7 +25,14 @@ def hash_id(exp, as_str=True):
 def save_model(exp):
     assert exp.model != None
     model_save_loc = LOC['models_dir'] + str(exp.eid) + '.pth'
-    torch.save(exp.model.state_dict(), model_save_loc)
+    # TODO
+    #   dirty fix: remove unwanted entries from the ordereddict: 
+    #   also this only works for the linear layer...
+    #   do it similarly to eval.efficiency_metrics() w. old & new and delete difference (mb init an empty model just for the state dict!)
+    unwanted = ["lin.linear.input_shape", "lin.linear.output_shape", "lin.linear.parameter_quantity", "lin.linear.inference_memory", "lin.linear.MAdd", "lin.linear.duration", "lin.linear.Flops", "lin.linear.Memory"]
+    state_dict = exp.model.state_dict()
+    for u in unwanted: state_dict.pop(u)
+    torch.save(state_dict, model_save_loc)
     return model_save_loc
 
 # only for predictions of experiment class
@@ -68,7 +75,9 @@ def model_factory(type:str, parameters:{}=None, path:str=None):
     elif type == 'RandomAttentionClassifier':
         model = RandomAttentionClassifier(parameters['random_seed'])
 
-    if path: model.load_state_dict(torch.load(path))
+    if path: 
+        state_dict = torch.load(path)
+        model.load_state_dict(state_dict)
     return model
 
 # loads jsons for experiment class (mostyle preprocessed or prediction data)

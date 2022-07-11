@@ -11,7 +11,7 @@ class RandomAttentionClassifier(nn.Module):
         self.TYPE = "RandomAttentionClassifier"
         self.rationality = 'soft'
         self.seed = seed
-        self.lin = nn.Linear(3, 1)
+        self.lin = TestModule()
         torch.manual_seed(self.seed)
 
     def forward(self, question:str, context:str, answers:[]):
@@ -23,3 +23,15 @@ class RandomAttentionClassifier(nn.Module):
         return out, attn
 
 # TODO add option to return hard rationales! (or write another RND classifier for that~)
+
+
+class TestModule(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(150, 5)
+    
+    def forward(self, x):
+        x = x.view(1000,-1)
+        x = self.linear(x)
+        return x

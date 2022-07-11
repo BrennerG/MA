@@ -192,7 +192,8 @@ class Experiment():
                 result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.parameters['aopc_thresholds'])
 
             if 'efficiency' in self.evaluation_mode:
-                pass # TODO do me next!
+                # TODO does this actually need the train/test mode? or is eff beyond train / test
+                result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO input correct input sizes, but where do we get them from?
 
             if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)
