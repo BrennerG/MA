@@ -25,7 +25,8 @@ This class represents a single pass through the pipeline and provides means to r
 such passes/runs by saving data such as:
 - the trained model
 - data for visualizations
-- calculated evaluation metrics ...
+- calculated evaluation metrics 
+- ...
 
 An Experiment can be:
 - initialized
@@ -37,7 +38,7 @@ An Experiment can be:
 
 The central piece of information from which an experiment can be reloaded is its .yaml file,
 which is located at data/experiments/ and named after the eid (Experiment ID).
-Due to the nature of yaml, we will not persist the objects themselves (e.g. the model),
+Due to the nature of yaml, we will not persist the objects themselves (e.g. the model) in the .yaml,
 but rather ids or locations of the actual persisted objects (e.g. pickle file of the model).
 
 # ***************************** **************** ******************************** # 
