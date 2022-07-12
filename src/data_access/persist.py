@@ -4,6 +4,9 @@ import json
 import yaml
 import pickle
 
+import numpy as np
+import torch.nn as nn
+
 from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
 from models.bow import BagOfWordsClassifier
@@ -27,16 +30,21 @@ def save_model(exp):
     assert exp.model != None
 
     model_save_loc = LOC['models_dir'] + str(exp.eid) + '.pth'
-    # TODO
-    #   dirty fix: remove unwanted entries from the ordereddict: 
-    #   also this only works for the linear layer...
-    #   do it similarly to eval.efficiency_metrics() w. old & new and delete difference (mb init an empty model just for the state dict!)
-    unwanted = ["lin.linear.input_shape", "lin.linear.output_shape", "lin.linear.parameter_quantity", "lin.linear.inference_memory", "lin.linear.MAdd", "lin.linear.duration", "lin.linear.Flops", "lin.linear.Memory"]
-    state_dict = exp.model.state_dict()
-    for u in unwanted: 
-        if u in state_dict.keys(): 
-            state_dict.pop(u)
-    torch.save(state_dict, model_save_loc)
+    if isinstance(exp.model, nn.Module): # for torch
+        # TODO
+        #   dirty fix: remove unwanted entries from the ordereddict: 
+        #   also this only works for the linear layer...
+        #   do it similarly to eval.efficiency_metrics() w. old & new and delete difference (mb init an empty model just for the state dict!)
+        unwanted = ["lin.linear.input_shape", "lin.linear.output_shape", "lin.linear.parameter_quantity", "lin.linear.inference_memory", "lin.linear.MAdd", "lin.linear.duration", "lin.linear.Flops", "lin.linear.Memory"]
+        state_dict = exp.model.state_dict()
+        for u in unwanted: 
+            if u in state_dict.keys(): 
+                state_dict.pop(u)
+        torch.save(state_dict, model_save_loc)
+    else: # for custom
+        with open(model_save_loc, 'wb') as f:
+            pickle.dump(exp.model, f)
+
     return model_save_loc
 
 # only for predictions of experiment class
@@ -109,7 +117,9 @@ def load_pickle(path:str):
 
 # parses tensor into list format (required by .yaml)
 def parse_tensor_list(tensor_list:[]):
-    return [x.squeeze().tolist() for x in tensor_list]
+    if isinstance(tensor_list[0], torch.Tensor): return [x.squeeze().tolist() for x in tensor_list]
+    elif isinstance(tensor_list, np.ndarray): return tensor_list.tolist()
+    else: return tensor_list
 
 def load_yaml(eid:str):
     path = LOC['experiments_dir'] + eid + '.yaml'

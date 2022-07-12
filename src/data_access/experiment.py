@@ -144,10 +144,10 @@ class Experiment():
             self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
             self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
         else: # must be a 'custom' module then (e.g. Bag of Words)
-            t_out = T.train_custom(self.model_params, self.dataset, self.model)
-            # self.model = 
+            t_out = T.train_custom(self.model_params, self.dataset, self.model, proba=True)
+            self.model = t_out['model']
             # self.viz_data['xy'] = 
-            self.train_predictions = None
+            self.train_predictions = t_out['outputs'], t_out['attentions']
 
         self.lvl = 1 # increase progress level of experiment
         return self.train_predictions
@@ -166,21 +166,33 @@ class Experiment():
 
             elif mode == 'test':
                 dataset = self.testset
-                pred, attn = self.test_predictions = T.predict(self.model_params, self.model, self.testset)
+                if isinstance(self.model, nn.Module):
+                    pred, attn = self.test_predictions = T.predict(self.model_params, self.model, self.testset)
+                else:
+                    pred, attn = self.test_predictions = T.predict_custom(self.model_params, self.model, self.testset, proba=True)
             
             gold = dataset.labels
             doc_ids = dataset.docids
 
             if 'explainability' in self.evaluation_mode:
-                attn_detached = [x.detach().numpy() for x in attn] # TODO model could return detached attn and predictions?
+                if isinstance(attn[0], torch.Tensor): # for torch classifiers
+                    attn_detached = [x.detach().numpy() for x in attn]
+                else: # custom clf
+                    attn_detached = attn
                 # retrain for comp and suff:
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
-                comp_predictions, _ = T.predict(self.model_params, self.model, comp_data) # _ is attn vector
-                suff_predictions, _ = T.predict(self.model_params, self.model, suff_data) # _ is attn vector
-                aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset)
+                if isinstance(self.model, nn.Module): # for torch models
+                    comp_predictions, _ = T.predict(self.model_params, self.model, comp_data)
+                    suff_predictions, _ = T.predict(self.model_params, self.model, suff_data)
+                    aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
+                else:
+                    comp_predictions, _ = T.predict_custom(self.model_params, self.model, comp_data, proba=True)
+                    suff_predictions, _ = T.predict_custom(self.model_params, self.model, suff_data, proba=True)
+                    aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
+
                 er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
-                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}') # TODO avg_precision and roc_auc_score NaN, but only for testset!
+                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}')
                 result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.evaluation_params['aopc_thresholds'])
 
             if 'efficiency' in self.evaluation_mode:
@@ -204,12 +216,12 @@ class Experiment():
                 os.makedirs(newpath)
 
             for mode in self.viz_mode:
-                if mode == 'loss':
+                if mode == 'loss' and 'train_loss' in self.viz_data:
                     viz.loss_plot(self.viz_data['train_loss'], save_loc=newpath, show=show)
+                    self.lvl = 3
                 else:
-                    'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
+                    'VIZ_MODE:' + '"' + mode + '"' + " failed!"
             
             self.viz_dir = newpath
-            self.lvl = 3
         else:
             print('NOWRITE param set: not even pictures will be exported!')

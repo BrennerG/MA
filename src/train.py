@@ -7,9 +7,15 @@ import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
 
-def train_custom(P:{}, ds:Dataset, clf):
-    clf.train(ds)
-    return clf.predict(ds)
+def train_custom(P:{}, ds:Dataset, clf, proba=False):
+    return clf.train(ds, proba=proba)
+    '''
+    return {
+        'outputs': self.clf.predict(data),
+        'attentions': None,
+        'model': self
+        }
+    '''
 
 def train(P:{}, ds:Dataset, clf:nn.Module):
     epoch_losses = []
@@ -55,6 +61,10 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
         'losses': epoch_losses
     }
 
+def predict_custom(P:{}, clf, ds:Dataset(), proba=False):
+    if proba: return clf.predict_proba(ds)
+    else: return clf.predict(ds)
+
 def predict(P:{}, clf:nn.Module(), ds:Dataset()):
     predictions = []
     attentions = []
@@ -73,21 +83,31 @@ def predict(P:{}, clf:nn.Module(), ds:Dataset()):
 # where x is a number in the 'aopc_thresholds' parameter.
 # this enables evaluation for sufficiency and comprehensiveness as proposed by ERASER.
 def predict_aopc_thresholded(model_params:{}, eval_params, clf:nn.Module(), attn:[], ds:Dataset()):
-    aopc_thresholds = eval_params['aopc_thresholds'] # TODO put them into P{}
+    aopc_thresholds = eval_params['aopc_thresholds']
     intermediate = {}
     result = []
 
     for aopc in aopc_thresholds:
         # TODO calculate the aopc erases on a per_sample basis or take aopc*avg_evidence_len (second approach currently)
         tokens_to_be_erased = math.ceil(aopc * ds.avg_evidence_len)
+
         # comp
         comp_ds = ds.erase(attn, k=tokens_to_be_erased, mode='comprehensiveness')
-        comp_pred, _ = predict(model_params, clf, comp_ds)
-        comp_labels = from_softmax(comp_pred, to='dict')
+        if isinstance(clf, nn.Module): # for torch models
+            comp_pred, _ = predict(model_params, clf, comp_ds)
+            comp_labels = from_softmax(comp_pred, to='dict')
+        else: # for custom models
+            comp_pred, _ = predict_custom(model_params, clf, comp_ds)
+            comp_labels = from_softmax(clf.predict_proba(comp_ds)[0], to='dict')
+
         # suff
         suff_ds = ds.erase(attn, k=tokens_to_be_erased, mode='sufficiency')
-        suff_pred, _ = predict(model_params, clf, suff_ds)
-        suff_labels = from_softmax(suff_pred, to='dict')
+        if isinstance(clf, nn.Module): # for torch models
+            suff_pred, _ = predict(model_params, clf, suff_ds)
+            suff_labels = from_softmax(suff_pred, to='dict')
+        else: #  for custom models
+            suff_pred, _ = predict_custom(model_params, clf, suff_ds)
+            suff_labels = from_softmax(clf.predict_proba(suff_ds)[0], to='dict')
     
         intermediate[aopc] = [aopc, comp_labels, suff_labels]
 

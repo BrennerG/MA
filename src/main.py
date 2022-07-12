@@ -26,10 +26,13 @@ In the future this file will be a CLI interface, with the following arguments:
 #      ************************** TODO *****************************       #
 
 * BOW Model
-    * Bagging
-    * Logistic Regression
+    * ~~Bagging~~
+    * ~~Logistic Regression~~
+    * ~~Evaluation~~
+    * shift nn.Module vs Custom differentation from experiments into the specific functions!
 * revisit efficiency calculations for BOW
-* implement module for dynamic .yaml creation!
+* introduce preprocessing as intermediate step!
+* implement module for dynamic .yaml creation! (e.g. for parameter search)
 * implement CLI (low prio, coz it's only fancy)
     * loading new scripts vs creating new scripts
 * implement dynamic re-use of already saved data (e.g. preprocessed data!)
@@ -56,7 +59,7 @@ exp.train()
 print('evaluating...')
 exp.evaluate()
 
-print('visualizing')
+print('visualizing...')
 exp.visualize()
 
 print('saving...')

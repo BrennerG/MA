@@ -45,7 +45,8 @@ class CoseDataset(Dataset):
 
         assert len(weights) == len(self.data)
         if k == None: k = round(np.mean([len(x[4].text.split()) for x in self]))
-        weights = [tensor.detach().numpy() for tensor in weights] # TODO make models return detached vector?
+        if isinstance(weights[0], torch.Tensor):
+            weights = [tensor.detach().numpy() for tensor in weights] # TODO make models return detached vector?
 
         erased = []
         for i, X in enumerate(self): # (Question, Context, Answer, Label, Evidence)
