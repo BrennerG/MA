@@ -52,6 +52,9 @@ exp.train()
 print('evaluating...')
 exp.evaluate()
 
+print('visualizing')
+exp.visualize()
+
 print('saving...')
 exp.save()
 

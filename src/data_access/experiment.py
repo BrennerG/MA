@@ -125,6 +125,7 @@ class Experiment():
         # UPDATE state!
         self.state['lvl'] = self.lvl
         self.state['evaluation_results'] = self.evaluation_results # TODO if evaluation_results already exist, make a new save?
+        self.state['viz_dir'] = self.viz_dir
 
         # then simply save state as yaml
         P.save_yaml(self, self.state)
