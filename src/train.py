@@ -7,6 +7,10 @@ import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
 
+def train_custom(P:{}, ds:Dataset, clf):
+    clf.train(ds)
+    return clf.predict(ds)
+
 def train(P:{}, ds:Dataset, clf:nn.Module):
     epoch_losses = []
     

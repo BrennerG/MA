@@ -6,6 +6,7 @@ import pickle
 
 from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
+from models.bow import BagOfWordsClassifier
 
 from data_access.locations import LOC
 
@@ -78,6 +79,10 @@ def model_factory(type:str, parameters:{}=None, path:str=None):
         model = RandomClassifier(parameters['random_seed'])
     elif type == 'RandomAttentionClassifier':
         model = RandomAttentionClassifier(parameters['random_seed'])
+    elif type == "BagOfWordsClassifier":
+        model = BagOfWordsClassifier(parameters)
+    else:
+        raise AttributeError('model_type: "' + type + '" is unknown!')
 
     if path: 
         state_dict = torch.load(path)

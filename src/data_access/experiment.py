@@ -12,6 +12,7 @@ import train as T
 import eval as E
 import data_access.persist as P
 import evaluation.visualizations.viz as viz
+import torch.nn as nn
 
 from data_access.locations import LOC
 from data_access.csqa_dataset import CsqaDataset
@@ -137,10 +138,17 @@ class Experiment():
     # actually a wrapper for the training module src/train.py
     # also saves training predictions and data for training visualization
     def train(self, output_softmax=False): 
-        t_out = T.train(self.model_params, self.dataset, self.model)
-        self.model = t_out['model'] # updates the model
-        self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
-        self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
+        if isinstance(self.model, nn.Module): # torch module training
+            t_out = T.train(self.model_params, self.dataset, self.model)
+            self.model = t_out['model'] # updates the model
+            self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
+            self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
+        else: # must be a 'custom' module then (e.g. Bag of Words)
+            t_out = T.train_custom(self.model_params, self.dataset, self.model)
+            # self.model = 
+            # self.viz_data['xy'] = 
+            self.train_predictions = None
+
         self.lvl = 1 # increase progress level of experiment
         return self.train_predictions
     

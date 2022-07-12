@@ -25,7 +25,6 @@ In the future this file will be a CLI interface, with the following arguments:
 
 #      ************************** TODO *****************************       #
 
-* BUG: experiment can have high lvl, but if it's not saved, the actual state may be lower! - is this really relevant? unlikely scenario!
 * BOW Model
     * Bagging
     * Logistic Regression
@@ -39,7 +38,7 @@ In the future this file will be a CLI interface, with the following arguments:
 '''
 
 # script arguments
-EID = 'new'
+EID = 'bow'
 NOWRITE = False
 
 # initialize relevant folders
