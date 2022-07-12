@@ -48,6 +48,9 @@ exp = Experiment(
 print('training...')
 exp.train()
 
+print('evaluating...')
+exp.evaluate()
+
 print('saving...')
 exp.save()
 

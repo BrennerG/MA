@@ -1,37 +1,35 @@
 dataset: cose
 date: 11/07/2022, 15:47:52
 edited: 11/07/2022, 15:48:02
-evaluation_mode: &id001
+evaluation_mode:
 - competence
 - explainability
 - efficiency
-evaluation_results: null
-lvl: 0
-model_loc: data/models/new.pth
-model_params:
-  NOWRITE: false
+evaluation_params:
   aopc_thresholds:
   - 0.01
   - 0.05
   - 0.1
   - 0.2
   - 0.5
-  batch_size: 1
-  dataset: cose_train
-  epochs: 1
   eraser_k: null
-  evaluation_mode: *id001
-  limit: -1
+evaluation_results: null
+limit: -1
+lvl: 0
+model_loc: data/models/new.pth
+model_params:
+  batch_size: 1
+  epochs: 1
   lr: 0.001
   model: RandomAttentionClassifier
   momentum: 0.9
   print_every: 1000
   random_seed: 69
-  testset: cose_test
-  viz_mode: &id002
-  - loss
 model_type: RandomAttentionClassifier
 preprocessed: null
 testset: cose
+train_predictions_loc: data/predicted/new_train.jsonl
 viz: null
-viz_mode: *id002
+viz_data_loc: data/viz/data/new.pickle
+viz_mode:
+- loss

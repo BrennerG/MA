@@ -68,8 +68,8 @@ def predict(P:{}, clf:nn.Module(), ds:Dataset()):
 # it allows re-predicting a given dataset by omitting the top x% of tokens,
 # where x is a number in the 'aopc_thresholds' parameter.
 # this enables evaluation for sufficiency and comprehensiveness as proposed by ERASER.
-def predict_aopc_thresholded(P:{}, clf:nn.Module(), attn:[], ds:Dataset()):
-    aopc_thresholds = P['aopc_thresholds'] # TODO put them into P{}
+def predict_aopc_thresholded(model_params:{}, eval_params, clf:nn.Module(), attn:[], ds:Dataset()):
+    aopc_thresholds = eval_params['aopc_thresholds'] # TODO put them into P{}
     intermediate = {}
     result = []
 
@@ -78,11 +78,11 @@ def predict_aopc_thresholded(P:{}, clf:nn.Module(), attn:[], ds:Dataset()):
         tokens_to_be_erased = math.ceil(aopc * ds.avg_evidence_len)
         # comp
         comp_ds = ds.erase(attn, k=tokens_to_be_erased, mode='comprehensiveness')
-        comp_pred, _ = predict(P, clf, comp_ds)
+        comp_pred, _ = predict(model_params, clf, comp_ds)
         comp_labels = from_softmax(comp_pred, to='dict')
         # suff
         suff_ds = ds.erase(attn, k=tokens_to_be_erased, mode='sufficiency')
-        suff_pred, _ = predict(P, clf, suff_ds)
+        suff_pred, _ = predict(model_params, clf, suff_ds)
         suff_labels = from_softmax(suff_pred, to='dict')
     
         intermediate[aopc] = [aopc, comp_labels, suff_labels]

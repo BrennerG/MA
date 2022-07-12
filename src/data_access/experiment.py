@@ -82,6 +82,7 @@ class Experiment():
         if 'test_predictions' in state: self.test_predictions = state['test_predictions'] # semi_dir
         else: self.test_predictions = None
         # eval
+        self.evaluation_params = state['evaluation_params']
         self.evaluation_mode = state['evaluation_mode']
         self.evaluation_results = state['evaluation_results']
         # viz
@@ -89,6 +90,10 @@ class Experiment():
         if 'viz_data' in state: self.viz_data = state['viz_data'] # semi_dir
         else: self.viz_data = {}
         if 'viz_dir' in state: self.viz_dir = state['viz_dir'] # semi_dir
+
+        # TODO
+        # hidden_state = state.copy()
+        # state = None
     
 
     # switch objects vs locations and pop object entries!
@@ -115,6 +120,10 @@ class Experiment():
         if len(self.viz_data.keys()) != 0: 
             self.state['viz_data_loc'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
             if 'viz_data' in self.state: self.state.pop('viz_data')
+
+        # UPDATE state!
+        self.state['lvl'] = self.lvl
+        self.state['evaluation_results'] = self.evaluation_results # TODO if evaluation_results already exist, make a new save?
 
         # then simply save state as yaml
         P.save_yaml(self, self.state)
@@ -187,7 +196,7 @@ class Experiment():
 
             elif mode == 'test':
                 dataset = self.testset
-                pred, attn = self.test_predictions = T.predict(self.parameters, self.model, self.testset)
+                pred, attn = self.test_predictions = T.predict(self.model_params, self.model, self.testset)
             
             gold = dataset.labels
             doc_ids = dataset.docids
@@ -197,12 +206,12 @@ class Experiment():
                 # retrain for comp and suff:
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
-                comp_predictions, _ = T.predict(self.parameters, self.model, comp_data) # _ is attn vector
-                suff_predictions, _ = T.predict(self.parameters, self.model, suff_data) # _ is attn vector
-                aopc_predictions = T.predict_aopc_thresholded(self.parameters, self.model, attn, dataset)
+                comp_predictions, _ = T.predict(self.model_params, self.model, comp_data) # _ is attn vector
+                suff_predictions, _ = T.predict(self.model_params, self.model, suff_data) # _ is attn vector
+                aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset)
                 er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
                 result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}') # TODO avg_precision and roc_auc_score NaN, but only for testset!
-                result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.parameters['aopc_thresholds'])
+                result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.evaluation_params['aopc_thresholds'])
 
             if 'efficiency' in self.evaluation_mode:
                 # TODO does this actually need the train/test mode? or is eff beyond train / test
