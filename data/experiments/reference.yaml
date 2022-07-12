@@ -1,0 +1,181 @@
+dataset: cose # the dataset used for training
+date: 11/07/2022, 15:47:52 # date of experiment initialization
+evaluation_mode: # the modes of evaluation
+- competence
+- explainability
+- efficiency
+evaluation_params: # parameters that are relevant for the evaluation
+  aopc_thresholds: &id001 # parameter for the eraser benchmark (see src/train.py: predict_aopc_thresholded())
+  - 0.01
+  - 0.05
+  - 0.1
+  - 0.2
+  - 0.5
+  eraser_k: null  # set the k parameter for the eraser benchmark manually # TODO not implemented yet
+evaluation_results: # all the results of the evaluation suite
+  test: # for testset
+    accuracy: 0.196 # classification score (calculated by sklearn)
+    agreement_auprc: # agreement between human rationales and predicted rationales (area-under-precision-curve)
+      auprc: 0.5936518080330586
+      average_precision: 0.38463261483562955
+      roc_auc_score: 0.49531125466679493
+    classification_scores: # classification scores (calculated by eraser)
+      accuracy: 0.19555143651529194
+      aopc_thresholds: *id001 # see above
+      comprehensiveness: 0.07010243222656021 # general comprehensiveness
+      comprehensiveness_aopc: 0.07198797436198004 # (area-under-precision-curve)
+      comprehensiveness_aopc_points: # comprehensiveness across the aopc_thresholds
+      - 0.06990911109343627
+      - 0.07116302959724528
+      - 0.07231697203993687
+      - 0.0743070732702029
+      - 0.07224368580907888
+      comprehensiveness_entropy: -0.00040800204118817096
+      comprehensiveness_kl: 0.06439625872302603
+      prf: # classification scores on per_label basis (calculated by eraser)
+        A:
+          f1-score: 0.1651376146788991
+          precision: 0.1651376146788991
+          recall: 0.1651376146788991
+          support: 218
+        B:
+          f1-score: 0.2375
+          precision: 0.22440944881889763
+          recall: 0.252212389380531
+          support: 226
+        C:
+          f1-score: 0.1726618705035971
+          precision: 0.1791044776119403
+          recall: 0.16666666666666666
+          support: 216
+        D:
+          f1-score: 0.19259259259259262
+          precision: 0.20526315789473684
+          recall: 0.1813953488372093
+          support: 215
+        E:
+          f1-score: 0.20476190476190473
+          precision: 0.19907407407407407
+          recall: 0.2107843137254902
+          support: 204
+        accuracy: 0.19555143651529194
+        macro avg:
+          f1-score: 0.1945307965073987
+          precision: 0.19459775461570958
+          recall: 0.19523926665775926
+          support: 1079
+        weighted avg:
+          f1-score: 0.19476255793105926
+          precision: 0.19475977076527295
+          recall: 0.19555143651529194
+          support: 1079
+      sufficiency: 0.07243193953235023 # general sufficiency score
+      sufficiency_aopc: 0.07077087650871365 # sufficiency score (area under precision curve)
+      sufficiency_aopc_points: # sufficiency score (scores across aopc_thresholds)
+      - 0.07267048166403625
+      - 0.07135157626850722
+      - 0.07066098093793169
+      - 0.07012600040165112
+      - 0.06904534327144199
+      sufficiency_entropy: 0.0006573620227293559
+      sufficiency_kl: 0.06583530976077329
+    efficiency: {} # efficiency metrics currently only accounted for in training
+    precision: 0.195 # general classification score (by sklearn)
+    recall: 0.195 # general classification score (by sklearn)
+  train: # same as for 'test' above, but this includes the efficiency metrics (see ['train']['efficiency'])
+    accuracy: 0.2
+    agreement_auprc:
+      auprc: 0.557945764641434
+      average_precision: 0.41659034510328447
+      roc_auc_score: 0.49978134883153524
+    classification_scores:
+      accuracy: 0.20006855575868374
+      aopc_thresholds: *id001
+      comprehensiveness: 0.07189919455981451
+      comprehensiveness_aopc: 0.07091920078703129
+      comprehensiveness_aopc_points:
+      - 0.07110418835007866
+      - 0.07142155629053194
+      - 0.07055339235318671
+      - 0.07118176276432912
+      - 0.07033510417703001
+      comprehensiveness_entropy: 0.00011818347439215573
+      comprehensiveness_kl: 0.06507754505469283
+      prf:
+        A:
+          f1-score: 0.20348671048871106
+          precision: 0.19866071428571427
+          recall: 0.20855301698886936
+          support: 1707
+        B:
+          f1-score: 0.20665701881331403
+          precision: 0.2104952830188679
+          recall: 0.2029562251279136
+          support: 1759
+        C:
+          f1-score: 0.1978639685216414
+          precision: 0.19577308120133483
+          recall: 0.2
+          support: 1760
+        D:
+          f1-score: 0.19965870307167236
+          precision: 0.20347826086956522
+          recall: 0.19597989949748743
+          support: 1791
+        E:
+          f1-score: 0.19275028768699656
+          precision: 0.19241815048822516
+          recall: 0.1930835734870317
+          support: 1735
+        accuracy: 0.20006855575868374
+        macro avg:
+          f1-score: 0.20008333771646708
+          precision: 0.20016509797274148
+          recall: 0.20011454302026038
+          support: 8752
+        weighted avg:
+          f1-score: 0.20008141931367027
+          precision: 0.20020689229258617
+          recall: 0.20006855575868374
+          support: 8752
+      sufficiency: 0.07111982654497517
+      sufficiency_aopc: 0.07135140781888442
+      sufficiency_aopc_points:
+      - 0.0712649572267788
+      - 0.07103114749153419
+      - 0.07082896458216598
+      - 0.07185463482680879
+      - 0.07177733496713437
+      sufficiency_entropy: -3.379144303678414e-05
+      sufficiency_kl: 0.06554353260313348
+    efficiency: # efficiency metrics for the given module! here for the 'linear' module
+      linear.Flops: 750000 # Floating point operations
+      linear.MAdd: 1495 # Matrix Adds
+      linear.Memory: # Memory Usage # TODO meaning of [0] or [1] unknown
+      - 3620000
+      - 20000
+      linear.duration: 0.0003666877746582031
+      linear.inference_memory: 1.9073486328125e-05
+      linear.input_shape: 150
+      linear.output_shape: 5
+      linear.parameter_quantity: 755 # number of parameters
+    precision: 0.2
+    recall: 0.2
+limit: -1 # how many samples should be used (-1 uses all)
+lvl: 3 # which step is has been performed last? 0=initialized, 1=trained, 2=evaluated, 3=visualized
+model_loc: data/models/new.pth # location of the saved model - if trained
+model_params: # model parameters
+  batch_size: 1
+  epochs: 1
+  lr: 0.001
+  momentum: 0.9
+  print_every: 1000
+  random_seed: 69
+model_type: RandomAttentionClassifier
+preprocessed: null
+testset: cose
+train_predictions_loc: data/predicted/new_train.jsonl # location of predictions
+viz_data_loc: data/viz/data/new.pickle # location for data relevant for visualization
+viz_dir: data/viz/new/ # location of the visualization files
+viz_mode: # kinds of visualizations to create
+- loss

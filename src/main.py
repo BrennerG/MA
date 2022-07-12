@@ -10,16 +10,21 @@ from data_access.experiment import Experiment
 
 It's the main file!
 Currently this is for handling the Experiment Class, which is the main unit of this repo.
-Here you can set the parameters of the experiment and algorithm and train, evaluate, visualize.
+This means training, evaluation, visualization.
 You can also save and load experiments.
+see src/data_access/experiment.py
 
-continue reading src/data_acess/experiment.py
+The input to the Experiment Class is a .yaml file with all the experiment settings.
+(model_parameters, evaluation_parameters, ...)
+This file can either be manually written or generated automatically (TODO).
+see data/experiments/reference.yaml
+
+In the future this file will be a CLI interface, with the following arguments:
+- EID (experiment id - load a saved experiment or create new experiment with new id)
+- NOWRITE (do a pass through the pipeline without saving the data to disk)
 
 #      ************************** TODO *****************************       #
 
-* CURRENT rework saving and loading
-    * start with saving and loading then insert all the steps between and debug/develop!!!
-    * redo comments
 * BUG: experiment can have high lvl, but if it's not saved, the actual state may be lower! - is this really relevant? unlikely scenario!
 * BOW Model
     * Bagging
