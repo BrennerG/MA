@@ -48,8 +48,8 @@ class Experiment():
 
     def __init__(self, 
             eid:str,  # 'auto' for automatic name
-            state:{}=None,  # the state dictionary for the experiment, keeps everything
-            NOWRITE = False
+            NOWRITE = False,
+            state:{}=None  # the state dictionary for the experiment, keeps everything
             ):
         
         # TODO use this for loading!
@@ -73,8 +73,8 @@ class Experiment():
         # TODO check for model_loc!
         self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=None) # semi_dir
         # data
-        self.dataset = state['dataset'] # CoseDataset(mode='train') # semi_dir
-        self.testset = state['testset'] # CoseDataset(mode='test') # semi_dir
+        if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train')
+        if state['testset'] == 'cose': self.testset = CoseDataset(mode='test')
         if 'preprocessed' in state: self.preprocessed = state['preprocessed'] # semi_dir
         else: self.preprocessed = None
         if 'train_predictions' in state: self.train_predictions = state['train_predictions'] # semi_dir
@@ -92,6 +92,7 @@ class Experiment():
     
 
     # switch objects vs locations and pop object entries!
+    # TODO add option to copy and rename the experiment!
     def save(self):
         # model
         if self.lvl>0: # only save model if it has been trained!
@@ -113,44 +114,13 @@ class Experiment():
 
         if len(self.viz_data.keys()) != 0: 
             self.state['viz_data_loc'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
-            if 'viz_data' in state: self.state.pop('viz_data')
+            if 'viz_data' in self.state: self.state.pop('viz_data')
 
         # then simply save state as yaml
         P.save_yaml(self, self.state)
 
-        '''
-        # OLD
-        dic = {}
-        # meta
-        dic['date'] = self.date
-        dic['lvl'] = self.lvl
-        # model
-        dic['parameters'] = self.parameters
-        if not self.NOWRITE and self.lvl>1:
-            dic['model'] = P.save_model(self)
-        dic['model_type'] = self.model.TYPE
-        # save data
-        dic['dataset'] = self.dataset.location 
-        dic['testset'] = self.testset.location
-        if not self.NOWRITE:
-            dic['preprocessed'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
-            if self.train_predictions: dic['train_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
-            if self.test_predictions: dic['test_predictions'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
-        # save learnings
-        dic['evaluation_mode'] = self.evaluation_mode
-        dic['evaluation_results'] = self.evaluation_results
-        dic['viz_mode'] = self.viz_mode
-        if not self.NOWRITE and len(self.viz_data.keys()) != 0: 
-            dic['viz_data'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
-        dic['viz'] = self.viz
-
-        # save all paths in yaml!
-        if not self.NOWRITE:
-            return P.save_yaml(self, dic)
-        else:
-            return dic
-        '''
-    
+    '''
+    '''
     # TODO put the logic into the experiment constructor, then simply init a new experiment!
     def load(self, eid:str):
         filename = str(eid) + '.yaml'
@@ -196,7 +166,7 @@ class Experiment():
     # actually a wrapper for the training module src/train.py
     # also saves training predictions and data for training visualization
     def train(self, output_softmax=False): 
-        t_out = T.train(self.parameters, self.dataset, self.model)
+        t_out = T.train(self.model_params, self.dataset, self.model)
         self.model = t_out['model'] # updates the model
         self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
         self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions

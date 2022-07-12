@@ -20,13 +20,14 @@ continue reading src/data_acess/experiment.py
 * CURRENT rework saving and loading
     * start with saving and loading then insert all the steps between and debug/develop!!!
 * BUG: experiment can have high lvl, but if it's not saved, the actual state may be lower! - is this really relevant? unlikely scenario!
-* revisit saving / loading!
 * BOW Model
     * Bagging
     * Logistic Regression
 * revisit efficiency calculations for BOW
-* implement dynamic re-use of already saved data (e.g. preprocessed data!)
+* implement module for dynamic .yaml creation!
 * implement CLI (low prio, coz it's only fancy)
+    * loading new scripts vs creating new scripts
+* implement dynamic re-use of already saved data (e.g. preprocessed data!)
 
 # ************************************************************************ #
 '''
@@ -44,22 +45,10 @@ exp = Experiment(
     NOWRITE=NOWRITE
 )
 
-print('saving')
+print('training...')
+exp.train()
+
+print('saving...')
 exp.save()
-#print('loading')
-#exp.load(NAME)
 
-# OLD~
-## run the experiment
-#exp.train()
-#exp.evaluate()
-#exp.visualize()
-#exp.save()
-#print('saved')
-
-## load the experiment & evaluate again
-#print('loading...')
-#loaded = exp.load(exp.eid)
-#print('evaluating...')
-#exp.evaluate()
-#print('done')
+print('done')
