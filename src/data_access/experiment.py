@@ -89,14 +89,17 @@ class Experiment():
         else: self.viz_data = {}
         if 'viz_dir' in state: self.viz_dir = state['viz_dir'] # semi_dir
 
-        # TODO
-        # hidden_state = state.copy()
-        # state = None
+        # hide state for consistency
+        self.hidden_state = state.copy()
+        self.state = None
     
 
     # switch objects vs locations and pop object entries!
     # TODO add option to copy and rename the experiment!
     def save(self):
+        self.state = self.hidden_state.copy() # reactivate hidden state
+        self.hidden_state = None
+
         # model
         if self.lvl>0: # only save model if it has been trained!
             self.state['model_loc'] = P.save_model(self)
