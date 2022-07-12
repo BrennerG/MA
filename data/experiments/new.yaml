@@ -1,6 +1,5 @@
 dataset: cose
 date: 11/07/2022, 15:47:52
-edited: 11/07/2022, 15:48:02
 evaluation_mode:
 - competence
 - explainability
@@ -29,7 +28,7 @@ model_type: RandomAttentionClassifier
 preprocessed: null
 testset: cose
 train_predictions_loc: data/predicted/new_train.jsonl
-viz: null
+viz_dir: null
 viz_data_loc: data/viz/data/new.pickle
 viz_mode:
 - loss
