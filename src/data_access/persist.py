@@ -114,6 +114,7 @@ def load_yaml(eid:str):
 
 # these are all the parameters for a single experiment (=a single pass through the pipeline)
 # TODO this should load from a central .yaml file!
+# TODO deprecated
 def create_default_experiment():
     '''
     return {

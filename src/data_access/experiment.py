@@ -46,19 +46,16 @@ but rather ids or locations of the actual persisted objects (e.g. pickle file of
 
 class Experiment():
 
+    # init function also loads an experiment from disk
     def __init__(self, 
             eid:str,  # 'auto' for automatic name
             NOWRITE = False,
             state:{}=None  # the state dictionary for the experiment, keeps everything
             ):
         
-        # TODO use this for loading!
-        #   means loading proper objects from paths!
-        # TODO which of the entries can stay in the state dict, without being part of the Experiment object?
-
         # meta
         self.eid = eid
-        # self.eid = P.hash_id(str(model) + str(parameters)) # automatic name
+        # self.eid = P.hash_id(str(model) + str(parameters)) # automatic name - TODO prbly put this in CLI
         if state == None: 
             state = P.load_yaml(eid)
             self.state = state
@@ -67,19 +64,20 @@ class Experiment():
         self.NOWRITE = NOWRITE
         self.lvl = state['lvl']
         self.date = state['date']
-        self.edited = state['edited']
         # model
         self.model_params = state['model_params']
-        # TODO check for model_loc!
-        self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=None) # semi_dir
+        if 'model_loc' in state and os.path.exists(state['model_loc']): # load old model
+            self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=state['model_loc'])
+        elif 'model_loc' in state: # load new model
+            self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=None)
         # data
         if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train')
         if state['testset'] == 'cose': self.testset = CoseDataset(mode='test')
-        if 'preprocessed' in state: self.preprocessed = state['preprocessed'] # semi_dir
+        if 'preprocessed' in state: self.preprocessed = state['preprocessed']
         else: self.preprocessed = None
-        if 'train_predictions' in state: self.train_predictions = state['train_predictions'] # semi_dir
+        if 'train_predictions' in state: self.train_predictions = state['train_predictions']
         else: self.train_predictions = None
-        if 'test_predictions' in state: self.test_predictions = state['test_predictions'] # semi_dir
+        if 'test_predictions' in state: self.test_predictions = state['test_predictions']
         else: self.test_predictions = None
         # eval
         self.evaluation_params = state['evaluation_params']
@@ -118,7 +116,7 @@ class Experiment():
             if 'test_predictions_loc' in self.state: self.state.pop('test_predictions_loc')
 
         if len(self.viz_data.keys()) != 0: 
-            self.state['viz_data_loc'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
+            self.state['viz_data_loc'] = P.save_pickle(self, self.viz_data)
             if 'viz_data' in self.state: self.state.pop('viz_data')
 
         # UPDATE state!
@@ -128,49 +126,6 @@ class Experiment():
         # then simply save state as yaml
         P.save_yaml(self, self.state)
 
-    '''
-    '''
-    # TODO put the logic into the experiment constructor, then simply init a new experiment!
-    def load(self, eid:str):
-        filename = str(eid) + '.yaml'
-        path = LOC['experiments_dir'] + filename
-        files_in_dir = next(walk(LOC['experiments_dir']), (None, None, []))[2]
-        if filename in files_in_dir:
-            with open(path, 'r') as file:
-                exp_yaml = yaml.load(file, Loader=Loader)
-        else:
-            exp_yaml = None
-
-        # init the experiment
-        new = Experiment()
-        # meta
-        new.eid = filename
-        new.date = (exp_yaml['date'])
-        new.lvl = exp_yaml['lvl']
-        # model
-        new.parameters = exp_yaml['parameters']
-        if exp_yaml['lvl'] > 0: # == the experiment was trained already 
-            new.model = P.model_factory(type=exp_yaml['model_type'], parameters=self.parameters, path=exp_yaml['model'])
-        # data
-        new.dataset = CoseDataset(mode='train')
-        new.testset = CoseDataset(mode='test')
-        new.preprocessed = P.load_json(exp_yaml['preprocessed'])
-        if 'train_predictions' in exp_yaml.keys():
-            train_predictions, train_attention = P.load_json(exp_yaml['train_predictions'])[0] # squeeze due to json
-            new.train_predictions = ([torch.tensor(x) for x in train_predictions], [torch.tensor(x) for x in train_attention]) # reconstruct tensors
-        if 'test_predictions' in exp_yaml.keys():
-            test_predictions, test_attention = P.load_json(exp_yaml['test_predictions'])[0] # squeeze due to json
-            new.test_predictions = ([torch.tensor(x) for x in test_predictions], [torch.tensor(x) for x in test_attention]) # reconstruct tensors
-        # learnings
-        new.evaluation_mode = exp_yaml['evaluation_mode']
-        new.evaluation_results = exp_yaml['evaluation_results']
-        new.viz_mode = exp_yaml['viz_mode']
-        if 'viz_data' in exp_yaml:
-            new.viz_data = P.load_pickle(exp_yaml['viz_data'])
-        if 'viz' in exp_yaml: # TODO rename to viz_dir
-            new.viz = exp_yaml['viz']
-        return new
-    
     # Trains the algorithms of the experiment
     # actually a wrapper for the training module src/train.py
     # also saves training predictions and data for training visualization

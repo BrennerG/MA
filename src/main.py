@@ -19,6 +19,7 @@ continue reading src/data_acess/experiment.py
 
 * CURRENT rework saving and loading
     * start with saving and loading then insert all the steps between and debug/develop!!!
+    * redo comments
 * BUG: experiment can have high lvl, but if it's not saved, the actual state may be lower! - is this really relevant? unlikely scenario!
 * BOW Model
     * Bagging
