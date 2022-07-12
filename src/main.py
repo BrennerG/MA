@@ -17,43 +17,49 @@ continue reading src/data_acess/experiment.py
 
 #      ************************** TODO *****************************       #
 
-* ~~import params from .yaml~~
+* CURRENT rework saving and loading
+    * start with saving and loading then insert all the steps between and debug/develop!!!
 * BUG: experiment can have high lvl, but if it's not saved, the actual state may be lower! - is this really relevant? unlikely scenario!
-* remove redundancies in the .yaml!
 * revisit saving / loading!
 * BOW Model
     * Bagging
     * Logistic Regression
 * revisit efficiency calculations for BOW
+* implement dynamic re-use of already saved data (e.g. preprocessed data!)
 * implement CLI (low prio, coz it's only fancy)
 
 # ************************************************************************ #
 '''
 
+# script arguments
+EID = 'new'
+NOWRITE = False
+
 # initialize relevant folders
 LOC.init_locations()
 
-# load configuration file
-yaml = P.read_experiment_yaml(LOC.LOC['experiments_dir'] + 'init.yaml')
-
 # the main unit
 exp = Experiment(
-    eid='init', # experiment identifier - None for automatic name
-    parameters = yaml['parameters'],
-    dataset = yaml['parameters']['dataset'],
-    testset = yaml['parameters']['testset'],
-    model = yaml['model_type'],
-    evaluation_mode = yaml['parameters']['evaluation_mode'],
-    viz_mode = yaml['parameters']['viz_mode']
+    eid=EID, # experiment identifier - None for automatic name
+    NOWRITE=NOWRITE
 )
 
-# run the experiment
-exp.train()
-exp.evaluate()
+print('saving')
+exp.save()
+#print('loading')
+#exp.load(NAME)
+
+# OLD~
+## run the experiment
+#exp.train()
+#exp.evaluate()
 #exp.visualize()
 #exp.save()
 #print('saved')
 
-# load the experiment & evaluate again
-loaded = exp.load(exp.eid)
-print('done')
+## load the experiment & evaluate again
+#print('loading...')
+#loaded = exp.load(exp.eid)
+#print('evaluating...')
+#exp.evaluate()
+#print('done')

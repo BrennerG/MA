@@ -54,6 +54,7 @@ def save_json(exp, obj, type=None): # type = 'preprocessed_data' | 'train_predic
     return save_loc
 
 # only for experiment yamls!
+# TODO redundant... dic is in exp!
 def save_yaml(exp, dic):
     assert exp.eid != None
     filename = LOC['experiments_dir'] + str(exp.eid) + '.yaml'
@@ -105,7 +106,8 @@ def load_pickle(path:str):
 def parse_tensor_list(tensor_list:[]):
     return [x.squeeze().tolist() for x in tensor_list]
 
-def read_experiment_yaml(path:str):
+def load_yaml(eid:str):
+    path = LOC['experiments_dir'] + eid + '.yaml'
     with open(path, 'r') as stream:
         dict = yaml.safe_load(stream)
     return dict

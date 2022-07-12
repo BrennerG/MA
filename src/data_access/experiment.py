@@ -47,51 +47,82 @@ but rather ids or locations of the actual persisted objects (e.g. pickle file of
 class Experiment():
 
     def __init__(self, 
-            eid=None, 
-            date=datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
-            edited=None,
-            NOWRITE=False,
-            parameters=None, 
-            model=None, 
-            dataset='csqa_train', 
-            testset='csqa_test',
-            preprocessed=None, 
-            train_predictions=None, 
-            test_predictions=None, 
-            evaluation_mode=['accuracy', 'precision', 'recall'],
-            evaluation_results = None,
-            viz_mode=['loss'],
-            viz_data={},
-            viz=None):
+            eid:str,  # 'auto' for automatic name
+            state:{}=None,  # the state dictionary for the experiment, keeps everything
+            NOWRITE = False
+            ):
+        
+        # TODO use this for loading!
+        #   means loading proper objects from paths!
+        # TODO which of the entries can stay in the state dict, without being part of the Experiment object?
 
         # meta
-        if eid != None: self.eid = eid
-        else: self.eid = P.hash_id(str(model) + str(parameters))
-        self.date = date
-        self.edited = None # TODO use this!
+        self.eid = eid
+        # self.eid = P.hash_id(str(model) + str(parameters)) # automatic name
+        if state == None: 
+            state = P.load_yaml(eid)
+            self.state = state
+        else:
+            self.state = state
         self.NOWRITE = NOWRITE
-        self.lvl = 0 # progress level of the experiment 0=initiated, 1=trained, 2=evaluated, 3=visualized
-        # model relevant
-        self.parameters = parameters 
-        self.model = P.model_factory(model, self.parameters)
+        self.lvl = state['lvl']
+        self.date = state['date']
+        self.edited = state['edited']
+        # model
+        self.model_params = state['model_params']
+        # TODO check for model_loc!
+        self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=None) # semi_dir
         # data
-        self.dataset = CoseDataset(mode='train')
-        self.testset = CoseDataset(mode='test')
-        self.preprocessed = preprocessed
-        self.train_predictions = train_predictions
-        self.test_predictions = test_predictions
-        # learnings
-        self.evaluation_mode = evaluation_mode
-        self.evaluation_results = evaluation_results
-        self.viz_mode = viz_mode
-        self.viz_data = viz_data
-        self.viz = viz
+        self.dataset = state['dataset'] # CoseDataset(mode='train') # semi_dir
+        self.testset = state['testset'] # CoseDataset(mode='test') # semi_dir
+        if 'preprocessed' in state: self.preprocessed = state['preprocessed'] # semi_dir
+        else: self.preprocessed = None
+        if 'train_predictions' in state: self.train_predictions = state['train_predictions'] # semi_dir
+        else: self.train_predictions = None
+        if 'test_predictions' in state: self.test_predictions = state['test_predictions'] # semi_dir
+        else: self.test_predictions = None
+        # eval
+        self.evaluation_mode = state['evaluation_mode']
+        self.evaluation_results = state['evaluation_results']
+        # viz
+        self.viz_mode = state['viz_mode']
+        if 'viz_data' in state: self.viz_data = state['viz_data'] # semi_dir
+        else: self.viz_data = {}
+        if 'viz_dir' in state: self.viz_dir = state['viz_dir'] # semi_dir
     
+
+    # switch objects vs locations and pop object entries!
     def save(self):
+        # model
+        if self.lvl>0: # only save model if it has been trained!
+            self.state['model_loc'] = P.save_model(self)
+            if 'model' in self.state: self.state.pop('model', None)
+
+        # data
+        if self.preprocessed:
+            self.state['preprocessed_loc'] = P.save_json(self, self.preprocessed, type='preprocessed_data')
+            if 'preprocessed' in self.state: self.state.pop('preprocessed')
+
+        if self.train_predictions:
+            self.state['train_predictions_loc'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.train_predictions], type='train_predictions')
+            if 'train_predictions' in self.state: self.state.pop('train_predictions')
+
+        if self.test_predictions:
+            self.state['test_predictions_loc'] = P.save_json(self, [P.parse_tensor_list(x) for x in self.test_predictions], type='test_predictions')
+            if 'test_predictions_loc' in self.state: self.state.pop('test_predictions_loc')
+
+        if len(self.viz_data.keys()) != 0: 
+            self.state['viz_data_loc'] = P.save_pickle(self, self.viz_data) # TODO shift second check into save_pickle()
+            if 'viz_data' in state: self.state.pop('viz_data')
+
+        # then simply save state as yaml
+        P.save_yaml(self, self.state)
+
+        '''
+        # OLD
         dic = {}
         # meta
         dic['date'] = self.date
-        dic['edited'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S") 
         dic['lvl'] = self.lvl
         # model
         dic['parameters'] = self.parameters
@@ -118,7 +149,9 @@ class Experiment():
             return P.save_yaml(self, dic)
         else:
             return dic
+        '''
     
+    # TODO put the logic into the experiment constructor, then simply init a new experiment!
     def load(self, eid:str):
         filename = str(eid) + '.yaml'
         path = LOC['experiments_dir'] + filename
@@ -134,7 +167,6 @@ class Experiment():
         # meta
         new.eid = filename
         new.date = (exp_yaml['date'])
-        new.edited = exp_yaml['edited']
         new.lvl = exp_yaml['lvl']
         # model
         new.parameters = exp_yaml['parameters']
@@ -228,7 +260,7 @@ class Experiment():
                 else:
                     'VIZ_MODE:' + '"' + mode + '"' + " is unknown!"
             
-            self.viz = newpath
+            self.viz_dir = newpath
             self.lvl = 3
         else:
             print('NOWRITE param set: not even pictures will be exported!')
