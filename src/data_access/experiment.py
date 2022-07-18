@@ -138,18 +138,13 @@ class Experiment():
     # actually a wrapper for the training module src/train.py
     # also saves training predictions and data for training visualization
     def train(self, output_softmax=False): 
-        if isinstance(self.model, nn.Module): # torch module training
-            t_out = T.train(self.model_params, self.dataset, self.model)
-            self.model = t_out['model'] # updates the model
+        t_out = T.train(self.model_params, self.dataset, self.model, proba=True)
+        self.model = t_out['model'] # updates the model
+        if t_out['losses']:
             self.viz_data['train_loss'] = [float(round(x,4)) for x in t_out['losses']] # save training relevant vis data
-            self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
-        else: # must be a 'custom' module then (e.g. Bag of Words)
-            t_out = T.train_custom(self.model_params, self.dataset, self.model, proba=True)
-            self.model = t_out['model']
-            # self.viz_data['xy'] = 
-            self.train_predictions = t_out['outputs'], t_out['attentions']
-
+        self.train_predictions = t_out['outputs'], t_out['attentions'] # keep the preds & attentions
         self.lvl = 1 # increase progress level of experiment
+
         return self.train_predictions
     
     # evaluates the algorithm trained on the testset for the given evaluation modes
@@ -166,30 +161,21 @@ class Experiment():
 
             elif mode == 'test':
                 dataset = self.testset
-                if isinstance(self.model, nn.Module):
-                    pred, attn = self.test_predictions = T.predict(self.model_params, self.model, self.testset)
-                else:
-                    pred, attn = self.test_predictions = T.predict_custom(self.model_params, self.model, self.testset, proba=True)
+                pred, attn = self.test_predictions = T.predict(self.model_params, self.model, self.testset, proba=True)
             
             gold = dataset.labels
             doc_ids = dataset.docids
 
             if 'explainability' in self.evaluation_mode:
-                if isinstance(attn[0], torch.Tensor): # for torch classifiers
-                    attn_detached = [x.detach().numpy() for x in attn]
-                else: # custom clf
-                    attn_detached = attn
+                # detach attention if necessary
+                if isinstance(attn[0], torch.Tensor): attn_detached = [x.detach().numpy() for x in attn]
+                else: attn_detached = attn
                 # retrain for comp and suff:
                 comp_data = dataset.erase(attn, mode='comprehensiveness')
                 suff_data = dataset.erase(attn, mode='sufficiency')
-                if isinstance(self.model, nn.Module): # for torch models
-                    comp_predictions, _ = T.predict(self.model_params, self.model, comp_data)
-                    suff_predictions, _ = T.predict(self.model_params, self.model, suff_data)
-                    aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
-                else:
-                    comp_predictions, _ = T.predict_custom(self.model_params, self.model, comp_data, proba=True)
-                    suff_predictions, _ = T.predict_custom(self.model_params, self.model, suff_data, proba=True)
-                    aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
+                comp_predictions, _ = T.predict(self.model_params, self.model, comp_data, proba=True)
+                suff_predictions, _ = T.predict(self.model_params, self.model, suff_data, proba=True)
+                aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
 
                 er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
                 result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}')

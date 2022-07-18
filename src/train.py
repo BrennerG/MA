@@ -7,17 +7,22 @@ import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
 
-def train_custom(P:{}, ds:Dataset, clf, proba=False):
-    return clf.train(ds, proba=proba)
-    '''
-    return {
-        'outputs': self.clf.predict(data),
-        'attentions': None,
-        'model': self
-        }
-    '''
+def train(P:{}, ds:Dataset, clf, proba=False):
+    if isinstance(clf, nn.Module): # torch module training
+        return train_torch(P, ds, clf)
+    else:
+        return train_custom(P, ds, clf, proba=proba)
 
-def train(P:{}, ds:Dataset, clf:nn.Module):
+def train_custom(P:{}, ds:Dataset, clf, proba=False):
+    res = clf.train(ds, proba=proba)
+    return {
+        'outputs': res['outputs'],
+        'attentions': res['attentions'],
+        'model':res['model'],
+        'losses': None
+    }
+
+def train_torch(P:{}, ds:Dataset, clf:nn.Module):
     epoch_losses = []
     
     if P['batch_size'] > 1:
@@ -61,11 +66,18 @@ def train(P:{}, ds:Dataset, clf:nn.Module):
         'losses': epoch_losses
     }
 
+# proba only relevant for predict_custom (BoW specifically)
+def predict(P:{}, clf, ds:Dataset(), proba=False):
+    if isinstance(clf, nn.Module):
+        return predict_torch(P, clf, ds)
+    else:
+        return predict_custom(P, clf, ds, proba=proba)
+
 def predict_custom(P:{}, clf, ds:Dataset(), proba=False):
     if proba: return clf.predict_proba(ds)
     else: return clf.predict(ds)
 
-def predict(P:{}, clf:nn.Module(), ds:Dataset()):
+def predict_torch(P:{}, clf:nn.Module(), ds:Dataset()):
     predictions = []
     attentions = []
 

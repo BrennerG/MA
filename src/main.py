@@ -25,12 +25,12 @@ In the future this file will be a CLI interface, with the following arguments:
 
 #      ************************** TODO *****************************       #
 
-* BOW Model
-    * ~~Bagging~~
-    * ~~Logistic Regression~~
-    * ~~Evaluation~~
-    * shift nn.Module vs Custom differentation from experiments into the specific functions!
-* revisit efficiency calculations for BOW
+* BERT Baseline
+    * BERT
+    * BI-LSTM
+    * Attention
+    * LIME
+* re-check random baseline sufficiency (should be 22)
 * introduce preprocessing as intermediate step!
 * implement module for dynamic .yaml creation! (e.g. for parameter search)
 * implement CLI (low prio, coz it's only fancy)
@@ -41,7 +41,7 @@ In the future this file will be a CLI interface, with the following arguments:
 '''
 
 # script arguments
-EID = 'bow'
+EID = 'new'
 NOWRITE = False
 
 # initialize relevant folders
