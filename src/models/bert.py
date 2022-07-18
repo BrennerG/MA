@@ -24,9 +24,4 @@ class BertClassifier(nn.Module):
         outputs = self.model(**{k: v.unsqueeze(0) for k, v in encoding.items()}, labels=label, output_attentions=True)  # batch size is 1
         softmaxed = self.sm(outputs.logits.squeeze())
 
-        attentions = outputs.attentions # len=#attention_layers each layer outputs shape (batch_size, num_heads, sequence_length, sequence_length)
-        # TODO aggregate the attention layers somehow...
-        # TODO cut attentions back from masks
-        aggregated_attentions = None 
-
-        return softmaxed, aggregated_attentions
+        return softmaxed, None # attentions not relevant - LIME will be used for rationales!

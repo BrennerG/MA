@@ -26,10 +26,12 @@ In the future this file will be a CLI interface, with the following arguments:
 #      ************************** TODO *****************************       #
 
 * BERT Baseline
-    * BERT
-    * BI-LSTM
-    * Attention
-    * LIME
+    * HuggingFace BERT
+        * create an isolated HuggingFace Bert Pipeline from scratch and check if it is really working...
+        * ~~eval: competence - ezpz~~
+        * eval: efficiency - are the huggingface models too blackboxy for torchstat?    
+        * eval: explainability - use LIME for rationales!
+        * throughly check if the alg is rly learning
 * re-check random baseline sufficiency (should be 22)
 * introduce preprocessing as intermediate step!
 * implement module for dynamic .yaml creation! (e.g. for parameter search)
