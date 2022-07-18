@@ -12,7 +12,7 @@ from data_access.locations import LOC
 
 class CoseDataset(Dataset):
 
-    def __init__(self, mode='train'):
+    def __init__(self, mode='train', limit=-1):
         self.parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         self.mode = mode
         self.location = 'cose'
@@ -24,11 +24,17 @@ class CoseDataset(Dataset):
         # docs
         self.docids = [x.annotation_id for x in self.annotations]
         self.docs = EU.load_flattened_documents(LOC['cose'], self.docids)
-        self.labels = [self.parselabel[x.classification] for x in self.annotations]
+        # limit on true labels
+        if limit > 0: self.labels = [self.parselabel[x.classification] for x in self.annotations][:limit]
+        else: self.labels = [self.parselabel[x.classification] for x in self.annotations]
 
         self.data = []
-        for X in self.annotations:
-            self.data.append((self.docs[X.annotation_id], X.query_type, X.query.split(' [sep] '), float(self.parselabel[X.classification]), list(X.evidences)[0][0]))
+        if limit > 0:
+            for X in self.annotations[:limit]:
+                self.data.append((self.docs[X.annotation_id], X.query_type, X.query.split(' [sep] '), float(self.parselabel[X.classification]), list(X.evidences)[0][0]))
+        else:
+            for X in self.annotations:
+                self.data.append((self.docs[X.annotation_id], X.query_type, X.query.split(' [sep] '), float(self.parselabel[X.classification]), list(X.evidences)[0][0]))
 
         self.avg_evidence_len = round(np.mean([len(x[4].text.split()) for x in self]))
         

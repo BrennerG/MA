@@ -41,7 +41,7 @@ In the future this file will be a CLI interface, with the following arguments:
 '''
 
 # script arguments
-EID = 'new'
+EID = 'bert'
 NOWRITE = False
 
 # initialize relevant folders

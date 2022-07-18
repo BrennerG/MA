@@ -1,0 +1,26 @@
+dataset: cose
+date: '2022-07-18 16:29:53'
+evaluation_mode:
+- competence
+- efficiency
+evaluation_params:
+  aopc_thresholds:
+  - 0.01
+  - 0.05
+  - 0.1
+  - 0.2
+  - 0.5
+limit: 10
+lvl: 0
+model_params:
+  batch_size: 1
+  epochs: 1
+  lr: 0.001
+  momentum: 0.9
+  print_every: 100
+  random_seed: 69
+model_type: BertClassifier
+testset: cose
+viz_dir: data/viz/bert/
+viz_mode:
+- loss

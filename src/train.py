@@ -4,10 +4,12 @@ import numpy as np
 
 import torch.nn as nn
 import torch.optim as optim
+
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
-def train(P:{}, ds:Dataset, clf, proba=False):
+def train(P:{}, ds:Dataset, clf, proba=False, limit=-1):
     if isinstance(clf, nn.Module): # torch module training
         return train_torch(P, ds, clf)
     else:
@@ -39,7 +41,7 @@ def train_torch(P:{}, ds:Dataset, clf:nn.Module):
         for i, (question, context, answers, label, evidence) in enumerate(ds):
             optimizer.zero_grad()
 
-            output, attn = clf(question, context, answers)
+            output, attn = clf(question, context, answers, label)
             output = output.view(P['batch_size'],-1)
             label = torch.tensor([label], requires_grad=True).long()
 
@@ -83,7 +85,7 @@ def predict_torch(P:{}, clf:nn.Module(), ds:Dataset()):
 
     with torch.no_grad():
         for i, (question, context, answers, label, evidence) in enumerate(ds):
-            output, attn = clf(question, context, answers)
+            output, attn = clf(question, context, answers, label)
             output = output.view(P['batch_size'],-1)
             predictions.append(output)
             attentions.append(attn)

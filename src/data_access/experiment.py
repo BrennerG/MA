@@ -61,22 +61,27 @@ class Experiment():
         self.eid = eid
         # self.eid = P.hash_id(str(model) + str(parameters)) # automatic name - TODO prbly put this in CLI
         if state == None: 
-            state = P.load_yaml(eid)
-            self.state = state
+            if P.check_yaml(eid): self.state = state = P.load_yaml(eid)
+            else: # self.state = state = P.create_barebones_yaml(eid)
+                raise NotImplementedError('Please (for now manually) create a proper .yaml experiment file!')
         else:
             self.state = state
         self.NOWRITE = NOWRITE
         self.lvl = state['lvl']
-        self.date = state['date']
-        # model
+        # write date
+        if 'date' in state and state['date']: self.date = state['date']
+        else: state['date'] = self.date = str(datetime.now())[:19]
+        # initializing model
         self.model_params = state['model_params']
-        if 'model_loc' in state and os.path.exists(state['model_loc']): # load old model
+        if 'model_loc' in state and os.path.exists(state['model_loc']): # old
             self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=state['model_loc'])
-        elif 'model_loc' in state: # load new model
+        else: # new model
             self.model = P.model_factory(type=state['model_type'], parameters=state['model_params'], path=None)
         # data
-        if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train')
-        if state['testset'] == 'cose': self.testset = CoseDataset(mode='test')
+        if 'limit' in state and state['limit'] > 0:
+            if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train', limit=state['limit'])
+            if state['testset'] == 'cose': self.testset = CoseDataset(mode='test', limit=state['limit'])
+        # get preprocessed data
         if 'preprocessed' in state: self.preprocessed = state['preprocessed']
         else: self.preprocessed = None
         if 'train_predictions' in state: self.train_predictions = state['train_predictions']
@@ -86,7 +91,9 @@ class Experiment():
         # eval
         self.evaluation_params = state['evaluation_params']
         self.evaluation_mode = state['evaluation_mode']
-        self.evaluation_results = state['evaluation_results']
+        # evaluation results
+        if 'evaluation_results' in state: self.evaluation_results = state['evaluation_results']
+        else: state['evaluation_results'] = self.state['evaluation_results'] = None
         # viz
         self.viz_mode = state['viz_mode']
         if 'viz_data' in state: self.viz_data = state['viz_data'] # semi_dir
@@ -137,7 +144,7 @@ class Experiment():
     # Trains the algorithms of the experiment
     # actually a wrapper for the training module src/train.py
     # also saves training predictions and data for training visualization
-    def train(self, output_softmax=False): 
+    def train(self): 
         t_out = T.train(self.model_params, self.dataset, self.model, proba=True)
         self.model = t_out['model'] # updates the model
         if t_out['losses']:
@@ -183,7 +190,8 @@ class Experiment():
 
             if 'efficiency' in self.evaluation_mode:
                 # TODO does this actually need the train/test mode? or is eff beyond train / test
-                result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO input correct input sizes, but where do we get them from?
+                # result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO this only works for RandomAttentionClassifier
+                pass
 
             if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)

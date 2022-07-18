@@ -3,6 +3,7 @@ import torch
 import json
 import yaml
 import pickle
+import datetime
 
 import numpy as np
 import torch.nn as nn
@@ -10,6 +11,7 @@ import torch.nn as nn
 from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
 from models.bow import BagOfWordsClassifier
+from models.bert import BertClassifier
 
 from data_access.locations import LOC
 
@@ -89,6 +91,8 @@ def model_factory(type:str, parameters:{}=None, path:str=None):
         model = RandomAttentionClassifier(parameters['random_seed'])
     elif type == "BagOfWordsClassifier":
         model = BagOfWordsClassifier(parameters)
+    elif type == "BertClassifier":
+        model = BertClassifier(parameters)
     else:
         raise AttributeError('model_type: "' + type + '" is unknown!')
 
@@ -126,6 +130,20 @@ def load_yaml(eid:str):
     with open(path, 'r') as stream:
         dict = yaml.safe_load(stream)
     return dict
+
+def check_yaml(eid:str):
+    return os.path.exists(LOC['experiments_dir'] + eid + '.yaml')
+
+# TODO unnecessary
+def create_barebones_yaml(eid):
+    return {
+        'lvl': 0,
+        'date': str(datetime.now()[:19]),
+        'dataset': cose,
+        'testset': 'cose',
+        'limit': -1,
+        'evaluation_mode':['competence', 'explainability', 'efficiency'],
+    }
 
 # these are all the parameters for a single experiment (=a single pass through the pipeline)
 # TODO this should load from a central .yaml file!
