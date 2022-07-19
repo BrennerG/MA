@@ -12,6 +12,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
+_LIMIT = 10
 
 
 class EraserCosEConfig(datasets.BuilderConfig):
@@ -81,7 +82,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         labels = [parselabel[x.classification] for x in raw]
         # self.avg_evidence_len = round(np.mean([len(x[4].text.split()) for x in self])) # TODO calculate this differently
 
-        for i,X in enumerate(raw):
+        for i,X in enumerate(raw)[:_LIMIT]:
             rationale = list(X.evidences)[0][0]
             yield i, {
                 'id': X.annotation_id,
