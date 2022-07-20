@@ -14,13 +14,19 @@ import torch
 from transformers import AutoModelForMultipleChoice, TrainingArguments, Trainer
 from transformers import AlbertForMultipleChoice, AlbertTokenizer
 
+# model loading
+from transformers import pipeline
+from evaluate import evaluator
+import evaluate
+import numpy as np
+
+
 '''
     A SIMPLE BERT PIPELINE FOR COSE
 '''
 
 
-# TOKENIZER = AutoTokenizer.from_pretrained('bert-base-uncased')
-TOKENIZER = AlbertTokenizer.from_pretrained('albert-base-v2')
+TOKENIZER = AlbertTokenizer.from_pretrained('albert-base-v2') # or TOKENIZER = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 def preprocess_function(examples):
     first_sentences = [[question]*5 for question in examples['question']]
@@ -67,13 +73,11 @@ class DataCollatorForMultipleChoice:
         return batch
 
 
-def run():
+def train():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     cose = load_dataset('src/tests/bert/huggingface_cose.py')
-    # tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") # is now global
     tokenized_cose = cose.map(preprocess_function, batched=True)
-    #model = AutoModelForMultipleChoice.from_pretrained("bert-base-uncased")
-    model = AlbertForMultipleChoice.from_pretrained("albert-base-v2")
+    model = AlbertForMultipleChoice.from_pretrained("albert-base-v2") # or model = AutoModelForMultipleChoice.from_pretrained("bert-base-uncased")
 
     training_args = TrainingArguments(
         output_dir="src/tests/bert/results",
@@ -96,5 +100,36 @@ def run():
     )
 
     trainer.train()
-
     print('done')
+
+
+# takes ~4 minutes to do the predictions
+def eval_competence():
+    cose = load_dataset('src/tests/bert/huggingface_cose.py')
+    tokenized_cose = cose.map(preprocess_function, batched=True)
+    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
+    # metrics
+    accuracy = evaluate.load("accuracy")
+    precision = evaluate.load("precision")
+    recall = evaluate.load('recall')
+
+    trainer = Trainer(
+        model=model,
+        args=None,
+        train_dataset=tokenized_cose["train"],
+        eval_dataset=tokenized_cose["validation"],
+        tokenizer=TOKENIZER,
+        data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER),
+    )
+
+    preds = trainer.predict(tokenized_cose['validation'])
+
+    argmaxd = [np.argmax(x).item() for x in preds.predictions]
+    acc = accuracy.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd)
+    prec = precision.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd, average='weighted')
+    reca = recall.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd, average='weighted')
+
+    # I could also do ... (probably better with multiple metrics!)
+    # evaluation = trainer.evaluate(tokenized_cose['validation'])
+
+    print(acc, prec, reca)
