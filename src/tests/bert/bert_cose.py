@@ -68,6 +68,7 @@ class DataCollatorForMultipleChoice:
 
 
 def run():
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     cose = load_dataset('src/tests/bert/huggingface_cose.py')
     # tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") # is now global
     tokenized_cose = cose.map(preprocess_function, batched=True)
