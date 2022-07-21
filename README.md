@@ -28,17 +28,19 @@ _diagram incoming_
   - ~~huggingface clf~~
   - LIME
     - ~~run w. dummy data~~
-    - warp classifier for LIME
+    - wrap huggingface classifier for LIME
   - Evaluation
     - ~~Competence~~
     - Explainability (LIME needed)
-    - Efficiency (does torchstat actually work here?)
+    - Efficiency
+      - does torchstat actually work here?
       - floating_point_ops method available in hugginface models! :O
   - Integrate into Pipeline
 * __BERT*less__ - create simple GNN Architecture with UD graphs
-  - text to graph preproc
-  - GNN
-  - attention + explainability!
+  - text to graph preproc (UD)
+  - use word embeddings: Glove
+  - GNN / GAT
+  - how to aggregate attention?
   - extend to 4Lang
 * __QA-GNN Baseline__
   - run QA-GNN
