@@ -4,6 +4,8 @@ import torch.nn as nn
 
 from transformers import AlbertTokenizer, AlbertForMultipleChoice
 
+# THIS IS NOT THE PROPER BERT CLF
+# the current BERT pipeline is in src/tests/bert/bert_cose.py
 
 # https://towardsdatascience.com/question-answering-with-a-fine-tuned-bert-bc4dafd45626
 class BertClassifier(nn.Module):

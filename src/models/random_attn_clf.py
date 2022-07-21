@@ -14,7 +14,8 @@ class RandomAttentionClassifier(nn.Module):
         self.lin = TestModule()
         torch.manual_seed(self.seed)
 
-    def forward(self, question:str, context:str, answers:[]):
+    def forward(self, question:str, context:str, answers:[], label):
+        label = None # don't cheat
         rnd = torch.rand(len(answers))
         out = torch.softmax(rnd, 0)
         out.requires_grad = True

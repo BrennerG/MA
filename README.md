@@ -6,7 +6,7 @@ _diagram incoming_
 
 ## Setup Guide
 - git clone --recurse-submodules git@github.com:BrennerG/MA.git
-- conda env create -f environment.yml
+- conda env create --name ma -f environment.yml
 - conda activate ma
 - change line 18 in src/evaluation/eraserbenchmark/rationale_benchmark/metrics.py to "from .utils import"
 - read main.py for documentation of parameters
@@ -16,30 +16,39 @@ _diagram incoming_
 - in the future parameters can be manipulated in a .yaml file and a CLI can be used to run the code!
 
 ## TODO
-* create pipeline with random classifier and full evaluation
-  * ~~saving and loading runs~~
-  * ~~rnd clf~~
-  * ~~eval: competence~~
-  * ~~eval: explainability~~
-  * ~~eval: efficiency~~
-* __BOW__ Baseline
-  * bags
-  * logistic regression
+* ~~ create pipeline with random classifier and full evaluation ~~
+  - ~~saving and loading runs~~
+  - ~~rnd clf~~
+  - ~~eval: competence~~
+  - ~~eval: explainability~~
+    - recheck suff implementation
+  - ~~eval: efficiency~~
+* ~~ __BOW__ Baseline ~~
 * __BERT + LIME__ Baseline
-  * BERT processing
-  * LIME
+  - ~~ BERT ~~
+  - LIME
+    - warp classifier for LIME
+  - Evaluation
+    - ~~ Competence ~~
+    - Explainability (LIME needed)
+    - Efficiency (does torchstat actually work here?)
+  - Integrate into Pipeline
 * __BERT*less__ - create simple GNN Architecture with UD graphs
-  * speech to graph
-  * GNN
-  * attention + explainability!
-  * extend to 4Lang
+  - text to graph preproc
+  - GNN
+  - attention + explainability!
+  - extend to 4Lang
 * __QA-GNN Baseline__
-  * run QA-GNN
-  * run QA-GNN w. UD/4Lang graphs
-  * make QA-GNN output compatible with our evaluation suite
+  - run QA-GNN
+  - run QA-GNN w. UD/4Lang graphs
+  - make QA-GNN output compatible with my evaluation suite
 * __Minimal__
-  * ...
+  - ...
 * __Extended__
-  * ...
+  - ...
 * __Full__
-  * ...
+  - ...
+* __Pipeline__
+  - caching (e.g. preprocessed_data, predictions, viz_data, ...)
+  - parameter search / dynamic config creation
+  - 

@@ -81,6 +81,9 @@ class Experiment():
         if 'limit' in state and state['limit'] > 0:
             if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train', limit=state['limit'])
             if state['testset'] == 'cose': self.testset = CoseDataset(mode='test', limit=state['limit'])
+        else:
+            if state['dataset'] == 'cose': self.dataset = CoseDataset(mode='train')
+            if state['testset'] == 'cose': self.testset = CoseDataset(mode='test')
         # get preprocessed data
         if 'preprocessed' in state: self.preprocessed = state['preprocessed']
         else: self.preprocessed = None
@@ -190,8 +193,7 @@ class Experiment():
 
             if 'efficiency' in self.evaluation_mode:
                 # TODO does this actually need the train/test mode? or is eff beyond train / test
-                # result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO this only works for RandomAttentionClassifier
-                pass # TODO can we calculate efficiency metrics for complex, blackboxy models such as hugging face transformer modules? ...
+                result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO this only works for RandomAttentionClassifier
 
             if 'competence' in self.evaluation_mode:
                 result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)

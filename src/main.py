@@ -43,7 +43,7 @@ In the future this file will be a CLI interface, with the following arguments:
 '''
 
 # script arguments
-EID = 'bert'
+EID = 'new' # this is the rnd classifier
 NOWRITE = False
 
 # initialize relevant folders
