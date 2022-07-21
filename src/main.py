@@ -23,23 +23,6 @@ In the future this file will be a CLI interface, with the following arguments:
 - EID (experiment id - load a saved experiment or create new experiment with new id)
 - NOWRITE (do a pass through the pipeline without saving the data to disk)
 
-#      ************************** TODO *****************************       #
-
-* BERT Baseline
-    * HuggingFace BERT
-        * create an isolated HuggingFace Bert Pipeline from scratch and check if it is really working...
-        * ~~eval: competence - ezpz~~
-        * eval: efficiency - are the huggingface models too blackboxy for torchstat?    
-        * eval: explainability - use LIME for rationales!
-        * throughly check if the alg is rly learning
-* re-check random baseline sufficiency (should be 22)
-* introduce preprocessing as intermediate step!
-* implement module for dynamic .yaml creation! (e.g. for parameter search)
-* implement CLI (low prio, coz it's only fancy)
-    * loading new scripts vs creating new scripts
-* implement dynamic re-use of already saved data (e.g. preprocessed data!)
-
-# ************************************************************************ #
 '''
 
 # script arguments
