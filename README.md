@@ -16,20 +16,21 @@ _diagram incoming_
 - in the future parameters can be manipulated in a .yaml file and a CLI can be used to run the code!
 
 ## TODO
-* ~~ create pipeline with random classifier and full evaluation ~~
+* ~~__create pipeline with random classifier and full evaluation__~~
   - ~~saving and loading runs~~
   - ~~rnd clf~~
   - ~~eval: competence~~
   - ~~eval: explainability~~
     - recheck suff implementation
   - ~~eval: efficiency~~
-* ~~ __BOW__ Baseline ~~
+* ~~__BOW__ Baseline~~
 * __BERT + LIME__ Baseline
-  - ~~ BERT ~~
+  - ~~huggingface clf~~
   - LIME
+    - ~~run w. dummy data~~
     - warp classifier for LIME
   - Evaluation
-    - ~~ Competence ~~
+    - ~~Competence~~
     - Explainability (LIME needed)
     - Efficiency (does torchstat actually work here?)
   - Integrate into Pipeline
@@ -42,13 +43,12 @@ _diagram incoming_
   - run QA-GNN
   - run QA-GNN w. UD/4Lang graphs
   - make QA-GNN output compatible with my evaluation suite
-* __Minimal__
+* __Minimal__ = BERT + UD/4Lang + GAT
   - ...
-* __Extended__
+* __Extended__ = _Minimal_ + 4Lang expansions 
   - ...
-* __Full__
+* __Full__ = _Extended_ + Node/Edge types
   - ...
 * __Pipeline__
   - caching (e.g. preprocessed_data, predictions, viz_data, ...)
   - parameter search / dynamic config creation
-  - 
