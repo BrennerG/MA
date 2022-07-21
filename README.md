@@ -33,6 +33,7 @@ _diagram incoming_
     - ~~Competence~~
     - Explainability (LIME needed)
     - Efficiency (does torchstat actually work here?)
+      - floating_point_ops method available in hugginface models! :O
   - Integrate into Pipeline
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc
