@@ -41,11 +41,12 @@ _diagram incoming_
   - use word embeddings: Glove
   - GNN / GAT
   - how to aggregate attention?
+    - do extensive experimentation here! (might be a crucial point of discussion)
   - extend to 4Lang
 * __QA-GNN Baseline__
   - run QA-GNN
-  - run QA-GNN w. UD/4Lang graphs
-  - make QA-GNN output compatible with my evaluation suite
+  - ~~run QA-GNN w. UD/4Lang graphs~~ _cancelled_
+  - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
 * __Minimal__ = BERT + UD/4Lang + GAT
   - ...
 * __Extended__ = _Minimal_ + 4Lang expansions 
@@ -55,3 +56,4 @@ _diagram incoming_
 * __Pipeline__
   - caching (e.g. preprocessed_data, predictions, viz_data, ...)
   - parameter search / dynamic config creation
+  - interface with Adam's Graph Classes

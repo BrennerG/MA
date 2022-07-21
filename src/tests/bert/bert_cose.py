@@ -23,6 +23,10 @@ import numpy as np
 import lime
 from lime.lime_text import LimeTextExplainer
 
+# predict experiment
+from data_access.cose_dataset import CoseDataset
+from torch.utils.data import DataLoader
+from datasets import Dataset
 
 '''
     A SIMPLE BERT PIPELINE FOR COSE
@@ -38,7 +42,7 @@ def preprocess_function(examples):
     first_sentences = sum(first_sentences, []) # this flattens the lists :O
     second_sentences = sum(second_sentences, [])
 
-    tokenized_examples = TOKENIZER(first_sentences, second_sentences, truncation=True)
+    tokenized_examples = TOKENIZER(first_sentences, second_sentences, truncation=True, padding=True)
     res = {k: [v[i : i + 5] for i in range(0, len(v), 5)] for k, v in tokenized_examples.items()} # rejoin to shape (8752 x 5 x unpadded_len)
     return res
 
@@ -72,7 +76,8 @@ class DataCollatorForMultipleChoice:
         )
 
         batch = {k: v.view(batch_size, num_choices, -1) for k, v in batch.items()}
-        batch["labels"] = torch.tensor(labels, dtype=torch.int64)
+        #batch["labels"] = torch.tensor(labels, dtype=torch.int64) # for training
+        batch["labels"] = torch.tensor(labels, dtype=torch.float) # for predicting for LIME
         return batch
 
 
@@ -81,7 +86,6 @@ def train():
     cose = load_dataset('src/tests/bert/huggingface_cose.py')
     tokenized_cose = cose.map(preprocess_function, batched=True)
     model = AlbertForMultipleChoice.from_pretrained("albert-base-v2") # or model = AutoModelForMultipleChoice.from_pretrained("bert-base-uncased")
-
     training_args = TrainingArguments(
         output_dir="src/tests/bert/results",
         evaluation_strategy="epoch",
@@ -92,7 +96,6 @@ def train():
         weight_decay=0.01,
         save_strategy='epoch',
     )
-
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -101,10 +104,8 @@ def train():
         tokenizer=TOKENIZER,
         data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER),
     )
-
     trainer.train()
     print('done')
-
 
 # takes ~4 minutes to do the predictions
 def eval_competence():
@@ -115,7 +116,7 @@ def eval_competence():
     accuracy = evaluate.load("accuracy")
     precision = evaluate.load("precision")
     recall = evaluate.load('recall')
-
+    # train
     trainer = Trainer(
         model=model,
         args=None,
@@ -124,9 +125,8 @@ def eval_competence():
         tokenizer=TOKENIZER,
         data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER),
     )
-
+    # predict
     preds = trainer.predict(tokenized_cose['validation'])
-
     argmaxd = [np.argmax(x).item() for x in preds.predictions]
     acc = accuracy.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd)
     prec = precision.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd, average='weighted')
@@ -134,9 +134,7 @@ def eval_competence():
 
     # I could also do ... (probably better with multiple metrics!)
     # evaluation = trainer.evaluate(tokenized_cose['validation'])
-
     print(acc, prec, reca)
-
 
 def eval_explainability():
     # TODO 
@@ -176,5 +174,49 @@ def eval_explainability():
     exp = explainer.explain_instance(sample, predict_proba, num_features=6, num_samples=1)
     weights = exp.as_list()
     # TODO save the weights
+    print('done')
+
+def current():
+    cose = load_dataset('src/tests/bert/huggingface_cose.py')
+    tokenized_cose = cose.map(preprocess_function, batched=True)
+    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
+
+    explainer = LimeTextExplainer(class_names=[0,1,2,3,4])
+
+    ds_for_lime = EraserCosE.parse_to_lime(ds=tokenized_cose['validation'])
+
+    # Multiplexer for (question, answer) -> 'questions+answers'
+    def clf_wrapper(input_str:str):
+        question, answers = input_str.split('[qsep]') # define this somewhere!
+        answers = answers.split(' [sep] ')
+        mapping = {
+            'id': [None],
+            'question': [[question]],
+            'context': [None],
+            'answers': [answers],
+            'label': [[-1]],
+            'rationale': [None]
+        }
+        dataset = Dataset.from_dict(mapping)
+        tokenized_data = dataset.map(preprocess_function)
+
+        trainer = Trainer(
+            model=model,
+            args=None,
+            train_dataset=None,
+            eval_dataset=None,
+            tokenizer=TOKENIZER,
+            data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER)
+        )
+
+        # TODO runs but outputs softmax vector with shape (1) instead of (1,5) ?!?!?!?!??!!?!?!??!?!?!?!?!?! FUCK
+        # mb something wrong with dataset? maybe pass the real EraserCosE Dataset?  THE 'REAL' CLASS IS ACTUALLY NEVER USED WTF
+        pred = trainer.predict(tokenized_data)
+        return pred.predictions
+
+    test = clf_wrapper(ds_for_lime[0]) # remove me
+
+    for x in ds_for_lime:
+        exp = explainer.explain_instance(x, clf_wrapper, num_features=6, num_samples=1)
 
     print('done')

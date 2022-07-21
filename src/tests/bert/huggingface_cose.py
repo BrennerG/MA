@@ -1,10 +1,10 @@
 import json
 import datasets
 
-from data_access.locations import LOC
-
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
+from datasets import Dataset
 
+from data_access.locations import LOC
 
 """ ERASER Cos-E Dataset """
 
@@ -101,6 +101,16 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                     'text': rationale.text
                 }
             }
-
+    
     def erase(self, weights:[], k=None, mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
         raise NotImplemented
+
+    @staticmethod
+    def parse_to_lime(ds:Dataset):
+        strings = [None] * len(ds['question'])
+        mask = None # TODO
+
+        for i in range(len(ds['question'])):
+            strings[i] = f"{ds['question'][i]}[qsep]{' [sep] '.join(ds['answers'][i])}"
+
+        return strings
