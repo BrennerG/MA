@@ -231,7 +231,7 @@ def experiment():
         # encode
         encoding = TOKENIZER([question]*5, answers, return_tensors='pt', padding=True)
         inputs = {k: v.unsqueeze(0) for k, v in encoding.items()}
-        pred = model(**inputs)
+        pred = model(**inputs, output_attentions=True)
         return pred.logits.detach().numpy()
 
     weights = []

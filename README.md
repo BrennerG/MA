@@ -28,10 +28,14 @@ _diagram incoming_
   - ~~huggingface clf~~
   - LIME
     - ~~run w. dummy data~~
-    - wrap huggingface classifier for LIME
+    - ~~wrap huggingface classifier for LIME~~
+      - _optional_ write a proper custom Pipeline class
   - Evaluation
     - ~~Competence~~
     - Explainability (LIME needed)
+      - ~~get lime to output weights~~
+      - fix issue, where all LIME weights are 0  (_current_)
+      - _optional_ try to aggregate transformer attention for explanations
     - Efficiency
       - does torchstat actually work here?
       - floating_point_ops method available in hugginface models! :O
@@ -49,9 +53,9 @@ _diagram incoming_
   - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
 * __Minimal__ = BERT + UD/4Lang + GAT
   - ...
-* __Extended__ = _Minimal_ + 4Lang expansions 
+* __Extended__ = __Minimal__ + 4Lang expansions 
   - ...
-* __Full__ = _Extended_ + Node/Edge types
+* __Full__ = __Extended__ + Node/Edge types
   - ...
 * __Pipeline__
   - caching (e.g. preprocessed_data, predictions, viz_data, ...)
