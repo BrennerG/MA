@@ -214,67 +214,29 @@ def eval_explainability():
 
 
 def experiment():
-    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
-    explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
+    # prepare data
     cose = load_dataset('src/tests/bert/huggingface_cose.py')
     tokenized_cose = cose.map(preprocess_function, batched=True)
+    ds_for_lime = EraserCosE.parse_to_lime(ds=tokenized_cose['validation'])
+    # prepare models
+    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
+    explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
 
-    training_args = TrainingArguments(
-        output_dir="src/tests/bert/results",
-        evaluation_strategy="epoch",
-        learning_rate=5e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=3,
-        weight_decay=0.01,
-        save_strategy='epoch',
-        log_level='critical'
-    )
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=tokenized_cose["train"],
-        eval_dataset=tokenized_cose["validation"],
-        tokenizer=TOKENIZER,
-        data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER),
-    )
     # Multiplexer for (question, answer) -> 'questions+answers'
     def clf_wrapper(input_str:str):
         if isinstance(input_str, list) and len(input_str) == 1: input_str = input_str[0]
+        # prep
         question, answers = input_str.split('[qsep]') # define this somewhere!
         answers = answers.split(' [sep] ')
-        mapping = {
-            'id': ['none'],
-            'question': [question],
-            'context': ['none'],
-            'answers': [answers],
-            'label': [0],
-            'rationale': [{
-                'docid': "",
-                'end_sentence': -1,
-                'end_token': -1,
-                'start_sentence': -1,
-                'start_token': -1,
-                'text': 'none',
+        # encode
+        encoding = TOKENIZER([question]*5, answers, return_tensors='pt', padding=True)
+        inputs = {k: v.unsqueeze(0) for k, v in encoding.items()}
+        pred = model(**inputs)
+        return pred.logits.detach().numpy()
 
-            }]
-        }
-
-        dataset = Dataset.from_dict(mapping=mapping) # dataset = Dataset.from_dict(mapping=mapping, features=EraserCosE._info().features, info=EraserCosE._info())
-        tokenized_data = dataset.map(lime_preprocess_function)
-        pred = trainer.predict(tokenized_data)
-        return pred.predictions
-
-    ds_for_lime = [
-        'Where  ?[qsep]europe [sep] city [sep] england [sep] garage [sep] new jersey',
-        'Where is ?[qsep]europe [sep] city [sep] england [sep] garage [sep] new jersey',
-        'Where is a  ?[qsep]europe [sep] city [sep] england [sep] garage [sep] new jersey',
-        'Where is a crowded  ?[qsep]europe [sep] city [sep] england [sep] garage [sep] new jersey',
-        'Where is a crowded motorway likely to be ?[qsep]europe [sep] city [sep] england [sep] garage [sep] new jersey',
-    ]
-
-    preds = []
+    weights = []
     for i,x in enumerate(tqdm(ds_for_lime)):
-        preds.append(clf_wrapper(x))
+        exp = explainer.explain_instance(x, clf_wrapper, num_features=30, num_samples=1)
+        weights.append(exp.as_list())
 
     print('done')
