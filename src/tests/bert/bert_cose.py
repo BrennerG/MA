@@ -143,45 +143,16 @@ def eval_competence():
 
 def eval_explainability():
     # TODO 
-    # 1. get LIME weights
-    #   - ~~ make it run ~~
-    #   - wrap predict method
-    #       raw_text_predictor(text:str) -> np.array.shape=(1,5)
-    #       probably write a custom class (RawTextWrapperClassifier or sth. that takes raw text and creates a huggingface dummy set!)
-    #   - get the actual weights!
+    # 1. ~~get LIME weights~~
+    #   - ~~make it run~~
+    #   - ~~wrap predict method~~
+    #   - ~~get the weights!~~
     # 2. ERASER
+    #   - fix weights, can't erase if attention is zeros
     #   - recreate eraser benchmark for huggingface dataset
     #   - reuse experiment.eval() interface(s)!
     # 3. META
     #   - isn't this the same setting as the logistic-regression fail?
-
-    cose = load_dataset('src/tests/bert/huggingface_cose.py')
-    tokenized_cose = cose.map(preprocess_function, batched=True)
-    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
-    # metrics
-    explainer = LimeTextExplainer(class_names=[0,1,2,3,4])
-
-    trainer = Trainer(
-        model=model,
-        args=None,
-        train_dataset=tokenized_cose["train"],
-        eval_dataset=tokenized_cose["validation"],
-        tokenizer=TOKENIZER,
-        data_collator=DataCollatorForMultipleChoice(tokenizer=TOKENIZER),
-    )
-
-    # preds = trainer.predict(tokenized_cose['validation'])
-
-    def predict_proba(irrelevant:str='roflmao'):
-        return np.array([[0.1, 0.3, 0.5, 0.05, 0.05]])
-
-    sample = tokenized_cose['validation'][0]['question']
-    exp = explainer.explain_instance(sample, predict_proba, num_features=6, num_samples=1)
-    weights = exp.as_list()
-    # TODO save the weights
-    print('done')
-
-def current():
     cose = load_dataset('src/tests/bert/huggingface_cose.py')
     tokenized_cose = cose.map(preprocess_function, batched=True)
     model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
