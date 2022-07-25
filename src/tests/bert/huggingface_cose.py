@@ -12,7 +12,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_LIMIT = 13
+_LIMIT = _FULL
 
 
 class EraserCosEConfig(datasets.BuilderConfig):

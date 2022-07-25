@@ -92,12 +92,12 @@ def train():
     tokenized_cose = cose.map(preprocess_function, batched=True)
     model = AlbertForMultipleChoice.from_pretrained("albert-base-v2") # or model = AutoModelForMultipleChoice.from_pretrained("bert-base-uncased")
     training_args = TrainingArguments(
-        output_dir="src/tests/bert/results",
+        output_dir="src/tests/bert/results/22_7/",
         evaluation_strategy="epoch",
         learning_rate=5e-5,
         per_device_train_batch_size=16,
         per_device_eval_batch_size=16,
-        num_train_epochs=3,
+        num_train_epochs=10,
         weight_decay=0.01,
         save_strategy='epoch',
     )
