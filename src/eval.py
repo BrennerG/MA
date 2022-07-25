@@ -50,8 +50,12 @@ def soft_scores(results, docids, ds='cose_train'):
 def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
     if mode == 'train':
         annotations = EU.annotations_from_jsonl(LOC['cose_train'])
-    else:
+    elif mode == 'val':
+        annotations = EU.annotations_from_jsonl(LOC['cose_val'])
+    elif mode == 'test':
         annotations = EU.annotations_from_jsonl(LOC['cose_test'])
+    else:
+        raise AttributeError('mode unknown!')
 
     # TODO check for IDs and overlap (are results and annotation in the same order of samples?)
     docs = EU.load_documents(LOC['cose'])

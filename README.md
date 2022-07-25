@@ -40,6 +40,10 @@ _diagram incoming_
       - does torchstat actually work here?
       - floating_point_ops method available in hugginface models! :O
   - Integrate into Pipeline
+    - write a transformers.pipeline wrapper class! (including attention calculation with lime/attention/etc)
+    - train
+    - evaluate
+    - viz
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove

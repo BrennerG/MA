@@ -1,10 +1,15 @@
 import json
 import datasets
 
-import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
-from datasets import Dataset
+import statistics as stat
+import math as math
+import numpy as np
 
+import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
+
+from datasets import Dataset
 from data_access.locations import LOC
+
 
 """ ERASER Cos-E Dataset """
 
@@ -12,7 +17,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_LIMIT = 10
+_LIMIT = _FULL
 
 
 class EraserCosEConfig(datasets.BuilderConfig):
@@ -102,8 +107,56 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                 }
             }
     
-    def erase(self, weights:[], k=None, mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
-        raise NotImplemented
+    @staticmethod
+    def erase(weights:[], k=None, split='val', mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
+        # get correct split
+        train, val, test = EU.load_datasets(LOC['cose'])
+        if split == 'train': raw = train
+        elif split == 'val': raw = val
+        elif split == 'test': raw = test
+        docids = [x.annotation_id for x in raw]
+        docs = EU.load_flattened_documents(LOC['cose'], docids)
+        parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
+        labels = [parselabel[x.classification] for x in raw]
+
+        # take average evidence length if no k given!
+        if k==None: 
+            lens = []
+            for evi in [list(X.evidences)[0][0] for X in raw[:_LIMIT]]:
+                lens.append(evi.end_token - evi.start_token)
+            k = math.ceil(stat.mean(lens))
+
+        ret = []
+        for i,X in enumerate(raw[:_LIMIT]):
+            rationale = list(X.evidences)[0][0]
+            question = docs[X.annotation_id]
+            assert len(weights[i]) == len(question)
+
+            # erase top_k tokens from question input
+            top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
+            if mode=='comprehensiveness':
+                erased = [question[x] for x in range(len(question)) if x not in top_idx]
+            elif mode=='sufficiency':
+                erased = [question[x] for x in top_idx]
+            else:
+                raise AttributeError('evaluation mode unknown!')
+
+            ret.append({
+                'id': X.annotation_id,
+                'question': " ".join(erased),
+                'context': X.query_type,
+                'answers': X.query.split(' [sep] '),
+                'label': int(parselabel[X.classification]),
+                'rationale': { # TODO this might be a bad idea if the original rationale Object is needed later
+                    'docid': rationale.docid,
+                    'end_sentence': rationale.end_sentence,
+                    'end_token': rationale.end_token,
+                    'start_sentence': rationale.start_sentence,
+                    'start_token': rationale.start_token,
+                    'text': rationale.text
+                }
+            })
+        return ret
 
     @staticmethod
     def parse_to_lime(ds:Dataset):

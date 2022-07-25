@@ -8,6 +8,7 @@ LOC = {
     'cose_docs': 'data/eraser/cose/docs.jsonl',
     'cose_train': 'data/eraser/cose/train.jsonl',
     'cose_test': 'data/eraser/cose/test.jsonl',
+    'cose_val': 'data/eraser/cose/val.jsonl',
     'models_dir': 'data/models/',
     'experiments_dir': 'data/experiments/',
     'preprocessed_data': 'data/csqa_preprocessed/',
