@@ -223,7 +223,7 @@ def experiment():
     explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
 
     # Multiplexer for (question, answer) -> 'questions+answers'
-    def clf_wrapper(input_str:str):
+    def old_wrapper(input_str:str):
         if isinstance(input_str, list) and len(input_str) == 1: input_str = input_str[0]
         # prep
         question, answers = input_str.split('[qsep]') # define this somewhere!
@@ -234,9 +234,21 @@ def experiment():
         pred = model(**inputs, output_attentions=True)
         return pred.logits.detach().numpy()
 
+    def clf_wrapper(input_str:str):
+        answers = input_str[0].split('[qsep]')[1].split(' [sep] ')
+        rep_questions = [item for item in input_str for i in range(5)]
+        rep_answers = answers*len(input_str)
+        # encode
+        encoding = TOKENIZER(rep_questions, rep_answers, return_tensors='pt', padding=True)
+        inputs = {k: v.unsqueeze(0) for k, v in encoding.items()}
+        pred = model(**inputs, output_attentions=True)
+        logits = pred.logits.detach().numpy().T
+        grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
+        return np.array(grouped)
+
     weights = []
-    for i,x in enumerate(tqdm(ds_for_lime)):
-        exp = explainer.explain_instance(x, clf_wrapper, num_features=30, num_samples=1)
+    for i,x in tqdm(enumerate(ds_for_lime)):
+        exp = explainer.explain_instance(x, clf_wrapper, num_samples=10, num_features=30, labels=list(range(5)))
         weights.append(exp.as_list())
 
     print('done')
