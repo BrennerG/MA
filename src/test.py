@@ -1,3 +1,6 @@
-import tests.bert.bert_cose as bert_cose
+from models.bert import BertPipeline
+from datasets import load_dataset
 
-bert_cose.eval_efficiency()
+cose = load_dataset('src/tests/bert/huggingface_cose.py')
+pipe = BertPipeline()
+pipe.train(cose)
