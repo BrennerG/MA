@@ -138,10 +138,7 @@ def eval_competence():
     acc = accuracy.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd)
     prec = precision.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd, average='weighted')
     reca = recall.compute(references=tokenized_cose['validation']['label'], predictions=argmaxd, average='weighted')
-
-    # I could also do ... (probably better with multiple metrics!)
-    # evaluation = trainer.evaluate(tokenized_cose['validation'])
-    print(acc, prec, reca)
+    return acc, prec, reca
 
 # TODO find a way to bring answers into prediction function without multiplexing ...
 def eval_explainability():
@@ -237,5 +234,14 @@ def eval_explainability():
     er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, ordered_weights, aopc_thresholded_scores=aopc_predictions)
     agreement_auprc = E.soft_scores(er_results, docids=doc_ids, ds='cose_val')
     classification_scores = E.classification_scores(results=er_results, mode='val', aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]) # TODO test this on full data
+    return agreement_auprc, classification_scores
 
-    print('done')
+def eval_efficiency():
+    cose = load_dataset('src/tests/bert/huggingface_cose.py')
+    tokenized_cose = cose.map(preprocess_function, batched=True, batch_size=8752)
+    model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
+
+    input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
+    flops = model.floating_point_ops(input_dict, exclude_embeddings=False)
+    nr_params = 11000000 # for albert-base-v2 according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+    return flops, nr_params

@@ -29,20 +29,21 @@ _diagram incoming_
   - LIME
     - ~~run w. dummy data~~
     - ~~wrap huggingface classifier for LIME~~
-      - _optional_ write a proper custom Pipeline class
   - Evaluation
     - ~~Competence~~
     - Explainability (LIME needed)
       - ~~get lime to output weights~~
-      - fix issue, where all LIME weights are 0  (_current_)
-      - _optional_ try to aggregate transformer attention for explanations
+      - feed into ERASER _done, but to be tested_
+      - try to aggregate transformer attention for explanations _optional_
     - Efficiency
-      - does torchstat actually work here?
-      - floating_point_ops method available in hugginface models! :O
+      - ~~floating_point_ops~~
+      - ~~number of params (constant for pretrained LM-base)~~
+      - does torchstat work here? _optional_
   - Integrate into Pipeline
     - write a transformers.pipeline wrapper class! (including attention calculation with lime/attention/etc)
     - train
     - evaluate
+      - write a custom evaluation_metric method for all 3 evaluation modes _optional_
     - viz
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
