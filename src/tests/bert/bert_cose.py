@@ -242,6 +242,6 @@ def eval_efficiency():
     model = AlbertForMultipleChoice.from_pretrained("src/tests/bert/results/checkpoint-1641") 
 
     input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
-    flops = model.floating_point_ops(input_dict, exclude_embeddings=False)
+    flops = model.floating_point_ops(input_dict, exclude_embeddings=False) # chapter 2.1 relevant for albert: https://arxiv.org/pdf/2001.08361.pdf
     nr_params = 11000000 # for albert-base-v2 according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
     return flops, nr_params
