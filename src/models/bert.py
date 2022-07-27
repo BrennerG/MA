@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from transformers import Pipeline
 from transformers import AlbertForMultipleChoice, AlbertTokenizer
@@ -31,18 +32,22 @@ class BertPipeline(Pipeline):
         return preprocess_kwargs, {}, {}
 
     def preprocess(self, inputs, maybe_arg=2):
-        model_input = torch.Tensor(inputs["input_ids"])
-        return {"model_input": model_input}
+        questions = [x['question'] for x in inputs]
+        answers = [x['answers'] for x in inputs]
+        rep_questions = sum([[question] * 5 for question in questions], [])
+        rep_answers = sum(answers, [])
+        encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
+        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} # TODO this is when input is from the cose dataset object e.g. cose['validation']
+        return model_inputs
 
-    def _forward(self, model_inputs):
-        # model_inputs == {"model_input": model_input}
-        outputs = self.model(**model_inputs)
-        # Maybe {"logits": Tensor(...)}
-        return outputs
-
-    def postprocess(self, model_outputs):
-        best_class = model_outputs["logits"].softmax(-1)
-        return best_class
+    def _forward(self, model_inputs, attention='lime'): # TODO attention = {'lime', 'attention'}
+        return self.model(**model_inputs, output_attentions=True)
+        
+    def postprocess(self, model_outputs, output='proba'): # TODO output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
+        logits = model_outputs.logits.detach().numpy().T
+        grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
+        probas = np.array(grouped) # first part of the output
+        return probas
     
     def load(self, path_to_checkpoint:str):
         loaded_model = AlbertForMultipleChoice.from_pretrained(path_to_checkpoint) 
