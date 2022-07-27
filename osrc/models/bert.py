@@ -12,8 +12,7 @@ from dataclasses import dataclass
 from typing import Optional, Union
 from lime.lime_text import LimeTextExplainer
 
-from data.locations import LOC
-from data.huggingface_cose import EraserCosE
+from tests.bert.huggingface_cose import EraserCosE
 
 class BertPipeline(Pipeline):
 
@@ -111,7 +110,7 @@ class BertPipeline(Pipeline):
         return ordered_weights
 
     def efficiency_metrics(self):
-        cose = load_dataset(LOC['cose_huggingface'])
+        cose = load_dataset('src/tests/bert/huggingface_cose.py')
         tokenized_cose = cose.map(self.preprocess_function, batched=True, batch_size=8752)
         input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
         flops = self.model.floating_point_ops(input_dict, exclude_embeddings=False) # chapter 2.1 relevant for albert: https://arxiv.org/pdf/2001.08361.pdf
