@@ -29,8 +29,10 @@ class BertPipeline(Pipeline):
             binary_output = False
         )
         self.trainer = None
+        self.cached_inputs = None
 
     # see documentation in super (essentially it allows for dynamic parameter passing to the pipeline)
+    # TODO pass output and attention parameters here!
     def _sanitize_parameters(self, **kwargs):
         preprocess_kwargs = {}
         if "maybe_arg" in kwargs:
@@ -38,6 +40,9 @@ class BertPipeline(Pipeline):
         return preprocess_kwargs, {}, {}
 
     def preprocess(self, inputs, maybe_arg=2):
+        if isinstance(inputs, dict): # a single sample is entered
+            inputs = [inputs] # ~unsqueeze
+        self.cached_inputs = inputs # cache inputs for lime
         questions = [x['question'] for x in inputs]
         answers = [x['answers'] for x in inputs]
         rep_questions = sum([[question] * 5 for question in questions], [])
@@ -59,7 +64,7 @@ class BertPipeline(Pipeline):
         # attention/weights
         attn_weights = None
         if attention == 'lime':
-            attn_weights = self.lime_weights(None) # TODO how do we bring the dataset here?
+            attn_weights = self.lime_weights(model_outputs) # TODO how do we bring the dataset here?
 
         # output
         if output == 'proba': return probas, attn_weights
@@ -74,9 +79,7 @@ class BertPipeline(Pipeline):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
         # TODO do dynamic parsing to ds_for_lime!
-        cose = load_dataset('src/tests/bert/huggingface_cose.py')
-        tokenized_cose = cose.map(self.preprocess_function, batched=True)
-        ds_for_lime = EraserCosE.parse_to_lime(ds=tokenized_cose['debug_val']) 
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) 
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
         # TODO can this wrap around self._call() instead? 

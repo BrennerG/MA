@@ -184,7 +184,7 @@ class Experiment():
                 result[mode]['efficiency'] = E.efficiency_metrics(self.model.lin, (1000, 3, 50)) # TODO this only works for RandomAttentionClassifier
 
             if 'competence' in self.evaluation_mode:
-                result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence(gold, pred)
+                result[mode]['accuracy'], result[mode]['precision'], result[mode]['recall'] = E.competence_metrics(gold, pred)
 
         self.evaluation_results = result
         self.lvl = 2

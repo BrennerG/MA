@@ -12,6 +12,54 @@ from torchstat import stat
 from data_access.locations import LOC
 import train as T
 
+from tests.bert.huggingface_cose import EraserCosE
+
+
+def explainability_metrics_for_bert_model(model, dataset):
+    # aopc predictions (redundant with the one in src/train.py)
+    def predict_aopc_thresholded_for_bert(attn:[], split:str, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
+        intermediate = {}
+        result = []
+        # erase for each aopc_thresh
+        for aopc in aopc_thresholds:
+            # comp
+            comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
+            comp_pred, _ = zip(*model(comp_ds)) # TODO disable lime here (param passing is needed first)
+            comp_labels = T.from_softmax(comp_pred, to='dict')
+            # suff
+            suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
+            suff_pred, _ = zip(*model(suff_ds)) # TODO disable lime here (param passing is needed first)
+            suff_labels = T.from_softmax(suff_pred, to='dict')
+            # aggregate
+            intermediate[aopc] = [aopc, comp_labels, suff_labels]
+
+        # transform results
+        assert len(comp_ds) == len(suff_ds)
+        for i in range(len(comp_ds)):
+            sample = []
+            for aopc in aopc_thresholds:
+                sample.append({
+                    'threshold': aopc,
+                    "comprehensiveness_classification_scores": intermediate[aopc][1][i],
+                    "sufficiency_classification_scores": intermediate[aopc][2][i],
+                })
+            result.append(sample)
+
+        return result
+
+    # calculate eraser metrics
+    pred, attn = model(dataset) # regular predictions
+    comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split='debug_val')
+    suff_ds = EraserCosE.erase(attn, mode='sufficiency', split='debug_val')
+    comp_pred, _ = zip(*model(comp_ds)) # TODO exclude lime calcs here
+    suff_pred, _ = zip(*model(suff_ds)) # TODO exclude lime calcs here
+    aopc_predictions = predict_aopc_thresholded_for_bert(attn, split='debug_val')
+
+    doc_ids = dataset['id']
+    er_results = create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
+    agreement_auprc = soft_scores(er_results, docids=doc_ids, ds='cose_val')
+    clf_scores = classification_scores(results=er_results, mode='val', aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5], with_ids=doc_ids)
+    return agreement_auprc, clf_scores
 
 def explainability_metrics(model, dataset, model_params, evaluation_params, mode='test'):
     # init
@@ -44,7 +92,7 @@ def efficiency_metrics(model:nn.Module, input_size):
     return results
 
 # returns accuracy, precision, recall
-def competence(gold_labels:[], predictions:[], rounded=3):
+def competence_metrics(gold_labels:[], predictions:[], rounded=3):
     predictions = T.from_softmax(predictions, to='int')
     return [float(round(acc(gold_labels, predictions), rounded)), 
             float(round(pre(gold_labels, predictions, average='macro'), rounded)),
@@ -68,7 +116,7 @@ def soft_scores(results, docids, ds='cose_train'):
     return {k:float(v) for k,v in scores.items()}
 
 # classification metrics (accuracy, precision, recall, comprehensiveness, sufficiency)
-def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
+def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5], with_ids:[]=None):
     if mode == 'train':
         annotations = EU.annotations_from_jsonl(LOC['cose_train'])
     elif mode == 'val':
@@ -77,6 +125,10 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
         annotations = EU.annotations_from_jsonl(LOC['cose_test'])
     else:
         raise AttributeError('mode unknown!')
+    
+    # for debug or custom splits
+    if with_ids: 
+        annotations = [ann for ann in annotations if ann.annotation_id in with_ids]
 
     # TODO check for IDs and overlap (are results and annotation in the same order of samples?)
     docs = EU.load_documents(LOC['cose'])

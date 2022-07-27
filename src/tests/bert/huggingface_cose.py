@@ -178,10 +178,13 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
 
     @staticmethod
     def parse_to_lime(ds:Dataset):
-        strings = [None] * len(ds['question'])
+        strings = []
         mask = None # TODO
+        questions = [d['question'] for d in ds]
+        answers = [a['answers'] for a in ds]
 
-        for i in range(len(ds['question'])):
-            strings[i] = f"{ds['question'][i]}[qsep]{' [sep] '.join(ds['answers'][i])}"
+        for q,a in zip(questions, answers):
+            merged = f"{q}[qsep]{' [sep] '.join(a)}"
+            strings.append(merged)
 
         return strings

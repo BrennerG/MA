@@ -39,9 +39,10 @@ _diagram incoming_
     - ~~predict~~
     - evaluate (in eval)
       - ~~bring LIME weights into pipeline~~
+      - create parameter passing for bert
       - feed output into eval.py
-        - competence
-        - explainability
+        - ~~competence~~
+        - ~~explainability~~
         - efficiency
     - viz
 * __BERT*less__ - create simple GNN Architecture with UD graphs
