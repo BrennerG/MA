@@ -39,9 +39,11 @@ _diagram incoming_
       - ~~floating_point_ops~~
       - ~~number of params (constant for pretrained LM-base)~~
       - does torchstat work here? _optional_
-  - Integrate into Pipeline
-    - write a transformers.pipeline wrapper class! (including attention calculation with lime/attention/etc)
-    - train
+  - Integrate into Pipeline (write a class with the stuff from bert_cose.py)
+    - ~~train~~
+      - ~~create limit functionality when training~~
+      - model loading
+    - predict
     - evaluate
       - write a custom evaluation_metric method for all 3 evaluation modes _optional_
     - viz

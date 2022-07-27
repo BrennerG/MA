@@ -45,7 +45,7 @@ class BertPipeline(Pipeline):
         return best_class
     
     # TRAINING METHOD
-    def train(self, dataset, train_args:TrainingArguments=None, save_loc=None):
+    def train(self, dataset, train_args:TrainingArguments=None, save_loc=None, debug_train_split=False):
 
         def preprocess_function(examples):
             first_sentences = [[question]*5 for question in examples['question']]
@@ -95,30 +95,39 @@ class BertPipeline(Pipeline):
         tokenized = dataset.map(preprocess_function, batched=True)
         overwrite = False
 
+        # arguments for training
         if train_args == None:
             if save_loc == None:
                 save_loc = 'data/experiments/default_bert/'
                 overwrite = True
-            # arguments for training
+
             training_args = TrainingArguments(
                 output_dir=save_loc,
                 evaluation_strategy="epoch",
                 learning_rate=5e-5,
                 per_device_train_batch_size=16,
                 per_device_eval_batch_size=16,
-                num_train_epochs=10,
+                num_train_epochs=3,
                 weight_decay=0.01,
                 save_strategy='epoch',
                 overwrite_output_dir=overwrite,
                 no_cuda=True # TODO yes_cuda!!!
             )
         
+        # debug splits are tiny
+        if debug_train_split: 
+            train_data = tokenized['debug_train']
+            val_data = tokenized['debug_val']
+        else: 
+            train_data = tokenized['train']
+            val_data = tokenized['val']
+
         # use trainer api for training
         trainer = Trainer(
             model=self.model,
             args=training_args,
-            train_dataset=tokenized["train"],
-            eval_dataset=tokenized["validation"],
+            train_dataset=train_data,
+            eval_dataset=val_data,
             tokenizer=self.tokenizer,
             data_collator=DataCollatorForMultipleChoice(tokenizer=self.tokenizer)
         )
