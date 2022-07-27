@@ -31,7 +31,7 @@ class BertPipeline(Pipeline):
         return preprocess_kwargs, {}, {}
 
     def preprocess(self, inputs, maybe_arg=2):
-        model_input = Tensor(inputs["input_ids"])
+        model_input = torch.Tensor(inputs["input_ids"])
         return {"model_input": model_input}
 
     def _forward(self, model_inputs):
@@ -44,6 +44,11 @@ class BertPipeline(Pipeline):
         best_class = model_outputs["logits"].softmax(-1)
         return best_class
     
+    def load(self, path_to_checkpoint:str):
+        loaded_model = AlbertForMultipleChoice.from_pretrained(path_to_checkpoint) 
+        self.model = loaded_model
+        return loaded_model
+
     # TRAINING METHOD
     def train(self, dataset, train_args:TrainingArguments=None, save_loc=None, debug_train_split=False):
 

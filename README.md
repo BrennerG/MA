@@ -33,7 +33,7 @@ _diagram incoming_
     - ~~Competence~~
     - Explainability (LIME needed)
       - ~~get lime to output weights~~
-      - feed into ERASER _done, but to be tested_
+      - feed into ERASER _done, but to be tested - needs < 50GB+ RAM!_
       - try to aggregate transformer attention for explanations _optional_
     - Efficiency
       - ~~floating_point_ops~~
