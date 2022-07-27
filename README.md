@@ -43,7 +43,7 @@ _diagram incoming_
     - ~~train~~
       - ~~create limit functionality when training~~
       - ~~model loading~~
-    - predict
+    - ~~predict~~
     - evaluate
       - write a custom evaluation_metric method for all 3 evaluation modes _optional_
     - viz
