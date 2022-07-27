@@ -1,4 +1,5 @@
 import numpy as np
+import torch 
 import torch.nn as nn
 
 from sklearn.metrics import accuracy_score as acc
@@ -9,7 +10,27 @@ import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 from torchstat import stat
 
 from data_access.locations import LOC
-from train import from_softmax
+import train as T
+
+
+def explainability_metrics(model, dataset, model_params, evaluation_params, mode='test'):
+    # init
+    pred, attn = T.predict(model_params, model, dataset)
+    if isinstance(attn[0], torch.Tensor): attn_detached = [x.detach().numpy() for x in attn]
+    else: attn_detached = attn
+    doc_ids = dataset.docids
+    # erase for comprehensiveness and sufficiency
+    comp_data = dataset.erase(attn, mode='comprehensiveness')
+    suff_data = dataset.erase(attn, mode='sufficiency')
+    # do predictions
+    comp_predictions, _ = T.predict(model_params, model, comp_data, proba=True)
+    suff_predictions, _ = T.predict(model_params, model, suff_data, proba=True)
+    aopc_predictions = T.predict_aopc_thresholded(model_params, evaluation_params, model, attn, dataset)
+    # get results
+    er_results = create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
+    agreement_auprc = soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}') # TODO
+    clf_scores = classification_scores(results=er_results, mode=mode, aopc_thresholds=evaluation_params['aopc_thresholds'])
+    return agreement_auprc, clf_scores
 
 def efficiency_metrics(model:nn.Module, input_size):
     state_dict_keys_before = model.state_dict().keys()
@@ -24,7 +45,7 @@ def efficiency_metrics(model:nn.Module, input_size):
 
 # returns accuracy, precision, recall
 def competence(gold_labels:[], predictions:[], rounded=3):
-    predictions = from_softmax(predictions, to='int')
+    predictions = T.from_softmax(predictions, to='int')
     return [float(round(acc(gold_labels, predictions), rounded)), 
             float(round(pre(gold_labels, predictions, average='macro'), rounded)),
             float(round(rec(gold_labels, predictions, average='macro'), rounded))]
@@ -75,10 +96,10 @@ def create_results(docids, predictions, comp_predicitons, suff_predictions, atte
     assert len(docids) == len(predictions) == len(attentions)
 
     result = []
-    labels = from_softmax(predictions, to='str')
-    dicprics = from_softmax(predictions, to='dict')
-    comp_dicprics = from_softmax(comp_predicitons, to='dict')
-    suff_dicprics = from_softmax(suff_predictions, to='dict')
+    labels = T.from_softmax(predictions, to='str')
+    dicprics = T.from_softmax(predictions, to='dict')
+    comp_dicprics = T.from_softmax(comp_predicitons, to='dict')
+    suff_dicprics = T.from_softmax(suff_predictions, to='dict')
 
     for i, docid in enumerate(docids):
         dic = {

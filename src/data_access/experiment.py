@@ -176,20 +176,8 @@ class Experiment():
             gold = dataset.labels
             doc_ids = dataset.docids
 
-            if 'explainability' in self.evaluation_mode:
-                # detach attention if necessary
-                if isinstance(attn[0], torch.Tensor): attn_detached = [x.detach().numpy() for x in attn]
-                else: attn_detached = attn
-                # retrain for comp and suff:
-                comp_data = dataset.erase(attn, mode='comprehensiveness')
-                suff_data = dataset.erase(attn, mode='sufficiency')
-                comp_predictions, _ = T.predict(self.model_params, self.model, comp_data, proba=True)
-                suff_predictions, _ = T.predict(self.model_params, self.model, suff_data, proba=True)
-                aopc_predictions = T.predict_aopc_thresholded(self.model_params, self.evaluation_params, self.model, attn, dataset) # TODO normal attn needed here?
-
-                er_results = E.create_results(doc_ids, pred, comp_predictions, suff_predictions, attn_detached, aopc_thresholded_scores=aopc_predictions)
-                result[mode]['agreement_auprc'] = E.soft_scores(er_results, docids=doc_ids, ds=f'cose_{mode}')
-                result[mode]['classification_scores'] = E.classification_scores(results=er_results, mode=mode, aopc_thresholds=self.evaluation_params['aopc_thresholds'])
+            if 'explainability' in self.evaluation_mode: 
+                result[mode]['agreement_aupcr'], result[mode]['classification_scores'] = E.explainability_metrics(self.model, dataset, self.model_params, self.evaluation_params, mode=mode)
 
             if 'efficiency' in self.evaluation_mode:
                 # TODO does this actually need the train/test mode? or is eff beyond train / test

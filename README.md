@@ -26,26 +26,18 @@ _diagram incoming_
 * ~~__BOW__ Baseline~~
 * __BERT + LIME__ Baseline
   - ~~huggingface clf~~
-  - LIME
-    - ~~run w. dummy data~~
-    - ~~wrap huggingface classifier for LIME~~
+  - ~~LIME~~
   - Evaluation
     - ~~Competence~~
+    - ~~Efficiency~~
     - Explainability (LIME needed)
       - ~~get lime to output weights~~
-      - feed into ERASER _done, but to be tested - needs < 50GB+ RAM!_
+      - full LIME run needed, due to eraser eval script - needs 50GB+ RAM!)
       - try to aggregate transformer attention for explanations _optional_
-    - Efficiency
-      - ~~floating_point_ops~~
-      - ~~number of params (constant for pretrained LM-base)~~
-      - does torchstat work here? _optional_
   - Integrate into Pipeline (write a class with the stuff from bert_cose.py)
     - ~~train~~
-      - ~~create limit functionality when training~~
-      - ~~model loading~~
     - ~~predict~~
-    - evaluate
-      - write a custom evaluation_metric method for all 3 evaluation modes _optional_
+    - evaluate (in eval)
     - viz
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)

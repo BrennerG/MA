@@ -11,7 +11,6 @@ import torch.nn as nn
 from models.random_clf import RandomClassifier
 from models.random_attn_clf import RandomAttentionClassifier
 from models.bow import BagOfWordsClassifier
-from models.bert import BertClassifier
 
 from data_access.locations import LOC
 
