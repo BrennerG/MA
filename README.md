@@ -42,7 +42,7 @@ _diagram incoming_
   - Integrate into Pipeline (write a class with the stuff from bert_cose.py)
     - ~~train~~
       - ~~create limit functionality when training~~
-      - model loading
+      - ~~model loading~~
     - predict
     - evaluate
       - write a custom evaluation_metric method for all 3 evaluation modes _optional_
