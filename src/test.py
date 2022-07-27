@@ -14,4 +14,5 @@ probas, attn = pipe(cose['debug_val'])
 # eval
 comp = E.competence_metrics(cose['debug_val']['label'], probas)
 expl = E.explainability_metrics_for_bert_model(pipe, cose['debug_val'])
+flops, num_params = pipe.efficiency_metrics()
 print('done')

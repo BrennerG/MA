@@ -37,14 +37,10 @@ _diagram incoming_
   - Integrate into Pipeline (write a class with the stuff from bert_cose.py)
     - ~~train~~
     - ~~predict~~
-    - evaluate (in eval)
-      - ~~bring LIME weights into pipeline~~
-      - create parameter passing for bert
-      - feed output into eval.py
-        - ~~competence~~
-        - ~~explainability~~
-        - efficiency
+    - ~~evaluate~~
     - viz
+  - cleanup TODOs
+* Change Experiment Structure
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove

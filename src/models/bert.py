@@ -48,14 +48,14 @@ class BertPipeline(Pipeline):
         rep_questions = sum([[question] * 5 for question in questions], [])
         rep_answers = sum(answers, [])
         encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} # TODO this is when input is from the cose dataset object e.g. cose['validation']
+        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} 
         return model_inputs
 
     def _forward(self, model_inputs):         
         return self.model(**model_inputs, output_attentions=True)
         
-    # TODO attention = {None, 'lime', 'attention'}
-    # TODO output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
+    # attention = {None, 'lime', 'attention'}
+    # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
     def postprocess(self, model_outputs, attention='lime', output='proba'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
@@ -64,7 +64,7 @@ class BertPipeline(Pipeline):
         # attention/weights
         attn_weights = None
         if attention == 'lime':
-            attn_weights = self.lime_weights(model_outputs) # TODO how do we bring the dataset here?
+            attn_weights = self.lime_weights() # uses cached features
 
         # output
         if output == 'proba': return probas, attn_weights
@@ -75,14 +75,12 @@ class BertPipeline(Pipeline):
         self.model = loaded_model
         return loaded_model
 
-    def lime_weights(self, dataset, num_features=30, num_lime_permutations=3):
+    def lime_weights(self, num_features=30, num_lime_permutations=3):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
-        # TODO do dynamic parsing to ds_for_lime!
-        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) 
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)  # TODO set this None after use?
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
-        # TODO can this wrap around self._call() instead? 
         def clf_wrapper(input_str:str):
             answers = input_str[0].split('[qsep]')[1].split(' [sep] ')
             rep_questions = [item for item in input_str for i in range(5)]
@@ -110,6 +108,14 @@ class BertPipeline(Pipeline):
             ordered_weights.append(ordered)
 
         return ordered_weights
+
+    def efficiency_metrics(self):
+        cose = load_dataset('src/tests/bert/huggingface_cose.py')
+        tokenized_cose = cose.map(self.preprocess_function, batched=True, batch_size=8752)
+        input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
+        flops = self.model.floating_point_ops(input_dict, exclude_embeddings=False) # chapter 2.1 relevant for albert: https://arxiv.org/pdf/2001.08361.pdf
+        nr_params = 11000000 # for albert-base-v2 according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+        return flops, nr_params
 
     # only needed for training, yes I know its ugly
     def preprocess_function(self, examples):
