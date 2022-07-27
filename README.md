@@ -38,6 +38,11 @@ _diagram incoming_
     - ~~train~~
     - ~~predict~~
     - evaluate (in eval)
+      - ~~bring LIME weights into pipeline~~
+      - feed output into eval.py
+        - competence
+        - explainability
+        - efficiency
     - viz
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)

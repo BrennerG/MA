@@ -8,6 +8,6 @@ cose = load_dataset('src/tests/bert/huggingface_cose.py')
 pipe = BertPipeline()
 # pipe.train(cose, debug_train_split=True)
 pipe.load("src/tests/bert/results/22_7/checkpoint-5470")
-probas = pipe(cose['debug_val'])
+probas, attn = pipe(cose['debug_val'])
 
 print('done')

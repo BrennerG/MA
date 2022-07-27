@@ -1,12 +1,18 @@
 import torch
 import numpy as np
+import lime
 
+from tqdm import tqdm
 from transformers import Pipeline
 from transformers import AlbertForMultipleChoice, AlbertTokenizer
 from transformers import AutoModelForMultipleChoice, TrainingArguments, Trainer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase, PaddingStrategy
+from datasets import load_dataset
 from dataclasses import dataclass
 from typing import Optional, Union
+from lime.lime_text import LimeTextExplainer
+
+from tests.bert.huggingface_cose import EraserCosE
 
 class BertPipeline(Pipeline):
 
@@ -40,33 +46,82 @@ class BertPipeline(Pipeline):
         model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} # TODO this is when input is from the cose dataset object e.g. cose['validation']
         return model_inputs
 
-    def _forward(self, model_inputs, attention='lime'): # TODO attention = {'lime', 'attention'}
+    def _forward(self, model_inputs):         
         return self.model(**model_inputs, output_attentions=True)
         
-    def postprocess(self, model_outputs, output='proba'): # TODO output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
+    # TODO attention = {None, 'lime', 'attention'}
+    # TODO output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
+    def postprocess(self, model_outputs, attention='lime', output='proba'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
-        probas = np.array(grouped) # first part of the output
-        return probas
+        probas = np.array(grouped)
+
+        # attention/weights
+        attn_weights = None
+        if attention == 'lime':
+            attn_weights = self.lime_weights(None) # TODO how do we bring the dataset here?
+
+        # output
+        if output == 'proba': return probas, attn_weights
+        else: raise AttributeError(f'output mode {output} unknown!')
     
     def load(self, path_to_checkpoint:str):
         loaded_model = AlbertForMultipleChoice.from_pretrained(path_to_checkpoint) 
         self.model = loaded_model
         return loaded_model
 
+    def lime_weights(self, dataset, num_features=30, num_lime_permutations=3):
+        # init
+        explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
+        # TODO do dynamic parsing to ds_for_lime!
+        cose = load_dataset('src/tests/bert/huggingface_cose.py')
+        tokenized_cose = cose.map(self.preprocess_function, batched=True)
+        ds_for_lime = EraserCosE.parse_to_lime(ds=tokenized_cose['debug_val']) 
+
+        # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
+        # TODO can this wrap around self._call() instead? 
+        def clf_wrapper(input_str:str):
+            answers = input_str[0].split('[qsep]')[1].split(' [sep] ')
+            rep_questions = [item for item in input_str for i in range(5)]
+            rep_answers = answers*len(input_str)
+            # encode
+            encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
+            inputs = {k: v.unsqueeze(0) for k, v in encoding.items()}
+            pred = self.model(**inputs, output_attentions=True)
+            logits = pred.logits.detach().numpy().T
+            grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
+            return np.array(grouped)
+
+        # get lime explanations
+        weights = []
+        for i,x in enumerate(tqdm(ds_for_lime)):
+            exp = explainer.explain_instance(x, clf_wrapper, num_samples=num_lime_permutations, num_features=num_features, labels=list(range(5)))
+            weights.append(exp.as_list())
+        
+        # bring weights into order of tokens
+        ordered_weights = []
+        for i,input_str in enumerate(ds_for_lime):
+            q = ds_for_lime[i].split('[qsep]')[0].split()
+            w = dict(weights[i])
+            ordered = [w[p] if (p in q and p in w.keys()) else 0 for p in q ]
+            ordered_weights.append(ordered)
+
+        return ordered_weights
+
+    # only needed for training, yes I know its ugly
+    def preprocess_function(self, examples):
+        first_sentences = [[question]*5 for question in examples['question']]
+        second_sentences = examples['answers']
+        #flatten
+        first_sentences = sum(first_sentences, []) # this flattens the lists :O
+        second_sentences = sum(second_sentences, []) # not needed for predict
+
+        tokenized_examples = self.tokenizer(first_sentences, second_sentences, truncation=True, padding=True)
+        res = {k: [v[i : i + 5] for i in range(0, len(v), 5)] for k, v in tokenized_examples.items()} # rejoin to shape (8752 x 5 x unpadded_len)
+        return res
+
     # TRAINING METHOD
     def train(self, dataset, train_args:TrainingArguments=None, save_loc=None, debug_train_split=False):
-
-        def preprocess_function(examples):
-            first_sentences = [[question]*5 for question in examples['question']]
-            second_sentences = examples['answers']
-            #flatten
-            first_sentences = sum(first_sentences, []) # this flattens the lists :O
-            second_sentences = sum(second_sentences, []) # not needed for predict
-
-            tokenized_examples = self.tokenizer(first_sentences, second_sentences, truncation=True, padding=True)
-            res = {k: [v[i : i + 5] for i in range(0, len(v), 5)] for k, v in tokenized_examples.items()} # rejoin to shape (8752 x 5 x unpadded_len)
-            return res
 
         @dataclass
         class DataCollatorForMultipleChoice:
@@ -102,7 +157,7 @@ class BertPipeline(Pipeline):
                 return batch
 
         # training method starts here!
-        tokenized = dataset.map(preprocess_function, batched=True)
+        tokenized = dataset.map(self.preprocess_function, batched=True)
         overwrite = False
 
         # arguments for training
