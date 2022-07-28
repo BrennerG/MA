@@ -9,7 +9,6 @@ class Experiment(ABC):
     def __init__(self, params:{}):
         self.complete_set, self.train_set, self.val_set, self.test_set = self.init_data(params)
         self.model = self.model_factory(params['model_type'], params)
-        self.viz_data = {}
 
     def __call__(self, params:{}):
         self.train_output = self.train(params)
@@ -19,13 +18,17 @@ class Experiment(ABC):
         return self
         
     def evaluate(self, params:{}, split='val'):
+        # TODO make all of these return dicts?
         return self.eval_competence(params), self.eval_explainability(params), self.eval_efficiency(params)
     
     def model_factory(self, type:str, params:{}):
         if type == 'RandomAttentionClassifier':
             model = RandomAttentionClassifier(params['random_seed'])
         elif type == "BERT":
-            model = BertPipeline()
+            if 'load_from' in params: 
+                print(f"LOADING MODEL FROM {params['load_from']}")
+                model = BertPipeline(load_from=params['load_from'])
+            else: model = BertPipeline()
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
@@ -40,11 +43,6 @@ class Experiment(ABC):
         '''trains self.model on self.train_set'''
         raise NotImplementedError()
     
-    @abstractmethod
-    def load(self):
-        '''loads a pretrained model instead of training'''
-        raise NotImplementedError()
-
     @abstractmethod
     def eval_competence(self, params:{}):
         raise NotImplementedError()

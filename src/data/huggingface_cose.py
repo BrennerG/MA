@@ -150,8 +150,11 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             question = docs[X.annotation_id]
             assert len(weights[i]) == len(question)
 
-            # erase top_k tokens from question input
-            top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
+            # get top_k tokens
+            if k > len(weights[i]): top_idx = np.array(range(len(weights[i])))
+            else: top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
+
+            # erase the top_k tokens
             if mode=='comprehensiveness':
                 erased = [question[x] for x in range(len(question)) if x not in top_idx]
             elif mode=='sufficiency':

@@ -17,9 +17,13 @@ from data.huggingface_cose import EraserCosE
 
 class BertPipeline(Pipeline):
 
-    def __init__(self):
+    def __init__(self, load_from:str=None):
+
+        if load_from: model = AlbertForMultipleChoice.from_pretrained(load_from)
+        else: model = AlbertForMultipleChoice.from_pretrained("albert-base-v2"),
+
         super().__init__(
-            model = AlbertForMultipleChoice.from_pretrained("albert-base-v2"),
+            model = model,
             tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2'),
             feature_extractor=None,
             modelcard=None,

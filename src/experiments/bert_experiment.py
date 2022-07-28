@@ -15,15 +15,15 @@ class BERTExperiment(Experiment):
             return cose, cose['train'], cose['validation'], cose['test']
 
     def train(self, params:{}):
+        if 'load_from' in params:
+            print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
+            return None
         return self.model.train(
             self.complete_set, 
             debug_train_split=('debug' in params and params['debug'])
             # TODO save_loc = '/path/to/dir/'
         )
     
-    def load(self):
-        return None
-
     def eval_competence(self, params:{}):
         probas, attn = self.val_pred
         return E.competence_metrics(self.val_set['label'], probas)
@@ -39,6 +39,7 @@ class BERTExperiment(Experiment):
         # calcualte aopc metrics
         aopc_intermediate = {}
         for aopc in params['aopc_thresholds']:
+            # TODO WHERE THE K AT?
             # comp
             cds = EraserCosE.erase(attn, mode='comprehensiveness', split='debug_val')
             cp, _ = zip(*self.model(cds)) # TODO disable lime here
