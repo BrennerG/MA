@@ -80,6 +80,7 @@ class BertPipeline(Pipeline):
         self.model = loaded_model
         return loaded_model
 
+    # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
     def lime_weights(self, num_features=30, num_lime_permutations=3):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])

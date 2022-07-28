@@ -95,9 +95,8 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         docids = [x.annotation_id for x in raw]
         docs = EU.load_flattened_documents(LOC['cose'], docids)
         labels = [parselabel[x.classification] for x in raw]
-        # self.avg_evidence_len = round(np.mean([len(x[4].text.split()) for x in self])) # TODO calculate this differently
 
-        for i,X in enumerate(raw[:LIMIT]): # TODO this limits each split... probably only want it for training tho...
+        for i,X in enumerate(raw[:LIMIT]): 
             rationale = list(X.evidences)[0][0]
             yield i, {
                 'id': X.annotation_id,
@@ -107,7 +106,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                 'answers': X.query.split(' [sep] '),
                 #'answers': X.query.replace(' [sep] ', ' '),
                 'label': int(parselabel[X.classification]),
-                'rationale': { # TODO this might be a bad idea if the original rationale Object is needed later
+                'rationale': { 
                     'docid': rationale.docid,
                     'end_sentence': rationale.end_sentence,
                     'end_token': rationale.end_token,
@@ -168,7 +167,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                 'context': X.query_type,
                 'answers': X.query.split(' [sep] '),
                 'label': int(parselabel[X.classification]),
-                'rationale': { # TODO this might be a bad idea if the original rationale Object is needed later
+                'rationale': { 
                     'docid': rationale.docid,
                     'end_sentence': rationale.end_sentence,
                     'end_token': rationale.end_token,
@@ -182,7 +181,6 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
     @staticmethod
     def parse_to_lime(ds:Dataset):
         strings = []
-        mask = None # TODO
         questions = [d['question'] for d in ds]
         answers = [a['answers'] for a in ds]
 
