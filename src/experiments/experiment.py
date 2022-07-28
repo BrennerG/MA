@@ -3,7 +3,24 @@ from abc import ABC, abstractmethod
 from models.bert import BertPipeline
 from models.random import RandomClassifier
 
+'''
+This class represents a single pass through the pipeline of a single model
+and provides means to reproducing such passes/runs by saving important data.
 
+Each experiment consists of the following phases:
+    0. Initialization
+    1. Training / Loading
+    2. Predicting the validation set
+    3. Evaluating the modee
+    4. Visualizing aspects of the experiment
+
+As mentioned each Experiment subclass correlates to a kind of model:
+    - RandomExperiment and RandomClassifier
+    - BERTExperiment and BERTClassifier
+    - ...
+Since this class is abstract most of the actual logic is implemented in the respective sublassess.
+
+'''
 class Experiment(ABC):
 
     def __init__(self, params:{}):
@@ -30,6 +47,7 @@ class Experiment(ABC):
         }
     
     def model_factory(self, type:str, params:{}):
+        ''' This method allows to create model classes from strings'''
         if type == 'Random':
             model = RandomClassifier(params['rnd_seed'])
         elif type == "BERT":
@@ -53,17 +71,22 @@ class Experiment(ABC):
     
     @abstractmethod
     def eval_competence(self, params:{}):
+        '''evaluates the competence of the experiments model; returns {accuracy, precicison, recall}'''
         raise NotImplementedError()
 
     @abstractmethod
     def eval_explainability(self, params:{}):
+        '''evaluates the quantifiable explainability of the model with the aid of the ERASER module; 
+        returns a large number of metrics around comprehensiveness and sufficiency'''
         raise NotImplementedError()
 
     @abstractmethod
     def eval_efficiency(self, params:{}):
+        '''evaluates the efficiency of the experiments modele; returns {flops, num_params}'''
         raise NotImplementedError()
 
     @abstractmethod
     def viz(self, params:{}):
+        '''create visualizations of relevant aspects of the experiment'''
         raise NotImplementedError()
 
