@@ -40,10 +40,7 @@ _diagram incoming_
     - ~~evaluate~~
     - viz _on demand_
   - cleanup TODOs
-* Change Experiment Structure
-  - ~~BERT~~
-  - RandomClassifier
-  - ~~prune data folder~~
+* ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove

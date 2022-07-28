@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from models.bert import BertPipeline
-from models.random_attn_clf import RandomAttentionClassifier
+from models.random import RandomClassifier
 
 
 class Experiment(ABC):
@@ -22,8 +22,8 @@ class Experiment(ABC):
         return self.eval_competence(params), self.eval_explainability(params), self.eval_efficiency(params)
     
     def model_factory(self, type:str, params:{}):
-        if type == 'RandomAttentionClassifier':
-            model = RandomAttentionClassifier(params['random_seed'])
+        if type == 'Random':
+            model = RandomClassifier(params['rnd_seed'])
         elif type == "BERT":
             if 'load_from' in params: 
                 print(f"LOADING MODEL FROM {params['load_from']}")
