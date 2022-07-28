@@ -123,7 +123,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         LIMIT = _FULL
         train, val, test = EU.load_datasets(LOC['cose'])
         if split == 'train': raw = train
-        elif split == 'val': raw = val
+        elif split == 'val' or split == 'validation': raw = val
         elif split == 'test': raw = test
         elif split == 'debug_train': 
             raw = train
@@ -191,3 +191,11 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             strings.append(merged)
 
         return strings
+    
+    @staticmethod
+    def avg_rational_length(ds:Dataset):
+        result = {}
+        for split in list(ds.keys()):
+            r_lens = [r['end_token']-r['start_token'] for r in ds[split]['rationale']]
+            result[split] = np.mean(r_lens)
+        return result

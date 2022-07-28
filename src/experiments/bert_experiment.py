@@ -7,6 +7,10 @@ from data.locations import LOC
 
 class BERTExperiment(Experiment):
 
+    def __init__(self, params):
+        super().__init__(params)
+        self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
+
     def init_data(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
         if 'debug' in params and params['debug']:
@@ -30,31 +34,32 @@ class BERTExperiment(Experiment):
 
     # TODO erase using the dataset objects of this class! (no split='debug_val)
     def eval_explainability(self, params:{}):
-        # calculate eraser metrics
+        split = 'debug_val' if 'debug' in params and params['debug']==True else 'validation'
         pred, attn = self.val_pred
-        comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split='debug_val')
-        suff_ds = EraserCosE.erase(attn, mode='sufficiency', split='debug_val')
+        comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
+        suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
         comp_pred, _ = zip(*self.model(comp_ds)) # TODO exclude lime calcs here
         suff_pred, _ = zip(*self.model(suff_ds)) # TODO exclude lime calcs here
         # calcualte aopc metrics
         aopc_intermediate = {}
         for aopc in params['aopc_thresholds']:
-            # TODO WHERE THE K AT?
+            tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
-            cds = EraserCosE.erase(attn, mode='comprehensiveness', split='debug_val')
+            cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
             cp, _ = zip(*self.model(cds)) # TODO disable lime here
             cl = E.from_softmax(cp, to='dict') # labels
             # suff
-            sds = EraserCosE.erase(attn, mode='sufficiency', split='debug_val')
+            sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
             sp, _ = zip(*self.model(sds)) # TODO disable lime here
             sl = E.from_softmax(sp, to='dict')
             # aggregate
             aopc_intermediate[aopc] = [aopc, cl, sl]
         aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, params)
 
-        doc_ids = self.val_set['id'] # TODO only works because we have manually set split to debug_val everywhere...
+        doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
         return E.classification_scores(results=er_results, mode='val', aopc_thresholds=params['aopc_thresholds'], with_ids=doc_ids)
+        # E.soft_scores(results=er_results, docids=doc_ids)
 
     def eval_efficiency(self, params:{}):
         return self.model.efficiency_metrics()
