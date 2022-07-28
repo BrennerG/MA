@@ -91,8 +91,8 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
     if with_ids: 
         annotations = [ann for ann in annotations if ann.annotation_id in with_ids]
 
-    # TODO check for IDs and overlap (are results and annotation in the same order of samples?)
     docs = EU.load_documents(LOC['cose'])
+    assert [x['annotation_id'] for x in results] == [x['annotation_id'] for x in results]
     classifications = EM.score_classifications(results, annotations, docs, aopc_thresholds)
 
     # parse classification scores from numpy64 to float (for yaml readability!)

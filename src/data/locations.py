@@ -15,7 +15,8 @@ LOC = {
     'preprocessed_data': 'data/csqa_preprocessed/',
     'predictions': 'data/predicted/',
     'viz_data_dir': 'data/viz/data/',
-    'viz_dir': 'data/viz/'
+    'viz_dir': 'data/viz/',
+    'bert_checkpoints': 'data/experiments/bert',
 }
 
 # Creates all folders of the LOC dictionary

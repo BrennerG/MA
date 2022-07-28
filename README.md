@@ -39,7 +39,7 @@ _diagram incoming_
     - ~~predict~~
     - ~~evaluate~~
     - viz _on demand_
-  - cleanup TODOs
+  - ~~cleanup TODOs~~
 * ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)

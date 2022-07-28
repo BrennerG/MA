@@ -20,7 +20,7 @@ class BertPipeline(Pipeline):
     def __init__(self, load_from:str=None):
 
         if load_from: model = AlbertForMultipleChoice.from_pretrained(load_from)
-        else: model = AlbertForMultipleChoice.from_pretrained("albert-base-v2"),
+        else: model = AlbertForMultipleChoice.from_pretrained("albert-base-v2")
 
         super().__init__(
             model = model,
@@ -37,12 +37,15 @@ class BertPipeline(Pipeline):
         self.cached_inputs = None
 
     # see documentation in super (essentially it allows for dynamic parameter passing to the pipeline)
-    # TODO pass output and attention parameters here!
     def _sanitize_parameters(self, **kwargs):
         preprocess_kwargs = {}
+        forwards_kwargs = {}
+        postprocess_kwargs = {}
         if "maybe_arg" in kwargs:
             preprocess_kwargs["maybe_arg"] = kwargs["maybe_arg"]
-        return preprocess_kwargs, {}, {}
+        if 'attention' in kwargs:
+            postprocess_kwargs['attention'] = kwargs['attention']
+        return preprocess_kwargs, forwards_kwargs, postprocess_kwargs
 
     def preprocess(self, inputs, maybe_arg=2):
         if isinstance(inputs, dict): # a single sample is entered
@@ -68,7 +71,9 @@ class BertPipeline(Pipeline):
 
         # attention/weights
         attn_weights = None
-        if attention == 'lime':
+        if attention == None:
+            attn_weights = None
+        elif attention == 'lime':
             attn_weights = self.lime_weights() # uses cached features
 
         # output
@@ -84,7 +89,8 @@ class BertPipeline(Pipeline):
     def lime_weights(self, num_features=30, num_lime_permutations=3):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
-        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)  # TODO set this None after use?
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)
+        self.cached_inputs = None # reset cached data for safety
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
         def clf_wrapper(input_str:str):
@@ -200,7 +206,7 @@ class BertPipeline(Pipeline):
             val_data = tokenized['debug_val']
         else: 
             train_data = tokenized['train']
-            val_data = tokenized['val']
+            val_data = tokenized['validation']
 
         # use trainer api for training
         trainer = Trainer(

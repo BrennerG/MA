@@ -27,7 +27,10 @@ class RandomClassifierExperiment(Experiment):
     
     def eval_competence(self, params:{}):
         probas, attn = self.val_pred
-        return E.competence_metrics(self.val_set['label'], probas)
+        results = {}
+        results['accuracy'], results['precision'], results['recall'] = E.competence_metrics(self.val_set['label'], probas)
+        return results
+
 
     # TODO only works because we have manually set split to debug_val everywhere... better to handle data the directly
     def eval_explainability(self, params:{}):
@@ -67,7 +70,9 @@ class RandomClassifierExperiment(Experiment):
             }
 
     def eval_efficiency(self, params:{}):
-        return 0, 0
+        result = {}
+        result['flops'], result['params'] = (0,0)
+        return result
 
     def viz(self, params:{}):
         return None

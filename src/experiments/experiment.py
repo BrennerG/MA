@@ -11,15 +11,23 @@ class Experiment(ABC):
         self.model = self.model_factory(params['model_type'], params)
 
     def __call__(self, params:{}):
+        print('training...')
         self.train_output = self.train(params)
+        print('predicting')
         self.val_pred = self.model(self.val_set)
+        print('evaluating')
         self.eval_output = self.evaluate(params)
+        print('visualizing')
         self.viz_output = self.viz(params)
+        print('experiment done!')
         return self
         
     def evaluate(self, params:{}, split='val'):
-        # TODO make all of these return dicts?
-        return self.eval_competence(params), self.eval_explainability(params), self.eval_efficiency(params)
+        return {
+            'competence':self.eval_competence(params), 
+            'explainability':self.eval_explainability(params), 
+            'efficiency':self.eval_efficiency(params)
+        }
     
     def model_factory(self, type:str, params:{}):
         if type == 'Random':

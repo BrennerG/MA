@@ -1,7 +1,8 @@
-from experiments.experiment import Experiment
+import math
 from datasets import load_dataset
-from data.huggingface_cose import EraserCosE
 
+from data.huggingface_cose import EraserCosE
+from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
 
@@ -24,13 +25,15 @@ class BERTExperiment(Experiment):
             return None
         return self.model.train(
             self.complete_set, 
-            debug_train_split=('debug' in params and params['debug'])
-            # TODO save_loc = '/path/to/dir/'
+            debug_train_split=('debug' in params and params['debug']),
+            save_loc=LOC['bert_checkpoints']
         )
     
     def eval_competence(self, params:{}):
         probas, attn = self.val_pred
-        return E.competence_metrics(self.val_set['label'], probas)
+        results = {}
+        results['accuracy'], results['precision'], results['recall'] = E.competence_metrics(self.val_set['label'], probas)
+        return results
 
     # TODO erase using the dataset objects of this class! (no split='debug_val)
     def eval_explainability(self, params:{}):
@@ -38,19 +41,19 @@ class BERTExperiment(Experiment):
         pred, attn = self.val_pred
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
-        comp_pred, _ = zip(*self.model(comp_ds)) # TODO exclude lime calcs here
-        suff_pred, _ = zip(*self.model(suff_ds)) # TODO exclude lime calcs here
+        comp_pred, _ = zip(*self.model(comp_ds, attention=None))
+        suff_pred, _ = zip(*self.model(suff_ds, attention=None))
         # calcualte aopc metrics
         aopc_intermediate = {}
         for aopc in params['aopc_thresholds']:
             tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
             cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-            cp, _ = zip(*self.model(cds)) # TODO disable lime here
+            cp, _ = zip(*self.model(cds, attention=None))
             cl = E.from_softmax(cp, to='dict') # labels
             # suff
             sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-            sp, _ = zip(*self.model(sds)) # TODO disable lime here
+            sp, _ = zip(*self.model(sds, attention=None))
             sl = E.from_softmax(sp, to='dict')
             # aggregate
             aopc_intermediate[aopc] = [aopc, cl, sl]
@@ -62,7 +65,9 @@ class BERTExperiment(Experiment):
         # E.soft_scores(results=er_results, docids=doc_ids)
 
     def eval_efficiency(self, params:{}):
-        return self.model.efficiency_metrics()
+        result = {}
+        result['flops'], result['params'] = self.model.efficiency_metrics()
+        return result
 
     def viz(self, params:{}):
         return None
