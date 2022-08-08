@@ -1,5 +1,6 @@
 from experiments.bert_experiment import BERTExperiment
 from experiments.random_experiment import RandomClassifierExperiment
+import torch
 
 '''
 # ***************************** MAIN FILE ******************************** #
@@ -15,9 +16,9 @@ PARAMS = {
     'model_type': 'BERT',
     'debug': True,
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5],
-    #'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference)
+    #'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
     # TODO load from, but continue training from that checkpoint ...
-    'rnd_seed': 69, # Random obligatory # TODO also use this for BERT!
+    'rnd_seed': 69, # Random obligatory 
     # new params
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
     'attention': 'lime', # choose how the model generates the attention weights (relevant for explainability metrics)
@@ -25,14 +26,15 @@ PARAMS = {
     'lime_num_permutations': 3,
     'learning_rate': 5e-5,
     'batch_size': 16,
-    'epochs': 5,
-    'save_strategy': 'epoch',
+    'epochs': 3,
+    'save_strategy': 'no', # {'no', 'epoch', 'steps'}
     'save_loc': 'data/experiments/default_bert/',
     'overwrite_output_dir':False,
 }
 
 
 if __name__ == "__main__":
+    torch.manual_seed(PARAMS['rnd_seed'])
     exp = BERTExperiment(PARAMS)
     exp(PARAMS)
     print('done')
