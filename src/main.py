@@ -15,7 +15,7 @@ PARAMS = {
     'model_type': 'BERT',
     'debug': True,
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5],
-    'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference)
+    #'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference)
     # TODO load from, but continue training from that checkpoint ...
     'rnd_seed': 69, # Random obligatory # TODO also use this for BERT!
     # new params
@@ -23,12 +23,12 @@ PARAMS = {
     'attention': 'lime', # choose how the model generates the attention weights (relevant for explainability metrics)
     'lime_num_features': 10,
     'lime_num_permutations': 3,
-    # TODO expand hyper_param space
-    #'learning_rate': 5e-5,
-    #'batch_size': 16,
-    #'epochs': 3,
-    #'save_strategy': 'epoch',
-    #'overwrite_output_dir':False,
+    'learning_rate': 5e-5,
+    'batch_size': 16,
+    'epochs': 5,
+    'save_strategy': 'epoch',
+    'save_loc': 'data/experiments/default_bert/',
+    'overwrite_output_dir':False,
 }
 
 

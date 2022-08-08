@@ -1,5 +1,6 @@
 import math
 from datasets import load_dataset
+from transformers import TrainingArguments
 
 from data.huggingface_cose import EraserCosE
 from experiments.experiment import Experiment
@@ -27,7 +28,18 @@ class BERTExperiment(Experiment):
         return self.model.train(
             self.complete_set, 
             debug_train_split=('debug' in params and params['debug']),
-            save_loc=LOC['bert_checkpoints']
+            train_args = TrainingArguments(
+                output_dir= params['save_loc'],
+                evaluation_strategy="epoch",
+                learning_rate= params['learning_rate'],
+                per_device_train_batch_size= params['batch_size'],
+                per_device_eval_batch_size= params['batch_size'],
+                num_train_epochs= params['epochs'],
+                weight_decay=0.01,
+                save_strategy= params['save_strategy'],
+                overwrite_output_dir= params['overwrite_output_dir'],
+                no_cuda=True # TODO yes_cuda!!!
+            )
         )
     
     def eval_competence(self, params:{}):
