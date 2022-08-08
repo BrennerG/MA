@@ -33,10 +33,8 @@ class Experiment(ABC):
         if type == 'Random':
             model = RandomClassifier(params['rnd_seed'])
         elif type == "BERT":
-            if 'load_from' in params: 
-                print(f"LOADING MODEL FROM {params['load_from']}")
-                model = BertPipeline(load_from=params['load_from'])
-            else: model = BertPipeline()
+            if 'load_from' in params: print(f"LOADING MODEL FROM {params['load_from']}")
+            model = BertPipeline(params=params)
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model

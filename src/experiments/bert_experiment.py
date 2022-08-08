@@ -6,6 +6,7 @@ from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
 
+
 class BERTExperiment(Experiment):
 
     def __init__(self, params):

@@ -15,16 +15,23 @@ from lime.lime_text import LimeTextExplainer
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 
+
 class BertPipeline(Pipeline):
+    
+    _DEFAULT_BASE = "albert-base-v2"
 
-    def __init__(self, load_from:str=None):
+    def __init__(self, params:{}):
 
-        if load_from: model = AlbertForMultipleChoice.from_pretrained(load_from)
-        else: model = AlbertForMultipleChoice.from_pretrained("albert-base-v2")
+        
+        if 'load_from' in params and params['load_from']: model = AlbertForMultipleChoice.from_pretrained(params['load_from'])
+        else: model = AlbertForMultipleChoice.from_pretrained(self._DEFAULT_BASE)
+
+        if 'bert_base' in params and params['bert_base']: self.tokenizer_base = params['bert_base']
+        else: self.tokenizer_base = self._DEFAULT_BASE
 
         super().__init__(
             model = model,
-            tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2'),
+            tokenizer = AlbertTokenizer.from_pretrained(self.tokenizer_base),
             feature_extractor=None,
             modelcard=None,
             framework=None,
@@ -64,6 +71,7 @@ class BertPipeline(Pipeline):
         
     # attention = {None, 'lime', 'attention'}
     # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
+    # TODO use transformer attention weights as attn_weights (requires some form of aggregation...)
     def postprocess(self, model_outputs, attention='lime', output='proba'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
@@ -126,7 +134,10 @@ class BertPipeline(Pipeline):
         tokenized_cose = cose.map(self.preprocess_function, batched=True, batch_size=8752)
         input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
         flops = self.model.floating_point_ops(input_dict, exclude_embeddings=False) # chapter 2.1 relevant for albert: https://arxiv.org/pdf/2001.08361.pdf
-        nr_params = 11000000 # for albert-base-v2 according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+        if self.tokenizer_base == 'albert-base-v2':
+            nr_params = 11000000 # according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+        else:
+            nr_params = -1
         return flops, nr_params
 
     # only needed for training, yes I know its ugly
