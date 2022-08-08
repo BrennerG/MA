@@ -30,11 +30,11 @@ class Experiment(ABC):
     def __call__(self, params:{}):
         print('training...')
         self.train_output = self.train(params)
-        print('predicting')
+        print('predicting...')
         self.val_pred = self.model(self.val_set, **params)
-        print('evaluating')
+        print('evaluating...')
         self.eval_output = self.evaluate(params)
-        print('visualizing')
+        print('visualizing...')
         self.viz_output = self.viz(params)
         print('experiment done!')
         return self

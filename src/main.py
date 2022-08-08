@@ -14,14 +14,14 @@ An Experiment is run from start to finish using the given parameter settings.
 
 PARAMS = {
     'model_type': 'BERT', # determines the type of model for the pipeline (used by Experiment.model_factory())
-    'debug': True, # only use a tiny number of samples for testing purposes
+    'debug': False, # only use a tiny number of samples for testing purposes
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
     # TODO load from, but continue training from that checkpoint ...
     'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
     'skip_training': True, # skip training - mostly for inference with saved checkpoints
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
-    'attention': 'lime', # choose how the model generates the attention weights (relevant for explainability metrics)
+    'attention': 'zeros', # choose how the model generates the attention weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     'lime_num_features': 10, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 3, # number of input permutations per sample; default=5k :O
     'learning_rate': 5e-5, # Optimizer learning rate

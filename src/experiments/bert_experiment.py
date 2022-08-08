@@ -42,7 +42,7 @@ class BERTExperiment(Experiment):
                 weight_decay=0.01,
                 save_strategy= params['save_strategy'],
                 overwrite_output_dir= params['overwrite_output_dir'],
-                no_cuda=True # TODO yes_cuda!!!
+                no_cuda=False # TODO yes_cuda!!!
             )
         )
     

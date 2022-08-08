@@ -88,6 +88,15 @@ class BertPipeline(Pipeline):
             attn_weights = None
         elif attention == 'lime':
             attn_weights = self.lime_weights(lime_num_features, lime_num_permutations) # uses cached features
+        elif attention == 'zeros':
+            attn_weights = [len(x.split(" ")) for x in self.cached_inputs['question']]
+            self.cached_inputs = None
+        elif attention == 'random':
+            raise NotImplementedError()
+        elif attention == 'self_attn':
+            raise NotImplementedError()
+        else:
+            raise AttributeError(f"attention mode {attention}")
 
         # output
         if output == 'proba': return probas, attn_weights
