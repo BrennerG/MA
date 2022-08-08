@@ -52,9 +52,10 @@ class BertPipeline(Pipeline):
             preprocess_kwargs["maybe_arg"] = kwargs["maybe_arg"]
         if 'attention' in kwargs:
             postprocess_kwargs['attention'] = kwargs['attention']
-        if 'attention_mode' in kwargs:
-            postprocess_kwargs['attention'] = kwargs['attention_mode']
-
+            # lime parameters
+            if postprocess_kwargs['attention'] == 'lime':
+                if 'lime_num_features' in kwargs: postprocess_kwargs['lime_num_features'] = kwargs['lime_num_features']
+                if 'lime_num_permutations' in kwargs: postprocess_kwargs['lime_num_permutations'] = kwargs['lime_num_permutations']
         return preprocess_kwargs, forwards_kwargs, postprocess_kwargs
 
     def preprocess(self, inputs, maybe_arg=2):
@@ -76,7 +77,7 @@ class BertPipeline(Pipeline):
     # TODO expand parameters
     # attention = {None, 'lime', 'attention', 'random}
     # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
-    def postprocess(self, model_outputs, attention='lime', output='proba'):
+    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=30, lime_num_permutations=3):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
         probas = np.array(grouped)
@@ -86,7 +87,7 @@ class BertPipeline(Pipeline):
         if attention == None:
             attn_weights = None
         elif attention == 'lime':
-            attn_weights = self.lime_weights() # uses cached features
+            attn_weights = self.lime_weights(lime_num_features, lime_num_permutations) # uses cached features
 
         # output
         if output == 'proba': return probas, attn_weights
@@ -98,7 +99,7 @@ class BertPipeline(Pipeline):
         return loaded_model
 
     # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
-    def lime_weights(self, num_features=30, num_lime_permutations=3):
+    def lime_weights(self, num_features=30, lime_num_permutations=3):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
         ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)
@@ -120,7 +121,7 @@ class BertPipeline(Pipeline):
         # get lime explanations
         weights = []
         for i,x in enumerate(tqdm(ds_for_lime)):
-            exp = explainer.explain_instance(x, clf_wrapper, num_samples=num_lime_permutations, num_features=num_features, labels=list(range(5)))
+            exp = explainer.explain_instance(x, clf_wrapper, num_samples=lime_num_permutations, num_features=num_features, labels=list(range(5)))
             weights.append(exp.as_list())
         
         # bring weights into order of tokens

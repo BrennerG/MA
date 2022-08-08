@@ -20,10 +20,10 @@ PARAMS = {
     'rnd_seed': 69, # Random obligatory # TODO also use this for BERT!
     # new params
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
+    'attention': 'lime', # choose how the model generates the attention weights (relevant for explainability metrics)
+    'lime_num_features': 10,
+    'lime_num_permutations': 3,
     # TODO expand hyper_param space
-    'attention_mode': 'lime', # choose how the model generates the attention weights (relevant for explainability metrics)
-    #'lime_num_features': 30,
-    #'lime_num_permutations': 3,
     #'learning_rate': 5e-5,
     #'batch_size': 16,
     #'epochs': 3,
