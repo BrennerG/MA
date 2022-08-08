@@ -1,6 +1,15 @@
 from experiments.bert_experiment import BERTExperiment
 from experiments.random_experiment import RandomClassifierExperiment
 
+'''
+# ***************************** MAIN FILE ******************************** #
+
+It's the main file!
+Currently this is for handling the Experiment Class, which is the main unit of this repo.
+An Experiment is run from start to finish using the given parameter settings.
+(Parameter search, generation and reading from .yaml will be supported later)
+
+'''
 
 PARAMS = {
     'model_type': 'BERT',
