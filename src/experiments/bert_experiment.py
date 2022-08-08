@@ -23,8 +23,12 @@ class BERTExperiment(Experiment):
 
     def train(self, params:{}):
         if 'load_from' in params:
-            print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
-            return None
+            if 'skip_training' in params and params['skip_training']: 
+                print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
+                return None
+            else:
+             print(f"MODEL PRELOADED FROM {params['load_from']} - CONTINUING TRAINING!")
+
         return self.model.train(
             self.complete_set, 
             debug_train_split=('debug' in params and params['debug']),
