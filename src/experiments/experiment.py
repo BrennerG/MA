@@ -31,7 +31,7 @@ class Experiment(ABC):
         print('training...')
         self.train_output = self.train(params)
         print('predicting')
-        self.val_pred = self.model(self.val_set)
+        self.val_pred = self.model(self.val_set, **params)
         print('evaluating')
         self.eval_output = self.evaluate(params)
         print('visualizing')

@@ -52,6 +52,9 @@ class BertPipeline(Pipeline):
             preprocess_kwargs["maybe_arg"] = kwargs["maybe_arg"]
         if 'attention' in kwargs:
             postprocess_kwargs['attention'] = kwargs['attention']
+        if 'attention_mode' in kwargs:
+            postprocess_kwargs['attention'] = kwargs['attention_mode']
+
         return preprocess_kwargs, forwards_kwargs, postprocess_kwargs
 
     def preprocess(self, inputs, maybe_arg=2):
@@ -69,9 +72,10 @@ class BertPipeline(Pipeline):
     def _forward(self, model_inputs):         
         return self.model(**model_inputs, output_attentions=True)
         
-    # attention = {None, 'lime', 'attention'}
-    # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
     # TODO use transformer attention weights as attn_weights (requires some form of aggregation...)
+    # TODO expand parameters
+    # attention = {None, 'lime', 'attention', 'random}
+    # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
     def postprocess(self, model_outputs, attention='lime', output='proba'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
