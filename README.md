@@ -31,10 +31,14 @@ _diagram incoming_
   - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
   - ~~cleanup TODOs~~
   - Experimentation / Runs
-    - rework debug_flag
-    - skip_evaluation parameter
-    - cuda yes/no flag
-    - RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
+    - ~~rework debug_flag~~
+    - ~~skip_evaluation parameter~~
+    - ~~cuda yes/no flag~~
+    - Error on troubadix: 
+        RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
+    - Error on troubadix (mb also local - not tested):
+        File "/newstorage5/gbreiner/MA/src/data/huggingface_cose_old.py", line 140, in erase                                                             │
+        assert len(weights[i]) == len(question)
     - high epoch run
       - run
       - eval

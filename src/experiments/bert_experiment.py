@@ -22,6 +22,7 @@ class BERTExperiment(Experiment):
             return cose, cose['train'], cose['validation'], cose['test']
 
     def train(self, params:{}):
+        # TODO put the skip into the parent class!
         if 'load_from' in params:
             if 'skip_training' in params and params['skip_training']: 
                 print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
@@ -42,7 +43,7 @@ class BERTExperiment(Experiment):
                 weight_decay=0.01,
                 save_strategy= params['save_strategy'],
                 overwrite_output_dir= params['overwrite_output_dir'],
-                no_cuda=True
+                no_cuda=(not params['use_cuda'])
             )
         )
     

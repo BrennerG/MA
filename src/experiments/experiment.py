@@ -40,6 +40,9 @@ class Experiment(ABC):
         return self
         
     def evaluate(self, params:{}, split='val'):
+        if 'skip_evaluation' in params and params['skip_evaluation']: 
+            print('SKIPPING EVALUATION (flag was set in param dict!)')
+            return None
         return {
             'competence':self.eval_competence(params), 
             'explainability':self.eval_explainability(params), 
