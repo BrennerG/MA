@@ -27,20 +27,25 @@ _diagram incoming_
 * __BERT + LIME__ Baseline
   - ~~huggingface clf~~
   - ~~LIME~~
-  - Evaluation
-    - ~~Competence~~
-    - ~~Efficiency~~
-    - Explainability (LIME needed)
-      - ~~get lime to output weights~~
-      - full LIME run needed, due to eraser eval script - needs 50GB+ RAM!)
-      - try to aggregate transformer attention for explanations _optional_
-  - Integrate into Pipeline (write a class with the stuff from bert_cose.py)
-    - ~~train~~
-    - ~~predict~~
-    - ~~evaluate~~
-    - viz _on demand_
-    - document
+  - ~~Write Evaluation (Competence, Efficiency, Explainability)~~
+  - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
   - ~~cleanup TODOs~~
+  - Experimentation / Runs
+    - RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
+    - rework debug_flag
+    - skip_evaluation parameter
+    - high epoch run
+      - run
+      - eval
+      - viz
+    - full LIME run (high #features and #permutations)
+      - run
+      - eval
+      - viz
+    - aggregate transformer attention for explanations _optional_
+      - run
+      - eval
+      - viz
 * ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
