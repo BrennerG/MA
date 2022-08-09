@@ -31,14 +31,15 @@ _diagram incoming_
   - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
   - ~~cleanup TODOs~~
   - Experimentation / Runs
-    - RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
     - rework debug_flag
     - skip_evaluation parameter
+    - cuda yes/no flag
+    - RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
     - high epoch run
       - run
       - eval
       - viz
-    - full LIME run (high #features and #permutations)
+    - full LIME evaluation run (high #features and #permutations)
       - run
       - eval
       - viz

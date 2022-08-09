@@ -2,7 +2,7 @@ import math
 from datasets import load_dataset
 from transformers import TrainingArguments
 
-from data.huggingface_cose_old import EraserCosE
+from data.huggingface_cose_old import EraserCosE # TODO change this back after huggingface is fixed and renamed
 from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
@@ -42,7 +42,7 @@ class BERTExperiment(Experiment):
                 weight_decay=0.01,
                 save_strategy= params['save_strategy'],
                 overwrite_output_dir= params['overwrite_output_dir'],
-                no_cuda=False # TODO yes_cuda!!!
+                no_cuda=True
             )
         )
     

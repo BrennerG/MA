@@ -14,7 +14,7 @@ An Experiment is run from start to finish using the given parameter settings.
 
 PARAMS = {
     'model_type': 'BERT', # determines the type of model for the pipeline (used by Experiment.model_factory())
-    'debug': False, # only use a tiny number of samples for testing purposes
+    'debug': True, # only use a tiny number of samples for testing purposes
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
     #'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
     #'skip_training': True, # skip training - mostly for inference with saved checkpoints

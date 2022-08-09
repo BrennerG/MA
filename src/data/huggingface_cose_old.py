@@ -1,5 +1,8 @@
 import json
 import datasets
+
+import statistics as stat
+import math as math
 import numpy as np
 
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
@@ -12,7 +15,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_LIMIT = _FULL
+_LIMIT = 11
 COSE_LOC = 'data/eraser/cose/'
 
 class EraserCosEConfig(datasets.BuilderConfig):
@@ -79,14 +82,15 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         elif mode=='val' or mode=='debug_val': raw = val
         elif mode == 'test': raw = test
         else: raise AttributeError(f'CosE split {mode} unknown!')
-
+        # setting limit
+        if mode=='debug_train' or mode=='debug_val': limit=_LIMIT
+        else: limit=_FULL
         # extract
         docids = [x.annotation_id for x in raw]
-        docs = EU.load_flattened_documents('data/eraser/cose/', docids)
+        docs = EU.load_flattened_documents('data/eraser/cose/', docids) # TODO change this to COSE_LOC
         labels = [parselabel[x.classification] for x in raw]
-        # self.avg_evidence_len = round(np.mean([len(x[4].text.split()) for x in self])) # TODO calculate this differently
 
-        for i,X in enumerate(raw[:_LIMIT]):
+        for i,X in enumerate(raw[:limit]):
             rationale = list(X.evidences)[0][0]
             yield i, {
                 'id': X.annotation_id,
@@ -109,32 +113,28 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
     @staticmethod
     def erase(weights:[], k=None, split='val', mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
         # get correct split
-        LIMIT = _FULL
-        train, val, test = EU.load_datasets(LOC['cose'])
-        if split == 'train': raw = train
-        elif split == 'val' or split == 'validation': raw = val
-        elif split == 'test': raw = test
-        elif split == 'debug_train': 
-            raw = train
-            LIMIT = _DEBUG_LIMIT
-        elif split == 'debug_val': 
-            raw = val
-            LIMIT = _DEBUG_LIMIT
+        train, val, test = EU.load_datasets(COSE_LOC)
+        if split=='train' or split=='debug_train': raw = train
+        elif split=='val' or split=='validation' or split=='debug_val': raw = val
+        elif split=='test': raw = test
         else: raise AttributeError(f'CosE split {mode} unknown!')
+        # extract
         docids = [x.annotation_id for x in raw]
-        docs = EU.load_flattened_documents(LOC['cose'], docids)
+        docs = EU.load_flattened_documents(COSE_LOC, docids)
         parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         labels = [parselabel[x.classification] for x in raw]
-
+        # limit data
+        if mode=='debug_train' or mode=='debug_val': limit=_LIMIT
+        else: limit=_FULL
         # take average evidence length if no k given!
         if k==None: 
             lens = []
-            for evi in [list(X.evidences)[0][0] for X in raw[:LIMIT]]:
+            for evi in [list(X.evidences)[0][0] for X in raw[:limit]]:
                 lens.append(evi.end_token - evi.start_token)
             k = math.ceil(stat.mean(lens))
 
         ret = []
-        for i,X in enumerate(raw[:LIMIT]):
+        for i,X in enumerate(raw[:limit]):
             rationale = list(X.evidences)[0][0]
             question = docs[X.annotation_id]
             assert len(weights[i]) == len(question)
