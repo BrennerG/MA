@@ -13,7 +13,7 @@ from typing import Optional, Union
 from lime.lime_text import LimeTextExplainer
 
 from data.locations import LOC
-from data.huggingface_cose import EraserCosE
+from data.huggingface_cose_old import EraserCosE
 
 
 class BertPipeline(Pipeline):

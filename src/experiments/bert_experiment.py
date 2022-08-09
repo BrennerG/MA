@@ -2,7 +2,7 @@ import math
 from datasets import load_dataset
 from transformers import TrainingArguments
 
-from data.huggingface_cose import EraserCosE
+from data.huggingface_cose_old import EraserCosE
 from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC

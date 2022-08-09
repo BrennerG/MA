@@ -1,5 +1,6 @@
 import json
 import datasets
+import numpy as np
 
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
