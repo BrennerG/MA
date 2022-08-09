@@ -3,6 +3,7 @@ import datasets
 
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
+from datasets import Dataset
 
 """ ERASER Cos-E Dataset """
 
