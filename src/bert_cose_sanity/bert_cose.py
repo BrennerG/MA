@@ -1,7 +1,7 @@
 # dataset loading
 from datasets import load_dataset
 from transformers import AutoTokenizer
-from .huggingface_cose import EraserCosE
+from .huggingface_cose_old import EraserCosE
 
 # DataCollatorForMultipleChoice
 from dataclasses import dataclass

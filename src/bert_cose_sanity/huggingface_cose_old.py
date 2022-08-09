@@ -10,7 +10,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_LIMIT = 10
+_LIMIT = _FULL
 COSE_LOC = 'data/eraser/cose/'
 
 class EraserCosEConfig(datasets.BuilderConfig):
@@ -65,6 +65,8 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={'mode': 'train'}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={'mode': 'val'}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={'mode': 'test'}),
+            datasets.SplitGenerator(name='debug_train', gen_kwargs={'mode': 'debug_train'}),
+            datasets.SplitGenerator(name='debug_val', gen_kwargs={'mode': 'debug_val'})
         ]
 
     def _generate_examples(self, mode):
@@ -100,5 +102,84 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                 }
             }
 
-    def erase(self, weights:[], k=None, mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
-        raise NotImplemented
+    @staticmethod
+    def erase(weights:[], k=None, split='val', mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
+        # get correct split
+        LIMIT = _FULL
+        train, val, test = EU.load_datasets(LOC['cose'])
+        if split == 'train': raw = train
+        elif split == 'val' or split == 'validation': raw = val
+        elif split == 'test': raw = test
+        elif split == 'debug_train': 
+            raw = train
+            LIMIT = _DEBUG_LIMIT
+        elif split == 'debug_val': 
+            raw = val
+            LIMIT = _DEBUG_LIMIT
+        else: raise AttributeError(f'CosE split {mode} unknown!')
+        docids = [x.annotation_id for x in raw]
+        docs = EU.load_flattened_documents(LOC['cose'], docids)
+        parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
+        labels = [parselabel[x.classification] for x in raw]
+
+        # take average evidence length if no k given!
+        if k==None: 
+            lens = []
+            for evi in [list(X.evidences)[0][0] for X in raw[:LIMIT]]:
+                lens.append(evi.end_token - evi.start_token)
+            k = math.ceil(stat.mean(lens))
+
+        ret = []
+        for i,X in enumerate(raw[:LIMIT]):
+            rationale = list(X.evidences)[0][0]
+            question = docs[X.annotation_id]
+            assert len(weights[i]) == len(question)
+
+            # get top_k tokens
+            if k > len(weights[i]): top_idx = np.array(range(len(weights[i])))
+            else: top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
+
+            # erase the top_k tokens
+            if mode=='comprehensiveness':
+                erased = [question[x] for x in range(len(question)) if x not in top_idx]
+            elif mode=='sufficiency':
+                erased = [question[x] for x in top_idx]
+            else:
+                raise AttributeError('evaluation mode unknown!')
+
+            ret.append({
+                'id': X.annotation_id,
+                'question': " ".join(erased),
+                'context': X.query_type,
+                'answers': X.query.split(' [sep] '),
+                'label': int(parselabel[X.classification]),
+                'rationale': { 
+                    'docid': rationale.docid,
+                    'end_sentence': rationale.end_sentence,
+                    'end_token': rationale.end_token,
+                    'start_sentence': rationale.start_sentence,
+                    'start_token': rationale.start_token,
+                    'text': rationale.text
+                }
+            })
+        return ret
+
+    @staticmethod
+    def parse_to_lime(ds:Dataset):
+        strings = []
+        questions = [d['question'] for d in ds]
+        answers = [a['answers'] for a in ds]
+
+        for q,a in zip(questions, answers):
+            merged = f"{q}[qsep]{' [sep] '.join(a)}"
+            strings.append(merged)
+
+        return strings
+    
+    @staticmethod
+    def avg_rational_length(ds:Dataset):
+        result = {}
+        for split in list(ds.keys()):
+            r_lens = [r['end_token']-r['start_token'] for r in ds[split]['rationale']]
+            result[split] = np.mean(r_lens)
+        return result
