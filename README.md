@@ -36,8 +36,7 @@ _diagram incoming_
       - ~~skip_evaluation parameter~~
       - ~~cuda yes/no flag~~
       - ~~FIX: new pipeline doesnt learn, but old did (confirmed) SOLUTION: remove debug flag and set LIMIT manually in huggingface everytime!~~
-      - Error on troubadix: 
-          RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots
+      - ~~Error on troubadix: RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots~~
       - why is new pipeline slower than the old pipeline? _optional_
     - high epoch run
       - run
