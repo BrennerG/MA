@@ -19,7 +19,7 @@ PARAMS = {
     'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
     'skip_training': True, # skip training - mostly for inference with saved checkpoints
     'skip_evaluation': True, # skip evaluation (prediction still happens...) TODO change that?
-    'use_cuda': True, # use cuda
+    'use_cuda': False, # use cuda
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
     'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
@@ -29,8 +29,8 @@ PARAMS = {
     'batch_size': 16, # batch size for training and evaluation
     'epochs': 3, # epochs of training
     'save_strategy': 'epoch', # determines rules for saving artifacts {'no', 'epoch', 'steps'}
-    'save_loc': 'data/experiments/bert20/', # location where the above are saved
-    'overwrite_output_dir': False, # overwrites the given output directory above
+    'save_loc': 'data/experiments/bugfix/', # location where the above are saved
+    'overwrite_output_dir': True, # overwrites the given output directory above
 }
 
 
