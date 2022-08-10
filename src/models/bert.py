@@ -35,7 +35,7 @@ class BertPipeline(Pipeline):
             framework=None,
             task = '',
             args_parser=None,
-            device = 1 if ('use_cuda' in params and params['use_cuda']) else -1,
+            device = 0 if ('use_cuda' in params and params['use_cuda']) else -1,
             binary_output = False
         )
         self.trainer = None
