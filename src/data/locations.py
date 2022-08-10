@@ -4,7 +4,7 @@ import os
 LOC = {
     'csqa_train': 'data/csqa_raw/train_rand_split.jsonl',
     'csqa_test': 'data/csqa_raw/dev_rand_split.jsonl',
-    'cose_huggingface': 'src/data/huggingface_cose_old.py', # TODO change this after the rename
+    'cose_huggingface': 'src/data/huggingface_cose.py',
     'cose': 'data/eraser/cose/',
     'cose_docs': 'data/eraser/cose/docs.jsonl',
     'cose_train': 'data/eraser/cose/train.jsonl',
