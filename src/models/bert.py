@@ -21,14 +21,12 @@ class BertPipeline(Pipeline):
     _DEFAULT_BASE = "albert-base-v2"
 
     def __init__(self, params:{}):
-
-        
         if 'load_from' in params and params['load_from']: model = AlbertForMultipleChoice.from_pretrained(params['load_from'])
         else: model = AlbertForMultipleChoice.from_pretrained(self._DEFAULT_BASE)
 
         if 'bert_base' in params and params['bert_base']: self.tokenizer_base = params['bert_base']
         else: self.tokenizer_base = self._DEFAULT_BASE
-
+    
         super().__init__(
             model = model,
             tokenizer = AlbertTokenizer.from_pretrained(self.tokenizer_base),
@@ -37,7 +35,7 @@ class BertPipeline(Pipeline):
             framework=None,
             task = '',
             args_parser=None,
-            device = -1,
+            device = 1 if ('use_cuda' in params and params['use_cuda']) else -1,
             binary_output = False
         )
         self.trainer = None
@@ -67,7 +65,7 @@ class BertPipeline(Pipeline):
         rep_questions = sum([[question] * 5 for question in questions], [])
         rep_answers = sum(answers, [])
         encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} 
+        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} # TODO to device here?
         return model_inputs
 
     def _forward(self, model_inputs):         

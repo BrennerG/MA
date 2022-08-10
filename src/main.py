@@ -16,10 +16,10 @@ PARAMS = {
     'model_type': 'BERT', # determines the type of model for the pipeline (used by Experiment.model_factory())
     # 'debug': True, # deprecated: manipulate _LIMIT variable in huggingface_cose.py manually # TODO fix this when param space is read from .yaml files!
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
-    #'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
-    #'skip_training': True, # skip training - mostly for inference with saved checkpoints
+    'load_from': 'data/experiments/22_7/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
+    'skip_training': True, # skip training - mostly for inference with saved checkpoints
     #'skip_evaluation': True, # skip evaluation (prediction still happens...) TODO change that?
-    'use_cuda': False, # use cuda
+    'use_cuda': True, # use cuda
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
     'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
