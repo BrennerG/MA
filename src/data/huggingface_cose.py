@@ -8,8 +8,6 @@ import numpy as np
 import evaluation.eraserbenchmark.rationale_benchmark.utils as EU
 
 from datasets import Dataset
-from data.locations import LOC
-
 
 """ ERASER Cos-E Dataset """
 
@@ -17,8 +15,8 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_DEBUG_LIMIT = 11
-
+_LIMIT = 11 # set debug split manually here
+COSE_LOC = 'data/eraser/cose/'
 
 class EraserCosEConfig(datasets.BuilderConfig):
     """BuilderConfig for EraserCosE."""
@@ -72,31 +70,22 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={'mode': 'train'}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={'mode': 'val'}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={'mode': 'test'}),
-            datasets.SplitGenerator(name='debug_train', gen_kwargs={'mode': 'debug_train'}),
-            datasets.SplitGenerator(name='debug_val', gen_kwargs={'mode': 'debug_val'}),
         ]
 
     def _generate_examples(self, mode):
         parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         # choosing split
-        LIMIT = _FULL
-        train, val, test = EU.load_datasets(LOC['cose'])
-        if mode == 'train': raw = train
-        elif mode == 'val': raw = val
+        train, val, test = EU.load_datasets(COSE_LOC)
+        if mode=='train': raw = train
+        elif mode=='val': raw = val
         elif mode == 'test': raw = test
-        elif mode == 'debug_train': 
-            raw = train
-            LIMIT = _DEBUG_LIMIT
-        elif mode == 'debug_val': 
-            raw = val
-            LIMIT = _DEBUG_LIMIT
         else: raise AttributeError(f'CosE split {mode} unknown!')
         # extract
         docids = [x.annotation_id for x in raw]
-        docs = EU.load_flattened_documents(LOC['cose'], docids)
+        docs = EU.load_flattened_documents(COSE_LOC, docids)
         labels = [parselabel[x.classification] for x in raw]
 
-        for i,X in enumerate(raw[:LIMIT]): 
+        for i,X in enumerate(raw[:_LIMIT]):
             rationale = list(X.evidences)[0][0]
             yield i, {
                 'id': X.annotation_id,
@@ -115,36 +104,29 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                     'text': rationale.text
                 }
             }
-    
+
     @staticmethod
     def erase(weights:[], k=None, split='val', mode='comprehensiveness'): # modes = {'comprehensiveness', 'sufficiency'}
         # get correct split
-        LIMIT = _FULL
-        train, val, test = EU.load_datasets(LOC['cose'])
-        if split == 'train': raw = train
-        elif split == 'val' or split == 'validation': raw = val
-        elif split == 'test': raw = test
-        elif split == 'debug_train': 
-            raw = train
-            LIMIT = _DEBUG_LIMIT
-        elif split == 'debug_val': 
-            raw = val
-            LIMIT = _DEBUG_LIMIT
+        train, val, test = EU.load_datasets(COSE_LOC)
+        if split=='train': raw = train
+        elif split=='val' or split=='validation': raw = val
+        elif split=='test': raw = test
         else: raise AttributeError(f'CosE split {mode} unknown!')
+        # extract
         docids = [x.annotation_id for x in raw]
-        docs = EU.load_flattened_documents(LOC['cose'], docids)
+        docs = EU.load_flattened_documents(COSE_LOC, docids)
         parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
         labels = [parselabel[x.classification] for x in raw]
-
         # take average evidence length if no k given!
         if k==None: 
             lens = []
-            for evi in [list(X.evidences)[0][0] for X in raw[:LIMIT]]:
+            for evi in [list(X.evidences)[0][0] for X in raw[:_LIMIT]]:
                 lens.append(evi.end_token - evi.start_token)
             k = math.ceil(stat.mean(lens))
 
         ret = []
-        for i,X in enumerate(raw[:LIMIT]):
+        for i,X in enumerate(raw[:_LIMIT]):
             rationale = list(X.evidences)[0][0]
             question = docs[X.annotation_id]
             assert len(weights[i]) == len(question)

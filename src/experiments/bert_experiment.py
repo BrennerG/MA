@@ -2,7 +2,7 @@ import math
 from datasets import load_dataset
 from transformers import TrainingArguments
 
-from data.huggingface_cose_old import EraserCosE # TODO change this back after huggingface is fixed and renamed
+from data.huggingface_cose import EraserCosE 
 from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
@@ -16,10 +16,7 @@ class BERTExperiment(Experiment):
 
     def init_data(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
-        if 'debug' in params and params['debug']:
-            return cose, cose['debug_train'], cose['debug_val'], cose['test']
-        else:
-            return cose, cose['train'], cose['validation'], cose['test']
+        return cose, cose['train'], cose['validation'], cose['test']
 
     def train(self, params:{}):
         # TODO put the skip into the parent class!
@@ -32,7 +29,6 @@ class BERTExperiment(Experiment):
 
         return self.model.train(
             self.complete_set, 
-            debug_train_split=('debug' in params and params['debug']),
             train_args = TrainingArguments(
                 output_dir= params['save_loc'],
                 evaluation_strategy="epoch",
@@ -53,9 +49,8 @@ class BERTExperiment(Experiment):
         results['accuracy'], results['precision'], results['recall'] = E.competence_metrics(self.val_set['label'], probas)
         return results
 
-    # TODO erase using the dataset objects of this class! (no split='debug_val)
     def eval_explainability(self, params:{}):
-        split = 'debug_val' if 'debug' in params and params['debug']==True else 'validation'
+        split = 'validation'
         pred, attn = self.val_pred
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)

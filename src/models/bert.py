@@ -13,7 +13,7 @@ from typing import Optional, Union
 from lime.lime_text import LimeTextExplainer
 
 from data.locations import LOC
-from data.huggingface_cose_old import EraserCosE # TODO change this back after huggingface is fixed and renamed
+from data.huggingface_cose import EraserCosE 
 
 
 class BertPipeline(Pipeline):
@@ -167,7 +167,7 @@ class BertPipeline(Pipeline):
         return res
 
     # TRAINING METHOD
-    def train(self, dataset, train_args:TrainingArguments=None, debug_train_split=False):
+    def train(self, dataset, train_args:TrainingArguments=None):
 
         @dataclass
         class DataCollatorForMultipleChoice:
@@ -206,20 +206,12 @@ class BertPipeline(Pipeline):
         tokenized = dataset.map(self.preprocess_function, batched=True)
         overwrite = False
 
-        # debug splits are tiny
-        if debug_train_split: 
-            train_data = tokenized['debug_train']
-            val_data = tokenized['debug_val']
-        else: 
-            train_data = tokenized['train']
-            val_data = tokenized['validation']
-
         # use trainer api for training
         trainer = Trainer(
             model=self.model,
             args=train_args,
-            train_dataset=train_data,
-            eval_dataset=val_data,
+            train_dataset=tokenized['train'],
+            eval_dataset=tokenized['validation'],
             tokenizer=self.tokenizer,
             data_collator=DataCollatorForMultipleChoice(tokenizer=self.tokenizer)
         )
