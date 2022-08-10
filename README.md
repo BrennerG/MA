@@ -61,6 +61,7 @@ _diagram incoming_
   - extend to 4Lang
 * __QA-GNN Baseline__
   - run QA-GNN
+  - wrap QA-GNN for explainability evaluations
   - ~~run QA-GNN w. UD/4Lang graphs~~ _cancelled_
   - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
 * __Minimal__ = BERT + UD/4Lang + GAT
