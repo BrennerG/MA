@@ -8,6 +8,7 @@ import evaluation.eval_util as E
 from data.locations import LOC
 
 import yaml
+from tqdm import tqdm
 
 
 class BERTExperiment(Experiment):
@@ -60,7 +61,7 @@ class BERTExperiment(Experiment):
         suff_pred, _ = zip(*self.model(suff_ds, attention=None))
         # calcualte aopc metrics
         aopc_intermediate = {}
-        for aopc in params['aopc_thresholds']:
+        for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
             tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
             cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
