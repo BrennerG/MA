@@ -44,6 +44,8 @@ class Experiment(ABC):
         self.eval_output = self.evaluate(params)
         print('visualizing...')
         self.viz_output = self.viz(params)
+        print('saving...')
+        self.save(params)
         print('experiment done!')
         return self
         
@@ -99,3 +101,7 @@ class Experiment(ABC):
         '''create visualizations of relevant aspects of the experiment'''
         raise NotImplementedError()
 
+
+    def save(self, params:{}):
+        '''save relevant data e.g. evaluations, predictions, etc'''
+        raise NotImplementedError()

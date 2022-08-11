@@ -7,6 +7,8 @@ from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
 
+import yaml
+
 
 class BERTExperiment(Experiment):
 
@@ -84,3 +86,8 @@ class BERTExperiment(Experiment):
 
     def viz(self, params:{}):
         return None
+
+    def save(self, params:{}):
+        with open(params['save_loc']+'evaluation.yaml', 'w') as file:
+            documents = yaml.dump(self.eval_output, file)
+        return documents
