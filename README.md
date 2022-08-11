@@ -35,9 +35,15 @@ _diagram incoming_
       - ~~rework debug_flag~~
       - ~~skip_evaluation parameter~~
       - ~~cuda yes/no flag~~
-      - ~~FIX: new pipeline doesnt learn, but old did (confirmed) SOLUTION: remove debug flag and set LIMIT manually in huggingface everytime!~~
       - ~~Error on troubadix: RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots~~
-      - why is new pipeline slower than the old pipeline? _optional_
+      - ~~Error on troubadix during prediction: CUDA out of memory ...~~
+        - ~~all the memory gets loaded at one time because pipeline class doesn't recognize inputs as Dataset, but thinks its a single sample~~
+      - Error (silent): new pipeline doesnt learn, but old did (confirmed) 
+        - has something to do with limiting the #samples in the dataset...
+        - SOLUTION: remove debug flag and set LIMIT manually in huggingface everytime!
+        - 50 epoch run still doesn't learn (constant 1.6 loss), BUT 10 epoch does learn ?! (is #epochs used in optimizer init?)
+      -  
+      - why is new pipeline slower than the old pipeline? (it's still rather fast) _optional_
     - high epoch run
       - run
       - eval
