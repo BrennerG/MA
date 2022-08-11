@@ -32,45 +32,11 @@ class Experiment(ABC):
         self.train_output = self.train(params)
         print('predicting...')
 
-        # TODO temporary workaround:
-        # huggingface Pipeline parent class (base.py) doesnt recognize self.val_set as Dataset
-        # therefore no batching is enabled, which overloads GPU's VRAM
-        # SOLUTION: Pipeline accepts: Datasets, lists and generators: so lets give it a generator
-        # fails at padding... because first samples shape is considered for padding
-        # OPTION 1: give it batches, so the tokenizer properly works
-        # fails coz padding method then thinks each batch is a sample... c:
-        # OPTION 2: order the val set for this...
-        # TODO should the method stay in experiment parent or go into children?
-        #def generator_from_dataset(dataset, in_batches=False, order_first=True):
-        #    if order_first:
-        #        sample_list = list(dataset)
-        #    if in_batches:
-        #        bs = params['batch_size']
-        #        num_batches = int(len(dataset) / bs)
-        #        for i in range(num_batches):
-        #            yield [dataset[i*bs+x] for x in range(bs)]
-        #    else:
-        #        for sample in dataset:
-        #            yield sample
-        #pipeline_iterator = self.model(generator_from_dataset(self.val_set), **params)
-        #self.val_pred = list(pipeline_iterator)
-
-        # method 2 - probably not valid
-        # this throws an error during postprocessing
-        # also the model output from _forward cannot be correct: a batch returns logits.shape (1,5)
-        #   -> it should be (batch_size, 5)...
-        #from torch.utils.data import DataLoader
-        #data_loader = DataLoader(self.val_set, batch_size=1)
-        #val_set_iterator = data_loader._get_iterator()
-        #self.val_pred = self.model(list(val_set_iterator), **params)
-
-        # vanilla method - overloads RAM
-        #self.val_pred = self.model(self.val_set, **params)
-
+        # TODO is there a better way to do this? mb dont use a pipeline???
         # method 3 :puny workaround
         preds = [self.model(sample, **params) for sample in self.val_set]
         logits, attentions = zip(*preds)
-        self.val_pred = (list(logits), list(attentions))
+        self.val_pred = (list(logits), [a[0] for a in attentions])
     
         print('evaluating...')
         self.eval_output = self.evaluate(params)

@@ -65,7 +65,7 @@ class BertPipeline(Pipeline):
         rep_questions = sum([[question] * 5 for question in questions], [])
         rep_answers = sum(answers, [])
         encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-        model_inputs = {k: v.unsqueeze(0) for k, v in encoding.items()} # TODO to device here?
+        model_inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()} # TODO to device here?
         return model_inputs
 
     def _forward(self, model_inputs):
@@ -119,7 +119,7 @@ class BertPipeline(Pipeline):
             rep_answers = answers*len(input_str)
             # encode
             encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-            inputs = {k: v.unsqueeze(0) for k, v in encoding.items()}
+            inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()}
             pred = self.model(**inputs, output_attentions=True)
             return pred.logits.view(-1,5).detach().cpu().numpy()
 
