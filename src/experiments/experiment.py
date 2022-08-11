@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from models.bert import BertPipeline
 from models.random import RandomClassifier
 
+from tqdm import tqdm
+
 '''
 This class represents a single pass through the pipeline of a single model
 and provides means to reproducing such passes/runs by saving important data.
@@ -34,7 +36,7 @@ class Experiment(ABC):
 
         # TODO is there a better way to do this? mb dont use a pipeline???
         # method 3 :puny workaround
-        preds = [self.model(sample, **params) for sample in self.val_set]
+        preds = [self.model(sample, **params) for sample in tqdm(self.val_set)]
         logits, attentions = zip(*preds)
         self.val_pred = (list(logits), [a[0] for a in attentions])
     
