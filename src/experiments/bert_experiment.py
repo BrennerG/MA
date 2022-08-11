@@ -23,7 +23,7 @@ class BERTExperiment(Experiment):
 
     def train(self, params:{}):
         # TODO put the skip into the parent class!
-        if 'load_from' in params:
+        if 'load_from' in params: # TODO skip training requires 'load_from' ...
             if 'skip_training' in params and params['skip_training']: 
                 print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
                 return None

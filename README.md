@@ -36,26 +36,13 @@ _diagram incoming_
       - ~~skip_evaluation parameter~~
       - ~~cuda yes/no flag~~
       - ~~Error on troubadix: RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots~~
-      - ~~Error on troubadix during prediction: CUDA out of memory ...~~
-        - ~~all the memory gets loaded at one time because pipeline class doesn't recognize inputs as Dataset, but thinks its a single sample~~
-      - Error (silent): new pipeline doesnt learn, but old did (confirmed) 
-        - has something to do with limiting the #samples in the dataset...
-        - SOLUTION: remove debug flag and set LIMIT manually in huggingface everytime!
-        - 50 epoch run still doesn't learn (constant 1.6 loss), BUT 10 epoch does learn ?! (is #epochs used in optimizer init?)
-      -  
-      - why is new pipeline slower than the old pipeline? (it's still rather fast) _optional_
-    - high epoch run
-      - run
-      - eval
-      - viz
+      - ~~Error on troubadix during prediction: CUDA out of memory, bc all the memory gets loaded into GPU at once ~~
+      - ~~Error (silent): new pipeline doesnt learn, but old did (confirmed) SOLUTION: it doesn't learn with a high number of epochs... (sth to do with optimizer?)~~ __optional__
+      - Error: comprehensiveness and sufficiency scores can be >1 ?!
+      - grind TODOs
+    - high epoch run - requires different settings (batch_size, LR, ...) with default settings we converge at 3-4 epochs!
     - full LIME evaluation run (high #features and #permutations)
-      - run
-      - eval
-      - viz
     - aggregate transformer attention for explanations _optional_
-      - run
-      - eval
-      - viz
 * ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
