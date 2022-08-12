@@ -108,7 +108,7 @@ class BertPipeline(Pipeline):
         return loaded_model
 
     # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
-    def lime_weights(self, num_features=30, lime_num_permutations=3, normalize_weights='minmax'):
+    def lime_weights(self, num_features=30, lime_num_permutations=3, scaling='minmax'):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
         ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)
@@ -139,15 +139,15 @@ class BertPipeline(Pipeline):
             w = dict(weights[i])
             ordered = [w[p] if (p in q and p in w.keys()) else 0 for p in q ]
             # normalize
-            if normalize_weights == 'softmax':
+            if scaling == 'softmax':
                 ordered_weights.append(torch.softmax(torch.Tensor(ordered),0).tolist())
-            elif normalize_weights == 'normalize':
+            elif scaling == 'normalize':
                 ordered_weights.append(np.array(ordered) / np.linalg.norm(ordered))
             else:
                 ordered_weights.append(ordered)
 
         # normalize ctd
-        if normalize_weights == 'minmax':
+        if scaling == 'minmax':
             scaler = MinMaxScaler()
             transposed = [[x] for sublist in ordered_weights for x in sublist]
             ordered_weights = scaler.fit_transform(transposed).T
