@@ -1,0 +1,72 @@
+competence:
+  accuracy: 0.496
+  precision: 0.497
+  recall: 0.497
+efficiency:
+  flops: 254631029065440
+  params: 11000000
+explainability:
+  accuracy: 0.496316758747698
+  aopc_thresholds:
+  - 0.01
+  - 0.05
+  - 0.1
+  - 0.2
+  - 0.5
+  comprehensiveness: 0.45712989343956356
+  comprehensiveness_aopc: 0.19096520049840607
+  comprehensiveness_aopc_points:
+  - 0.14259631230704672
+  - 0.14259631230704672
+  - 0.14259631230704672
+  - 0.21214711094090521
+  - 0.31488995462998487
+  comprehensiveness_entropy: -0.346484551703759
+  comprehensiveness_kl: 3.713247234492414
+  prf:
+    A:
+      f1-score: 0.5
+      precision: 0.5123152709359606
+      recall: 0.48826291079812206
+      support: 213
+    B:
+      f1-score: 0.505592841163311
+      precision: 0.5207373271889401
+      recall: 0.49130434782608695
+      support: 230
+    C:
+      f1-score: 0.49881235154394293
+      precision: 0.4772727272727273
+      recall: 0.5223880597014925
+      support: 201
+    D:
+      f1-score: 0.5055928411633109
+      precision: 0.5022222222222222
+      recall: 0.509009009009009
+      support: 222
+    E:
+      f1-score: 0.4716553287981859
+      precision: 0.47058823529411764
+      recall: 0.4727272727272727
+      support: 220
+    accuracy: 0.496316758747698
+    macro avg:
+      f1-score: 0.49633067253375013
+      precision: 0.49662715658279355
+      recall: 0.4967383200123966
+      support: 1086
+    weighted avg:
+      f1-score: 0.49636594769958564
+      precision: 0.49709696247023316
+      recall: 0.496316758747698
+      support: 1086
+  sufficiency: 0.32678501451348857
+  sufficiency_aopc: 0.5634816336648725
+  sufficiency_aopc_points:
+  - 0.5989642602458058
+  - 0.5989642602458058
+  - 0.5989642602458058
+  - 0.5365096507898384
+  - 0.48400573679710673
+  sufficiency_entropy: -0.13784416777764977
+  sufficiency_kl: 2.5598901739113584
