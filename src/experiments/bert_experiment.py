@@ -89,6 +89,7 @@ class BERTExperiment(Experiment):
         return None
 
     def save(self, params:{}):
+        # TODO create folder if not there or just save eval files in data/experiment folder w. name of experiment
         with open(params['save_loc']+'evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
         return documents
