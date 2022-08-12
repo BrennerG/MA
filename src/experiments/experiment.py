@@ -36,7 +36,7 @@ class Experiment(ABC):
 
         # TODO is there a better way to do this? mb dont use a pipeline???
         # method 3 :puny workaround
-        preds = [self.model(sample, **params) for sample in tqdm(self.val_set, desc='predicting:')]
+        preds = [self.model(sample, softmax_logits=True, **params) for sample in tqdm(self.val_set, desc='predicting:')]
         # TODO find and remove the second tqdm bar during prediction :S
         logits, attentions = zip(*preds)
         self.val_pred = (list(logits), [a[0] for a in attentions])

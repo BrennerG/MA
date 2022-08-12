@@ -56,6 +56,8 @@ class BertPipeline(Pipeline):
             if postprocess_kwargs['attention'] == 'lime':
                 if 'lime_num_features' in kwargs: postprocess_kwargs['lime_num_features'] = kwargs['lime_num_features']
                 if 'lime_num_permutations' in kwargs: postprocess_kwargs['lime_num_permutations'] = kwargs['lime_num_permutations']
+        if 'softmax_logits' in kwargs and kwargs['softmax_logits']:
+            forwards_kwargs['softmax_logits'] = True
         return preprocess_kwargs, forwards_kwargs, postprocess_kwargs
 
     def preprocess(self, inputs, maybe_arg=2):
@@ -70,8 +72,11 @@ class BertPipeline(Pipeline):
         model_inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()} # TODO to device here?
         return model_inputs
 
-    def _forward(self, model_inputs):
-        return self.model(**model_inputs, output_attentions=True)
+    def _forward(self, model_inputs, softmax_logits=False):
+        output = self.model(**model_inputs, output_attentions=True)
+        if softmax_logits:
+            output.logits = torch.softmax(output.logits,1)
+        return output
         
     # TODO use transformer attention weights as attn_weights (requires some form of aggregation...)
     # TODO expand parameters

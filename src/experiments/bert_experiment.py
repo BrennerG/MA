@@ -57,19 +57,19 @@ class BERTExperiment(Experiment):
         pred, attn = self.val_pred
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
-        comp_pred, _ = zip(*self.model(comp_ds, attention=None))
-        suff_pred, _ = zip(*self.model(suff_ds, attention=None))
+        comp_pred, _ = zip(*self.model(comp_ds, attention=None, softmax_logits=True))
+        suff_pred, _ = zip(*self.model(suff_ds, attention=None, softmax_logits=True))
         # calcualte aopc metrics
         aopc_intermediate = {}
         for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
             tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
             cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-            cp, _ = zip(*self.model(cds, attention=None))
+            cp, _ = zip(*self.model(cds, attention=None, softmax_logits=True))
             cl = E.from_softmax(cp, to='dict') # labels
             # suff
             sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-            sp, _ = zip(*self.model(sds, attention=None))
+            sp, _ = zip(*self.model(sds, attention=None, softmax_logits=True))
             sl = E.from_softmax(sp, to='dict')
             # aggregate
             aopc_intermediate[aopc] = [aopc, cl, sl]
