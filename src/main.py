@@ -25,11 +25,11 @@ PARAMS = {
     'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     'lime_num_features': 10, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 20, # number of input permutations per sample; default=5k :O
-    'learning_rate': 2e-5, # Optimizer learning rate
+    'learning_rate': 1e-5, # Optimizer learning rate
     'batch_size': 16, # batch size for training and evaluation
     'epochs': 10, # epochs of training
     'save_strategy': 'epoch', # determines rules for saving artifacts {'no', 'epoch', 'steps'}
-    'save_loc': 'data/experiments/bert10_lr=2e-5/', # location where the above are saved
+    'save_loc': 'data/experiments/bert10_lr=1e-5/', # location where the above are saved
     'overwrite_output_dir': True, # overwrites the given output directory above
 }
 
