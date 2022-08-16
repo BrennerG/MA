@@ -132,7 +132,7 @@ class BertPipeline(Pipeline):
 
         # get lime explanations
         weights = []
-        for i,x in enumerate(tqdm(ds_for_lime)):
+        for i,x in enumerate(ds_for_lime):
             exp = explainer.explain_instance(x, clf_wrapper, num_samples=lime_num_permutations, num_features=num_features, labels=list(range(5)))
             weights.append(exp.as_list())
         
