@@ -30,29 +30,45 @@ class Experiment(ABC):
         self.model = self.model_factory(params['model_type'], params)
 
     def __call__(self, params:{}):
-        print('training...')
-        self.train_output = self.train(params)
-        print('predicting...')
 
-        # TODO is there a better way to do this? mb dont use a pipeline???
-        # method 3 :puny workaround
-        preds = [self.model(sample, softmax_logits=True, **params) for sample in tqdm(self.val_set, desc='predicting:')]
-        # TODO find and remove the second tqdm bar during prediction :S
-        logits, attentions = zip(*preds)
-        self.val_pred = (list(logits), [a[0] for a in attentions])
-    
-        print('evaluating...')
-        self.eval_output = self.evaluate(params)
+        # TRAINING
+        if not('skip_training' in params and params['skip_training']): # no skip
+            print('training...')
+            self.train_output = self.train(params)
+        else: # skip training
+            if not 'load_from' in params or params['load_from'] != None:
+                print('WARNING: training will be skipped, but no checkpoint was given (load_from) parameter (=prediction with only pre-trained model)')
+            else:
+                print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!") # this already happened in experiment.model_factory()
+
+        # PREDICTION
+        # EVALUATION
+        if not('skip_evaluation' in params and params['skip_evaluation']): # no skip
+            print('predicting...')
+            preds = [self.model(sample, softmax_logits=True, **params) for sample in tqdm(self.val_set, desc='predicting:')] # TODO find and remove the second tqdm bar during prediction :S
+            logits, attentions = zip(*preds) 
+            self.val_pred = (list(logits), [a[0] for a in attentions])
+
+            print('evaluating...')
+            self.eval_output = self.evaluate(params)
+        else: # skip evaluation
+            print('SKIPPING EVALUATION (flag was set in param dict!)')
+            self.val_pred = None
+            self.eval_output = None
+        
+        # VIZ
         print('visualizing...')
         self.viz_output = self.viz(params)
+
+        # SAVE / PERSIST
         print('saving...')
         self.save(params)
+
         print('experiment done!')
         return self
         
     def evaluate(self, params:{}, split='val'):
         if 'skip_evaluation' in params and params['skip_evaluation']: 
-            print('SKIPPING EVALUATION (flag was set in param dict!)')
             return None
         return {
             'competence':self.eval_competence(params), 

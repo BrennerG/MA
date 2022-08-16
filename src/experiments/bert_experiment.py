@@ -23,14 +23,7 @@ class BERTExperiment(Experiment):
         return cose, cose['train'], cose['validation'], cose['test']
 
     def train(self, params:{}):
-        # TODO put the skip into the parent class!
-        if 'load_from' in params: # TODO skip training requires 'load_from' ...
-            if 'skip_training' in params and params['skip_training']: 
-                print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!")
-                return None
-            else:
-             print(f"MODEL PRELOADED FROM {params['load_from']} - CONTINUING TRAINING!")
-        
+       
         wandb.init(project="BERT_baseline")
 
         result = self.model.train(
