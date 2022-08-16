@@ -39,6 +39,7 @@ _diagram incoming_
       - ~~Error on troubadix during prediction: CUDA out of memory, bc all the memory gets loaded into GPU at once ~~
       - ~~Error (silent): new pipeline doesnt learn, but old did (confirmed) SOLUTION: it doesn't learn with a high number of epochs... (sth to do with optimizer?)~~ __optional__
       - ~~Error: comprehensiveness and sufficiency scores can be >1 ?! (SOLUTION: softmax logits for explain_eval)~~
+      - ~~create loss plot for training SOLUTION: Weights and Biases (wandb)~~
       - grind TODOs
     - high epoch run 
       - requires different settings (batch_size, LR, ...) with default settings we converge at 3-4 epochs!

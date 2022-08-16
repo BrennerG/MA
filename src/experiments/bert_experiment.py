@@ -10,6 +10,7 @@ from data.locations import LOC
 import yaml
 from tqdm import tqdm
 
+import wandb
 
 class BERTExperiment(Experiment):
 
@@ -29,8 +30,10 @@ class BERTExperiment(Experiment):
                 return None
             else:
              print(f"MODEL PRELOADED FROM {params['load_from']} - CONTINUING TRAINING!")
+        
+        wandb.init(project="BERT_baseline")
 
-        return self.model.train(
+        result = self.model.train(
             self.complete_set, 
             train_args = TrainingArguments(
                 output_dir= params['save_loc'],
@@ -42,9 +45,14 @@ class BERTExperiment(Experiment):
                 weight_decay=0.01,
                 save_strategy= params['save_strategy'],
                 overwrite_output_dir= params['overwrite_output_dir'],
-                no_cuda=(not params['use_cuda'])
+                no_cuda=(not params['use_cuda']),
+                report_to='wandb',
+                run_name='BERT_insert_name'
             )
         )
+
+        wandb.finish()
+        return result
     
     def eval_competence(self, params:{}):
         probas, attn = self.val_pred
