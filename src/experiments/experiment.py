@@ -45,7 +45,9 @@ class Experiment(ABC):
         # EVALUATION
         if not('skip_evaluation' in params and params['skip_evaluation']): # no skip
             print('predicting...')
-            preds = [self.model(sample, softmax_logits=True, **params) for sample in tqdm(self.val_set, desc='predicting:')] 
+            preds = []
+            for sample in tqdm(self.val_set):
+                preds.append(self.model(sample, softmax_logits=True, **params))
             logits, attentions = zip(*preds) 
             self.val_pred = (list(logits), [a[0] for a in attentions])
 
