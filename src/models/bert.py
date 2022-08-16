@@ -124,6 +124,7 @@ class BertPipeline(Pipeline):
             rep_answers = answers*len(input_str)
             # encode
             encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
+            # TODO feed inputs into model in batches here put batches in loop onto device!
             inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()}
             pred = self.model(**inputs, output_attentions=True)
             return pred.logits.view(-1,5).detach().cpu().numpy()
