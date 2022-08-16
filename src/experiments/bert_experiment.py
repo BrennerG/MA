@@ -11,6 +11,7 @@ import yaml
 from tqdm import tqdm
 
 import wandb
+import os
 
 class BERTExperiment(Experiment):
 
@@ -90,7 +91,8 @@ class BERTExperiment(Experiment):
         return None
 
     def save(self, params:{}):
-        # TODO create folder if not there or just save eval files in data/experiment folder w. name of experiment
+        if not os.path.exists(params['save_loc']):
+            os.makedirs(params['save_loc'])
         with open(params['save_loc']+'evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
         return documents
