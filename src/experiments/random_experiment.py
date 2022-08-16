@@ -32,9 +32,8 @@ class RandomClassifierExperiment(Experiment):
         return results
 
 
-    # TODO only works because we have manually set split to debug_val everywhere... better to handle data the directly
     def eval_explainability(self, params:{}):
-        split = 'debug_val' if 'debug' in params and params['debug']==True else 'validation'
+        split = 'validation'
         pred, attn = self.val_pred
         comp_ds = self.reshape_erased_output(EraserCosE.erase(attn, mode='comprehensiveness', split=split))
         suff_ds = self.reshape_erased_output(EraserCosE.erase(attn, mode='sufficiency', split=split))
