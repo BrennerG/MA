@@ -40,11 +40,13 @@ _diagram incoming_
       - ~~Error (silent): new pipeline doesnt learn, but old did (confirmed) SOLUTION: it doesn't learn with a high number of epochs... (sth to do with optimizer?)~~ __optional__
       - ~~Error: comprehensiveness and sufficiency scores can be >1 ?! (SOLUTION: softmax logits for explain_eval)~~
       - ~~create loss plot for training SOLUTION: Weights and Biases (wandb)~~
-      - grind TODOs
+      - ~~grind TODOs~~
     - high epoch run 
       - requires different settings (batch_size, LR, ...) with default settings we converge at 3-4 epochs!
+      - change AlbertModel parameters
     - full LIME evaluation run (high #features and #permutations)
       - we get ~15-20 permutations maximum...\
+      - IDEA: feed single samples into lime.clf_wrapper() (similar to experiment.py)
     - aggregate transformer attention for explanations _optional_
 * ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
