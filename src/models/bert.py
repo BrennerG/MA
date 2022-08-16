@@ -69,7 +69,7 @@ class BertPipeline(Pipeline):
         rep_questions = sum([[question] * 5 for question in questions], [])
         rep_answers = sum(answers, [])
         encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-        model_inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()} # TODO to device here?
+        model_inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()} 
         return model_inputs
 
     def _forward(self, model_inputs, softmax_logits=False):
@@ -78,10 +78,6 @@ class BertPipeline(Pipeline):
             output.logits = torch.softmax(output.logits,1)
         return output
         
-    # TODO use transformer attention weights as attn_weights (requires some form of aggregation...)
-    # TODO expand parameters
-    # attention = {None, 'lime', 'attention', 'random}
-    # output = {'proba', 'softmax', 'label', 'dict', 'intform', ...}
     def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=30, lime_num_permutations=3):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
@@ -94,10 +90,12 @@ class BertPipeline(Pipeline):
         elif attention == 'lime':
             attn_weights = self.lime_weights(lime_num_features, lime_num_permutations) # uses cached features
         elif attention == 'zeros':
-            attn_weights = [len(x.split(" ")) for x in self.cached_inputs['question']]
+            attn_weights = [np.zeros(len(x['question'].split())) for x in self.cached_inputs]
+            #attn_weights = [len(x.split(" ")) for x in self.cached_inputs['question']]
             self.cached_inputs = None
         elif attention == 'random':
-            raise NotImplementedError()
+            attn_weights = [np.random.rand(len(x['question'].split())) for x in self.cached_inputs]
+            self.cached_inputs = None
         elif attention == 'self_attn':
             raise NotImplementedError()
         else:
@@ -137,7 +135,6 @@ class BertPipeline(Pipeline):
             weights.append(exp.as_list())
         
         # bring weights into order of tokens
-        # TODO using exp.as_map() might make this loop unnecessary
         ordered_weights = []
         for i,input_str in enumerate(ds_for_lime):
             q = ds_for_lime[i].split('[qsep]')[0].split()
