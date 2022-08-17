@@ -24,6 +24,7 @@ _diagram incoming_
     - recheck suff implementation
   - ~~eval: efficiency~~
 * ~~__BOW__ Baseline~~
+* ~~Change Experiment Structure~~
 * __BERT + LIME__ Baseline
   - ~~huggingface clf~~
   - ~~LIME~~
@@ -31,25 +32,16 @@ _diagram incoming_
   - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
   - ~~cleanup TODOs~~
   - Experimentation / Runs
-    - Preparation
-      - ~~rework debug_flag~~
-      - ~~skip_evaluation parameter~~
-      - ~~cuda yes/no flag~~
-      - ~~Error on troubadix: RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! loss plots~~
-      - ~~Error on troubadix during prediction: CUDA out of memory, bc all the memory gets loaded into GPU at once ~~
-      - ~~Error (silent): new pipeline doesnt learn, but old did (confirmed) SOLUTION: it doesn't learn with a high number of epochs... (sth to do with optimizer?)~~ __optional__
-      - ~~Error: comprehensiveness and sufficiency scores can be >1 ?! (SOLUTION: softmax logits for explain_eval)~~
-      - ~~create loss plot for training SOLUTION: Weights and Biases (wandb)~~
-      - ~~grind TODOs~~
-    - high epoch run 
-      - requires different settings (batch_size, LR, ...) with default settings we converge at 3-4 epochs!
-      - change AlbertModel parameters
+    - ~~Preparation~~
+    - ~~high epoch run~~
+    - bert-large-uncased runs! (for reference to thalmor 2018)
+      - not needed?
     - full LIME evaluation run (high #features and #permutations)
       - we get ~15-20 permutations maximum...\
       - IDEA: feed single samples into lime.clf_wrapper() (similar to experiment.py)
         - does not work clf wrapper only takes a single sample anyway...
+      - TODO: why is comp and suff so insanely high?
     - aggregate transformer attention for explanations _optional_
-* ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove
