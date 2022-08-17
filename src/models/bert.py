@@ -6,7 +6,7 @@ from tqdm import tqdm
 from transformers import Pipeline
 from transformers import AlbertForMultipleChoice, AlbertTokenizer
 from transformers import RobertaTokenizer, RobertaForMultipleChoice
-from transformers import AutoModelForMultipleChoice, TrainingArguments, Trainer
+from transformers import AutoTokenizer, AutoModelForMultipleChoice, TrainingArguments, Trainer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase, PaddingStrategy
 from datasets import load_dataset
 from dataclasses import dataclass
