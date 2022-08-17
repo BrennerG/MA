@@ -5,6 +5,7 @@ import lime
 from tqdm import tqdm
 from transformers import Pipeline
 from transformers import AlbertForMultipleChoice, AlbertTokenizer
+from transformers import RobertaTokenizer, RobertaForMultipleChoice
 from transformers import AutoModelForMultipleChoice, TrainingArguments, Trainer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase, PaddingStrategy
 from datasets import load_dataset
@@ -23,15 +24,28 @@ class BertPipeline(Pipeline):
     _DEFAULT_BASE = "albert-base-v2"
 
     def __init__(self, params:{}):
-        if 'load_from' in params and params['load_from']: model = AlbertForMultipleChoice.from_pretrained(params['load_from'])
-        else: model = AlbertForMultipleChoice.from_pretrained(self._DEFAULT_BASE)
 
-        if 'bert_base' in params and params['bert_base']: self.tokenizer_base = params['bert_base']
-        else: self.tokenizer_base = self._DEFAULT_BASE
-    
+        if params['bert_base'] == 'alberta-base-v2':
+            _tokenizer = AlbertTokenizer
+            _model = AlbertForMultipleChoice
+        elif params['bert_base'] == 'roberta-base':
+            _tokenizer = RobertaTokenizer
+            _model = RobertaForMultipleChoice
+        elif params['bert_base'] == 'bert-base-uncased' or params['bert_base'] == 'bert-large-uncased':
+            _tokenizer = AutoTokenizer
+            _model = AutoModelForMultipleChoice
+        else:
+            raise AttributeError('Error: BERT Base unknown!')
+
+        # load model from pretrained or checkpoint
+        if 'load_from' in params and params['load_from']: 
+            model = _model.from_pretrained(params['load_from'])
+        else: 
+            model = _model.from_pretrained(params['bert_base'])
+
         super().__init__(
             model = model,
-            tokenizer = AlbertTokenizer.from_pretrained(self.tokenizer_base),
+            tokenizer = _tokenizer.from_pretrained(params['bert_base']),
             feature_extractor=None,
             modelcard=None,
             framework=None,
@@ -157,13 +171,17 @@ class BertPipeline(Pipeline):
 
         return ordered_weights
 
-    def efficiency_metrics(self):
+    def efficiency_metrics(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
         tokenized_cose = cose.map(self.preprocess_function, batched=True, batch_size=8752)
         input_dict = {'input_ids':torch.Tensor(tokenized_cose['train']['input_ids'])}
         flops = self.model.floating_point_ops(input_dict, exclude_embeddings=False) # chapter 2.1 relevant for albert: https://arxiv.org/pdf/2001.08361.pdf
-        if self.tokenizer_base == 'albert-base-v2':
+        if params['bert_base'] == 'albert-base-v2':
             nr_params = 11000000 # according to https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+        if params['bert_base'] == 'roberta-base':
+            nr_params = 125000000
+        if params['bert_base'] == 'bert-base-uncased':
+            nr_params = 110000000
         else:
             nr_params = -1
         return flops, nr_params

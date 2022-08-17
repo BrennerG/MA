@@ -84,7 +84,7 @@ class BERTExperiment(Experiment):
 
     def eval_efficiency(self, params:{}):
         result = {}
-        result['flops'], result['params'] = self.model.efficiency_metrics()
+        result['flops'], result['params'] = self.model.efficiency_metrics(params)
         return result
 
     def viz(self, params:{}):
