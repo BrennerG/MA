@@ -1,0 +1,24 @@
+{
+    "os": "Linux-4.15.0-188-generic-x86_64-with-glibc2.27",
+    "python": "3.10.4",
+    "heartbeatAt": "2022-08-16T21:44:17.159586",
+    "startedAt": "2022-08-16T21:44:16.619453",
+    "docker": null,
+    "gpu": "NVIDIA GeForce GTX 1080 Ti",
+    "gpu_count": 6,
+    "cpu_count": 32,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/newstorage5/gbreiner/MA/src/main.py",
+    "codePath": "src/main.py",
+    "git": {
+        "remote": "git@github.com:BrennerG/MA.git",
+        "commit": "566120c7721297ff3d8b1aa5fb373b5130c8eff0"
+    },
+    "email": null,
+    "root": "/newstorage5/gbreiner/MA",
+    "host": "troubadix",
+    "username": "gbreiner",
+    "executable": "/home/gbreiner/anaconda3/envs/ma/bin/python"
+}
