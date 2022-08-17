@@ -25,7 +25,7 @@ class BertPipeline(Pipeline):
 
     def __init__(self, params:{}):
 
-        if params['bert_base'] == 'alberta-base-v2':
+        if params['bert_base'] == 'albert-base-v2':
             _tokenizer = AlbertTokenizer
             _model = AlbertForMultipleChoice
         elif params['bert_base'] == 'roberta-base':
