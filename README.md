@@ -47,6 +47,7 @@ _diagram incoming_
     - full LIME evaluation run (high #features and #permutations)
       - we get ~15-20 permutations maximum...\
       - IDEA: feed single samples into lime.clf_wrapper() (similar to experiment.py)
+        - does not work clf wrapper only takes a single sample anyway...
     - aggregate transformer attention for explanations _optional_
 * ~~Change Experiment Structure~~
 * __BERT*less__ - create simple GNN Architecture with UD graphs
