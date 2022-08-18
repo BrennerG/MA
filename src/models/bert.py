@@ -125,25 +125,25 @@ class BertPipeline(Pipeline):
         return loaded_model
 
     # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
+    # attribute 'mask_string'?
+    # >>> https://lime-ml.readthedocs.io/en/latest/lime.html#subpackages
     def lime_weights(self, num_features=30, lime_num_permutations=3, scaling='minmax'):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
-        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) # TODO IDEA: make the included labels a single word :O
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) # TODO IDEA: make the included labels a single word :O and substitute \s with _
         self.cached_inputs = None # reset cached data for safety
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
         def clf_wrapper(input_str:str):
-            answers = input_str[0].split('[qsep]')[1].split(' [sep] ')
+            answers = input_str[0].split('[qsep]')[1].split('[sep]')
             rep_questions = [item for item in input_str for i in range(5)]
             rep_answers = answers*len(input_str)
             # TODO IDEA: if labels are a single token - remove it or replace it (with a marker token e.g.:"[SOL]"")
             # encode
             encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
-
-            # TODO feed inputs into model in batches here put batches in loop onto device!
             inputs = {k: v.view(len(input_str), 5, -1) for k,v in encoding.items()}
             preds = np.zeros((len(input_str),5))
-            for i in tqdm(range(len(input_str))): # TODO remove tqdm
+            for i in range(len(input_str)):
                 out = self.model(**{k:v[i].unsqueeze(0).to(self.device) for k,v in inputs.items()}, output_attentions=True)
                 preds[i] = out.logits.squeeze().detach().cpu().numpy()
             return preds
