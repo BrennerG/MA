@@ -70,6 +70,7 @@ class BertPipeline(Pipeline):
             if postprocess_kwargs['attention'] == 'lime':
                 if 'lime_num_features' in kwargs: postprocess_kwargs['lime_num_features'] = kwargs['lime_num_features']
                 if 'lime_num_permutations' in kwargs: postprocess_kwargs['lime_num_permutations'] = kwargs['lime_num_permutations']
+                if 'lime_scaling' in kwargs: postprocess_kwargs['lime_scaling'] = kwargs['lime_scaling']
         if 'softmax_logits' in kwargs and kwargs['softmax_logits']:
             forwards_kwargs['softmax_logits'] = True
         return preprocess_kwargs, forwards_kwargs, postprocess_kwargs
@@ -92,7 +93,7 @@ class BertPipeline(Pipeline):
             output.logits = torch.softmax(output.logits,1)
         return output
         
-    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=-1, lime_num_permutations=5000):
+    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=-1, lime_num_permutations=5000, lime_scaling='minmax'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
         probas = np.array(grouped)
@@ -102,10 +103,9 @@ class BertPipeline(Pipeline):
         if attention == None:
             attn_weights = None
         elif attention == 'lime':
-            attn_weights = self.lime_weights(lime_num_features, lime_num_permutations) # uses cached features
+            attn_weights = self.lime_weights(num_features=lime_num_features, num_permutations=lime_num_permutations, scaling=lime_scaling) # uses cached features
         elif attention == 'zeros':
             attn_weights = [np.zeros(len(x['question'].split())) for x in self.cached_inputs]
-            #attn_weights = [len(x.split(" ")) for x in self.cached_inputs['question']]
             self.cached_inputs = None
         elif attention == 'random':
             attn_weights = [np.random.rand(len(x['question'].split())) for x in self.cached_inputs]
@@ -127,7 +127,7 @@ class BertPipeline(Pipeline):
     # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
     # attribute 'mask_string'?
     # >>> https://lime-ml.readthedocs.io/en/latest/lime.html#subpackages
-    def lime_weights(self, num_features=30, lime_num_permutations=3, scaling='minmax'):
+    def lime_weights(self, num_features=30, num_permutations=3, scaling='minmax'):
         # init
         if num_features < 1: lime_feature_selection = 'none'
         else: lime_feature_selection = 'auto'
@@ -153,7 +153,7 @@ class BertPipeline(Pipeline):
         # get lime explanations
         weights = []
         for i,x in enumerate(ds_for_lime):
-            exp = explainer.explain_instance(x, clf_wrapper, num_samples=lime_num_permutations, num_features=num_features, labels=list(range(5)))
+            exp = explainer.explain_instance(x, clf_wrapper, num_samples=num_permutations, num_features=num_features, labels=list(range(5)))
             weights.append(exp.as_list())
         
         # bring weights into order of tokens
