@@ -92,7 +92,7 @@ class BertPipeline(Pipeline):
             output.logits = torch.softmax(output.logits,1)
         return output
         
-    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=30, lime_num_permutations=3):
+    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=-1, lime_num_permutations=5000):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
         probas = np.array(grouped)
@@ -129,8 +129,10 @@ class BertPipeline(Pipeline):
     # >>> https://lime-ml.readthedocs.io/en/latest/lime.html#subpackages
     def lime_weights(self, num_features=30, lime_num_permutations=3, scaling='minmax'):
         # init
-        explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
-        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) # TODO IDEA: make the included labels a single word :O and substitute \s with _
+        if num_features < 1: lime_feature_selection = 'none'
+        else: lime_feature_selection = 'auto'
+        explainer = LimeTextExplainer(class_names=['A','B','C','D','E'], feature_selection=lime_feature_selection)
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) 
         self.cached_inputs = None # reset cached data for safety
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime

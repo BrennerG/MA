@@ -30,17 +30,12 @@ _diagram incoming_
   - ~~LIME~~
   - ~~Write Evaluation (Competence, Efficiency, Explainability)~~
   - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
-  - ~~cleanup TODOs~~
   - Experimentation / Runs
     - ~~Preparation~~
     - ~~high epoch run~~
     - bert-large-uncased runs! (for reference to thalmor 2018)
-      - not needed?
     - full LIME evaluation run (high #features and #permutations)
-      - we get ~15-20 permutations maximum...\
-      - IDEA: feed single samples into lime.clf_wrapper() (similar to experiment.py)
-        - does not work clf wrapper only takes a single sample anyway...
-      - TODO: why is comp and suff so insanely high?
+    - Why is comp and suff so insanely high?
     - aggregate transformer attention for explanations _optional_
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)

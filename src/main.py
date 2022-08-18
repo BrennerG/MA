@@ -23,9 +23,8 @@ PARAMS = {
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
     'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
-    # TODO add lime feature_selection='none' if lime_num_features = -1
     # TODO add lime scaling as param
-    'lime_num_features': 10, # number of tokens that lime assigns a weight to
+    'lime_num_features': -1, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 100, # number of input permutations per sample; default=5k :O
     'learning_rate': 9e-6, # Optimizer learning rate
     'batch_size': 16, # batch size for training and evaluation
