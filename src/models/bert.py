@@ -103,19 +103,22 @@ class BertPipeline(Pipeline):
         if attention == None:
             attn_weights = None
         elif attention == 'lime':
-            attn_weights = self.lime_weights(num_features=lime_num_features, num_permutations=lime_num_permutations, scaling=lime_scaling) # uses cached features
+            attn_weights = self.lime_weights( # uses cached features
+                predicted_label=np.argmax(probas), 
+                num_features=lime_num_features, 
+                num_permutations=lime_num_permutations, 
+                scaling=lime_scaling) 
         elif attention == 'zeros':
             attn_weights = [np.zeros(len(x['question'].split())) for x in self.cached_inputs]
-            self.cached_inputs = None
         elif attention == 'random':
             attn_weights = [np.random.rand(len(x['question'].split())) for x in self.cached_inputs]
-            self.cached_inputs = None
         elif attention == 'self_attn':
             raise NotImplementedError()
         else:
             raise AttributeError(f"attention mode {attention}")
 
         # output
+        self.cached_inputs = None # reset cached_inputs for cleanliness
         if output == 'proba': return probas, attn_weights
         else: raise AttributeError(f'output mode {output} unknown!')
     
@@ -127,13 +130,12 @@ class BertPipeline(Pipeline):
     # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
     # attribute 'mask_string'?
     # >>> https://lime-ml.readthedocs.io/en/latest/lime.html#subpackages
-    def lime_weights(self, num_features=30, num_permutations=3, scaling='minmax'):
+    def lime_weights(self, predicted_label, num_features=30, num_permutations=3, scaling='minmax'):
         # init
         if num_features < 1: lime_feature_selection = 'none'
         else: lime_feature_selection = 'auto'
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'], feature_selection=lime_feature_selection)
         ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) 
-        self.cached_inputs = None # reset cached data for safety
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
         def clf_wrapper(input_str:str):
@@ -154,7 +156,13 @@ class BertPipeline(Pipeline):
         weights = []
         for i,x in enumerate(ds_for_lime):
             exp = explainer.explain_instance(x, clf_wrapper, num_samples=num_permutations, num_features=num_features, labels=list(range(5)))
-            weights.append(exp.as_list())
+            weights.append(exp.as_list(predicted_label))
+
+            # show explanations like this (only during manual debugging)
+            # import matplotlib.pylab as plt
+            # plt.figure()
+            # exp.as_pyplot_figure()
+            # plt.show()
         
         # bring weights into order of tokens
         ordered_weights = []
