@@ -128,7 +128,7 @@ class BertPipeline(Pipeline):
     def lime_weights(self, num_features=30, lime_num_permutations=3, scaling='minmax'):
         # init
         explainer = LimeTextExplainer(class_names=['A','B','C','D','E'])
-        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs)
+        ds_for_lime = EraserCosE.parse_to_lime(ds=self.cached_inputs) # TODO IDEA: make the included labels a single word :O
         self.cached_inputs = None # reset cached data for safety
 
         # Multiplexer for (question, answer) -> 'questions+answers' = the prediction function for lime
@@ -136,12 +136,17 @@ class BertPipeline(Pipeline):
             answers = input_str[0].split('[qsep]')[1].split(' [sep] ')
             rep_questions = [item for item in input_str for i in range(5)]
             rep_answers = answers*len(input_str)
+            # TODO IDEA: if labels are a single token - remove it or replace it (with a marker token e.g.:"[SOL]"")
             # encode
             encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
+
             # TODO feed inputs into model in batches here put batches in loop onto device!
-            inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoding.items()}
-            pred = self.model(**inputs, output_attentions=True)
-            return pred.logits.view(-1,5).detach().cpu().numpy()
+            inputs = {k: v.view(len(input_str), 5, -1) for k,v in encoding.items()}
+            preds = np.zeros((len(input_str),5))
+            for i in tqdm(range(len(input_str))): # TODO remove tqdm
+                out = self.model(**{k:v[i].unsqueeze(0).to(self.device) for k,v in inputs.items()}, output_attentions=True)
+                preds[i] = out.logits.squeeze().detach().cpu().numpy()
+            return preds
 
         # get lime explanations
         weights = []
@@ -167,9 +172,13 @@ class BertPipeline(Pipeline):
         if scaling == 'minmax':
             scaler = MinMaxScaler()
             transposed = [[x] for sublist in ordered_weights for x in sublist]
-            ordered_weights = scaler.fit_transform(transposed).T
+            scaled_weights = scaler.fit_transform(transposed).T
+        elif scaling == 'none' or scaling == None:
+            scaled_weights = ordered_weights
+        else:
+            raise AttributeError(f"LIME: scaling method '{scaling}' is unknown!")
 
-        return ordered_weights
+        return scaled_weights
 
     def efficiency_metrics(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
