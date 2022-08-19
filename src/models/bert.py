@@ -184,7 +184,7 @@ class BertPipeline(Pipeline):
             transposed = [[x] for sublist in ordered_weights for x in sublist]
             scaled_weights = scaler.fit_transform(transposed).T
         elif scaling == 'none' or scaling == None:
-            scaled_weights = ordered_weights
+            scaled_weights = np.array(ordered_weights)
         else:
             raise AttributeError(f"LIME: scaling method '{scaling}' is unknown!")
 

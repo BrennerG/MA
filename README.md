@@ -45,6 +45,9 @@ _diagram incoming_
     - aggregate transformer attention for explanations _optional_
     - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
       - should we train the model to predict the rationales?
+      - right now we train for QA and one-shot ERASER
+      - should we also try: train for ERASER, one-shot QA?
+      - or unify the models, losses, ...
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove

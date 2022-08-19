@@ -25,7 +25,7 @@ PARAMS = {
     'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     'lime_num_features': -1, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 100, # number of input permutations per sample; default=5k :O
-    'lime_scaling': 'minmax', # decides how the limeweights should be scaled (per sample) # TODO add abs (apply np.abs(attn_weights))
+    'lime_scaling': 'none', # decides how the limeweights should be scaled (per sample) # TODO add abs (apply np.abs(attn_weights))
     'learning_rate': 9e-6, # Optimizer learning rate
     'batch_size': 16, # batch size for training and evaluation
     'epochs': 10, # epochs of training
