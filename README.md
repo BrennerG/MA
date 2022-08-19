@@ -37,6 +37,8 @@ _diagram incoming_
     - full LIME evaluation run (high #features and #permutations)
     - Why is comp and suff so insanely high?
     - aggregate transformer attention for explanations _optional_
+    - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
+      - should we train the model to predict the rationales?
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove
