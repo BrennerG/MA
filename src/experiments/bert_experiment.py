@@ -91,8 +91,23 @@ class BERTExperiment(Experiment):
         return None
 
     def save(self, params:{}):
+        # check for save location
         if not os.path.exists(params['save_loc']):
             os.makedirs(params['save_loc'])
+
+        # saving evaluation
         with open(params['save_loc']+'evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
-        return documents
+
+        # saving attention weights
+        if 'save_predictions' in params and params['save_predictions']:
+            prediction_data = {
+                xid:{
+                    'probas': self.val_pred[0][i].squeeze().tolist(),
+                    'attn': self.val_pred[1][i].squeeze().tolist()
+                }
+                    for i,xid in enumerate(self.val_set['id'])}
+            with open(params['save_loc']+'predictions_attentions.yaml', 'w') as file:
+                documents = yaml.dump(prediction_data, file)
+
+        return True

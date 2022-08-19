@@ -36,6 +36,10 @@ _diagram incoming_
     - bert-large-uncased runs! (for reference to thalmor 2018)
     - full LIME evaluation run (high #features and #permutations)
     - Why is comp and suff so insanely high?
+      - ~~TODO save predictions and weights~~
+      - TODO viz weights
+      - suff -> lower = better - so we are worse by x2
+      - comp -> still no idea
     - aggregate transformer attention for explanations _optional_
     - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
       - should we train the model to predict the rationales?
