@@ -37,7 +37,9 @@ _diagram incoming_
     - full LIME evaluation run (high #features and #permutations)
     - Why is comp and suff so insanely high?
       - ~~TODO save predictions and weights~~
+      - TODO make 5k LIME run with no scaling
       - TODO viz weights
+      - TODO viz 5k LIME attn with different post_hoc scaling methods and compare!
       - suff -> lower = better - so we are worse by x2
       - comp -> still no idea
     - aggregate transformer attention for explanations _optional_
