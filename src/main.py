@@ -32,6 +32,7 @@ PARAMS = {
     'save_strategy': 'epoch', # determines rules for saving artifacts {'no', 'epoch', 'steps'}
     'save_loc': 'data/experiments/curious_darkness_lime5k/', # location where the above are saved
     'overwrite_output_dir': True, # overwrites the given output directory above
+    'save_predictions': True,
 }
 
 

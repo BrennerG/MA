@@ -36,9 +36,18 @@ _diagram incoming_
     - bert-large-uncased runs! (for reference to thalmor 2018)
     - full LIME evaluation run (high #features and #permutations)
     - Why is comp and suff so insanely high?
+      - ~~TODO save predictions and weights~~
+      - TODO make 5k LIME run with no scaling
+      - TODO viz weights
+      - TODO viz 5k LIME attn with different post_hoc scaling methods and compare!
+      - suff -> lower = better - so we are worse by x2
+      - comp -> still no idea
     - aggregate transformer attention for explanations _optional_
     - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
       - should we train the model to predict the rationales?
+      - right now we train for QA and one-shot ERASER
+      - should we also try: train for ERASER, one-shot QA?
+      - or unify the models, losses, ...
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove
