@@ -112,8 +112,14 @@ class BertPipeline(Pipeline):
             attn_weights = [np.zeros(len(x['question'].split())) for x in self.cached_inputs]
         elif attention == 'random':
             attn_weights = [np.random.rand(len(x['question'].split())) for x in self.cached_inputs]
-        elif attention == 'self_attn':
-            raise NotImplementedError()
+        elif attention == 'self_attention':
+            # TODO find another way to aggregate?
+            last_layers_attn = model_outputs.attentions[-1]
+            attn_for_predicted_label = last_layers_attn[np.argmax(probas)]
+            mean_of_heads = torch.mean(attn_for_predicted_label, 0) # take mean of all attention heads
+            sum_heads = torch.sum(mean_of_heads, 0)
+            l = len(self.cached_inputs[0]['question'].split())
+            attn_weights = torch.softmax(sum_heads[:l],0).unsqueeze(0).numpy()
         else:
             raise AttributeError(f"attention mode {attention}")
 
