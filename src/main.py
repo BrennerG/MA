@@ -22,7 +22,7 @@ PARAMS = {
     'use_cuda': True, # use cuda
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
-    'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
+    'attention': 'random', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     'lime_num_features': -1, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 5000, # number of input permutations per sample; default=5k :O
     'lime_scaling': 'none', # decides how the limeweights should be scaled (per sample) # TODO add abs (apply np.abs(attn_weights))
@@ -30,7 +30,7 @@ PARAMS = {
     'batch_size': 16, # batch size for training and evaluation
     'epochs': 10, # epochs of training
     'save_strategy': 'epoch', # determines rules for saving artifacts {'no', 'epoch', 'steps'}
-    'save_loc': 'data/experiments/curious_darkness_lime5k/', # location where the above are saved
+    'save_loc': 'data/experiments/curious_darkness_rndattn/', # location where the above are saved
     'overwrite_output_dir': True, # overwrites the given output directory above
     'save_predictions': True,
 }
