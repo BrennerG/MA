@@ -85,3 +85,14 @@ class RandomClassifierExperiment(Experiment):
         # saving evaluation
         with open(params['save_loc']+'evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
+
+        # saving attention weights
+        if 'save_predictions' in params and params['save_predictions']:
+            prediction_data = {
+                xid:{
+                    'probas': self.val_pred[0][i].squeeze().tolist(),
+                    'attn': self.val_pred[1][i].squeeze().tolist()
+                }
+                    for i,xid in enumerate(self.val_set['id'])}
+            with open(params['save_loc']+'predictions_attentions.yaml', 'w') as file:
+                documents = yaml.dump(prediction_data, file)

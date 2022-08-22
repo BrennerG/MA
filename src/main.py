@@ -13,7 +13,7 @@ An Experiment is run from start to finish using the given parameter settings.
 '''
 
 PARAMS = {
-    'model_type': 'BERT', # determines the type of model for the pipeline (used by Experiment.model_factory())
+    'model_type': 'Random', # determines the type of model for the pipeline (used by Experiment.model_factory())
     # 'debug': True, # deprecated: manipulate _LIMIT variable in huggingface_cose.py manually # TODO fix this when param space is read from .yaml files!
     'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
     'load_from': 'data/experiments/bert10_lr=9e-6/checkpoint-5470', # use a checkpoint (currently only for inference) train from pretrained base if empty
@@ -39,6 +39,6 @@ PARAMS = {
 
 if __name__ == "__main__":
     torch.manual_seed(PARAMS['rnd_seed'])
-    exp = BERTExperiment(PARAMS)
+    exp = RandomClassifierExperiment(PARAMS)
     exp(PARAMS)
     print('done')
