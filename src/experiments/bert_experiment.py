@@ -79,6 +79,7 @@ class BERTExperiment(Experiment):
 
         doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
+        self.er_results = er_results
         return E.classification_scores(results=er_results, mode='val', aopc_thresholds=params['aopc_thresholds'], with_ids=doc_ids)
         # E.soft_scores(results=er_results, docids=doc_ids)
 
@@ -109,5 +110,11 @@ class BERTExperiment(Experiment):
                     for i,xid in enumerate(self.val_set['id'])}
             with open(params['save_loc']+'predictions_attentions.yaml', 'w') as file:
                 documents = yaml.dump(prediction_data, file)
+        
+        # saving eraser input
+        if 'save_eraser_input' in params and params['save_eraser_input']:
+            for x in self.er_results: x.pop('rationales')
+            with open(params['save_loc']+'eraser_input.yaml', 'w') as file:
+                documents = yaml.dump(self.er_results, file)
 
         return True
