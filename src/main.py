@@ -22,7 +22,7 @@ PARAMS = {
     'use_cuda': True, # use cuda
     'rnd_seed': 69, # Random obligatory 
     'bert_base': 'albert-base-v2', # choose the pretrained bert-base
-    'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
+    'attention': 'random', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     'lime_num_features': -1, # number of tokens that lime assigns a weight to
     'lime_num_permutations': 5000, # number of input permutations per sample; default=5k :O
     'lime_scaling': 'none', # decides how the limeweights should be scaled (per sample) # TODO add abs (apply np.abs(attn_weights))
