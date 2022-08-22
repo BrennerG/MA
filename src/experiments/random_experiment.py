@@ -5,6 +5,8 @@ from data.locations import LOC
 import evaluation.eval_util as E
 from data.locations import LOC
 import math
+import os
+import yaml
 
 
 class RandomClassifierExperiment(Experiment):    
@@ -37,19 +39,19 @@ class RandomClassifierExperiment(Experiment):
         pred, attn = self.val_pred
         comp_ds = self.reshape_erased_output(EraserCosE.erase(attn, mode='comprehensiveness', split=split))
         suff_ds = self.reshape_erased_output(EraserCosE.erase(attn, mode='sufficiency', split=split))
-        comp_pred, _ = self.model(comp_ds)
-        suff_pred, _ = self.model(suff_ds)
+        comp_pred, _ = self.model(comp_ds, **params)
+        suff_pred, _ = self.model(suff_ds, **params)
         # calcualte aopc metrics
         aopc_intermediate = {}
         for aopc in params['aopc_thresholds']:
             tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
             cds = self.reshape_erased_output(EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased))
-            cp, _ = self.model(cds)
+            cp, _ = self.model(cds, **params)
             cl = E.from_softmax(cp, to='dict') # labels
             # suff
             sds = self.reshape_erased_output(EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased))
-            sp, _ = self.model(sds)
+            sp, _ = self.model(sds, **params)
             sl = E.from_softmax(sp, to='dict')
             # aggregate
             aopc_intermediate[aopc] = [aopc, cl, sl]
@@ -73,5 +75,13 @@ class RandomClassifierExperiment(Experiment):
         result['flops'], result['params'] = (0,0)
         return result
 
-    def viz(self, params:{}):
-        return None
+    def viz(self, params:{}): pass
+    
+    def save(self, params:{}): 
+        # check for save location
+        if not os.path.exists(params['save_loc']):
+            os.makedirs(params['save_loc'])
+
+        # saving evaluation
+        with open(params['save_loc']+'evaluation.yaml', 'w') as file:
+            documents = yaml.dump(self.eval_output, file)

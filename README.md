@@ -36,12 +36,14 @@ _diagram incoming_
     - bert-large-uncased runs! (for reference to thalmor 2018)
     - full LIME evaluation run (high #features and #permutations)
     - Why is comp and suff so insanely high?
-      - ~~TODO save predictions and weights~~
-      - TODO make 5k LIME run with no scaling
-      - TODO viz weights
-      - TODO viz 5k LIME attn with different post_hoc scaling methods and compare!
       - suff -> lower = better - so we are worse by x2
-      - comp -> still no idea
+      - comp -> still no idea why the value is so high...
+      - even rnd weights run (BERT=BERT logits, random weights) gives:  comp=.53 suff=.40
+      - pure rnd run (Random=random logits, random weights) gives:      comp=.33 suff=.32
+      - ~~TODO save predictions and weights~~
+      - ~~TODO make 5k LIME run with no scaling~~
+      - ~~TODO viz 5k LIME attn with different post_hoc scaling methods and compare! SOL: no difference btw minimax and none scaling!~~
+      - TODO viz weights
     - aggregate transformer attention for explanations _optional_
     - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
       - should we train the model to predict the rationales?

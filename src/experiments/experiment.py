@@ -47,7 +47,7 @@ class Experiment(ABC):
             print('predicting...')
             preds = []
             for sample in tqdm(self.val_set):
-                preds.append(self.model(sample, softmax_logits=True, **params))
+                preds.append(self.model(sample, **params))
             logits, attentions = zip(*preds) 
             self.val_pred = (list(logits), [a[0] for a in attentions])
 
