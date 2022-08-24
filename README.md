@@ -23,6 +23,7 @@ _diagram incoming_
   - ~~eval: explainability~~
     - recheck suff implementation
   - ~~eval: efficiency~~
+  - __optional__ Can we do 'smarter' random? Think majority class only prediction or 'informed' random classifiers
 * ~~__BOW__ Baseline~~
 * ~~Change Experiment Structure~~
 * __BERT + LIME__ Baseline
@@ -44,6 +45,7 @@ _diagram incoming_
       - ~~TODO make 5k LIME run with no scaling~~
       - ~~TODO viz 5k LIME attn with different post_hoc scaling methods and compare! SOL: no difference btw minimax and none scaling!~~
       - TODO viz weights
+        - save attn vectors for all labels? (currently only for predicted label...)
     - aggregate transformer attention for explanations _optional_
     - Is evaluating on ERASER without optimizing the model for it actually zero-shot learning?
       - should we train the model to predict the rationales?
