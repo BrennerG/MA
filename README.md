@@ -52,6 +52,7 @@ _diagram incoming_
       - right now we train for QA and one-shot ERASER
       - should we also try: train for ERASER, one-shot QA?
       - or unify the models, losses, ...
+    - re-include soft_scores (overlap/plausability metrics back into evaluation)
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - text to graph preproc (UD)
   - use word embeddings: Glove
