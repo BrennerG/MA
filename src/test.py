@@ -1,3 +1,5 @@
-import bert_cose_sanity.bert_cose as bert_cose
+from tests.gnn_pipeline import run
 
-bert_cose.run()
+
+if __name__ == "__main__":
+    run()
