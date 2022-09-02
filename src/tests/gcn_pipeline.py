@@ -8,7 +8,6 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.datasets import Planetoid
 from torch.nn import CrossEntropyLoss
-from torch_geometric.nn.pool.glob import global_mean_pool
 from torchmetrics import Accuracy
 
 '''
