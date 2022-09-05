@@ -37,7 +37,8 @@ class GCN(torch.nn.Module):
         proba_vec = torch.zeros(5)
         for i,answer in enumerate(data[0]['answers']):
             # TODO +1 to dim0 because input = q + a (what about longer answers???)
-            emb = torch.rand(len(data[0]['question'].split())+1, self.num_node_features).to(self.device)
+            qa = f"{data[0]['question']} {answer}"
+            emb = torch.rand(qa.split().__len__(), self.num_node_features).to(self.device)
             edge_index = torch.Tensor(data[1][i]).T.long().to(self.device)
             x = self.conv1(emb, edge_index) # TODO doesn't work bc input for UD is longer (q+a) than just q!
             x = F.relu(x)
@@ -48,12 +49,12 @@ class GCN(torch.nn.Module):
 
 def run():
     # GETTING THE DATA
-    num_samples= 100
+    num_samples= 10
     emb_dim =  300
     split='train'
     cose = load_dataset(LOC['cose_huggingface'])
     dataset = cose[split]
-    edges = parse_cose(num_samples=num_samples, split=split, join_mode='a-to-all') # TODO this should be computed in advance and stored in json
+    edges = parse_cose(num_samples=num_samples, split=split) # TODO this should be computed in advance and stored in json
     data = list(zip(list(dataset),edges))
 
     # TRAIN
@@ -65,7 +66,7 @@ def run():
 
     # LOOP
     for epoch in range(10):
-        preds = torch.Tensor(num_samples)
+        preds = torch.zeros(num_samples)
         for i,sample in enumerate(data):
             # sample = sample.to(device) # TODO when do I call .to(device) then? (mb in the GCN?)
             optimizer.zero_grad()
