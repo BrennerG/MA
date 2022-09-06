@@ -11,19 +11,11 @@ from torch.nn import CrossEntropyLoss
 from torchmetrics import Accuracy
 from datasets import load_dataset
 from data.locations import LOC
+from tqdm import tqdm
 
-import tests.ud_preproc as UDP
+from tests.ud_preproc import UDParser
+from tests.glove import GloveEmbedder
  
-'''
-TODO
-~~1 run the most simple classifcation GNN with dummy data~~
-2 connect real data
-    - ~~convert text to graph (random embedding)~~
-    - attach non-BERT embedding
-3 classify real data with GCN (only see that it runs, results will be poop)
-4 Message Passing
-'''
-
 
 class GCN(torch.nn.Module):
     def __init__(self, num_node_features, device='cuda:0'):
@@ -32,14 +24,14 @@ class GCN(torch.nn.Module):
         self.num_node_features = num_node_features
         self.conv1 = GCNConv(num_node_features, 16)
         self.conv2 = GCNConv(16,1)
+        self.embedding= GloveEmbedder(LOC['glove_embedding'])
 
     def forward(self, data):
         proba_vec = torch.zeros(5)
         for i,answer in enumerate(data[0]['answers']):
             qa = f"{data[0]['question']} {answer}"
-            emb = torch.rand(qa.split().__len__(), self.num_node_features).to(self.device)
+            emb = self.embedding(qa).to(self.device)
             edge_index = torch.Tensor(data[1][i]).T.long().to(self.device)
-            assert torch.max(edge_index) == (emb.shape[0]-1) # TODO take me out after full dataset run
             x = self.conv1(emb, edge_index) 
             x = F.relu(x)
             x = F.dropout(x, training=self.training)
@@ -49,12 +41,13 @@ class GCN(torch.nn.Module):
 
 def run():
     # GETTING THE DATA
-    num_samples= 5
+    num_samples= -1
     emb_dim =  300
     split='train'
     cose = load_dataset(LOC['cose_huggingface'])
     dataset = cose[split]
-    edges = UDP.parse(dataset, num_samples=num_samples, split=split)
+    udparser = UDParser()
+    edges = udparser(dataset, num_samples=num_samples, split=split)
     data = list(zip(list(dataset),edges))
 
     # TRAIN
@@ -66,8 +59,8 @@ def run():
 
     # LOOP
     for epoch in range(10):
-        preds = torch.zeros(num_samples)
-        for i,sample in enumerate(data):
+        preds = torch.zeros(len(data))
+        for i,sample in enumerate(tqdm(data, desc=f'epoch={epoch} training...')):
             optimizer.zero_grad()
             out = model(sample)
             preds[i] = torch.argmax(out)

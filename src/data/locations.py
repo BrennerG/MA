@@ -17,7 +17,8 @@ LOC = {
     'viz_data_dir': 'data/viz/data/',
     'viz_dir': 'data/viz/',
     'bert_checkpoints': 'data/experiments/bert',
-    'ud_parses': 'data/ud_parses/'
+    'ud_parses': 'data/ud_parses/',
+    'glove_embedding': 'data/glove/glove.840B.300d.txt'
 }
 
 # Creates all folders of the LOC dictionary
