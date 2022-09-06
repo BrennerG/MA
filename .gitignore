@@ -136,3 +136,4 @@ data/experiments/bert*
 data/experiments/roberta*
 tmp
 cache
+data/glove/*
