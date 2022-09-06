@@ -12,13 +12,13 @@ from torchmetrics import Accuracy
 from datasets import load_dataset
 from data.locations import LOC
 
-from tests.ud_preproc import parse_cose
+import tests.ud_preproc as UDP
  
 '''
 TODO
 ~~1 run the most simple classifcation GNN with dummy data~~
 2 connect real data
-    - convert text to graph (random embedding)
+    - ~~convert text to graph (random embedding)~~
     - attach non-BERT embedding
 3 classify real data with GCN (only see that it runs, results will be poop)
 4 Message Passing
@@ -36,11 +36,11 @@ class GCN(torch.nn.Module):
     def forward(self, data):
         proba_vec = torch.zeros(5)
         for i,answer in enumerate(data[0]['answers']):
-            # TODO +1 to dim0 because input = q + a (what about longer answers???)
             qa = f"{data[0]['question']} {answer}"
             emb = torch.rand(qa.split().__len__(), self.num_node_features).to(self.device)
             edge_index = torch.Tensor(data[1][i]).T.long().to(self.device)
-            x = self.conv1(emb, edge_index) # TODO doesn't work bc input for UD is longer (q+a) than just q!
+            assert torch.max(edge_index) == (emb.shape[0]-1) # TODO take me out after full dataset run
+            x = self.conv1(emb, edge_index) 
             x = F.relu(x)
             x = F.dropout(x, training=self.training)
             x = self.conv2(x, edge_index)
@@ -49,12 +49,12 @@ class GCN(torch.nn.Module):
 
 def run():
     # GETTING THE DATA
-    num_samples= 10
+    num_samples= 5
     emb_dim =  300
     split='train'
     cose = load_dataset(LOC['cose_huggingface'])
     dataset = cose[split]
-    edges = parse_cose(num_samples=num_samples, split=split) # TODO this should be computed in advance and stored in json
+    edges = UDP.parse(dataset, num_samples=num_samples, split=split)
     data = list(zip(list(dataset),edges))
 
     # TRAIN
@@ -68,11 +68,10 @@ def run():
     for epoch in range(10):
         preds = torch.zeros(num_samples)
         for i,sample in enumerate(data):
-            # sample = sample.to(device) # TODO when do I call .to(device) then? (mb in the GCN?)
             optimizer.zero_grad()
             out = model(sample)
             preds[i] = torch.argmax(out)
-            loss = loss_fn(out,torch.Tensor([4]).squeeze().long()) # TODO ugly af
+            loss = loss_fn(out,preds[i].long())
             loss.backward()
             optimizer.step()
     
