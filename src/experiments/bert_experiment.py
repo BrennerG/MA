@@ -13,6 +13,9 @@ from tqdm import tqdm
 import wandb
 import os
 
+# TODO huggingface_cose.py has changed! (added missing '?' to questions!)
+# re-run c.dark and verify nothing has changed...!
+
 class BERTExperiment(Experiment):
 
     def __init__(self, params):

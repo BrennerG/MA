@@ -87,10 +87,12 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
 
         for i,X in enumerate(raw[:_LIMIT]):
             rationale = list(X.evidences)[0][0]
+            question = " ".join(docs[X.annotation_id])
+            if question[-1] != '?': question = question + ' ?'
             yield i, {
                 'id': X.annotation_id,
                 #'question': docs[X.annotation_id],
-                'question': " ".join(docs[X.annotation_id]),
+                'question': question,
                 'context': X.query_type,
                 'answers': X.query.split(' [sep] '),
                 #'answers': X.query.replace(' [sep] ', ' '),
@@ -129,6 +131,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         for i,X in enumerate(raw[:_LIMIT]):
             rationale = list(X.evidences)[0][0]
             question = docs[X.annotation_id]
+            if question[-1] != '?': question = question + ' ?'
             assert len(weights[i]) == len(question)
 
             # get top_k tokens
