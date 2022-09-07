@@ -9,10 +9,11 @@ from data.locations import LOC
 class GCN(torch.nn.Module):
     def __init__(self, params:{}):
         super().__init__()
+        assert 'gcn_hidden_dim' in params
         self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
         self.embedding= GloveEmbedder(LOC['glove_embedding'])
-        self.conv1 = GCNConv(self.embedding.dim, 16) # TODO add 16 as hidden_dim to params
-        self.conv2 = GCNConv(16,1) # TODO keep the hidden dim?
+        self.conv1 = GCNConv(self.embedding.dim, params['gcn_hidden_dim'])
+        self.conv2 = GCNConv(params['gcn_hidden_dim'],1)
 
     def forward(self, data):
         proba_vec = torch.zeros(5)
