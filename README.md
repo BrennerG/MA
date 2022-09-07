@@ -37,7 +37,8 @@ _diagram incoming_
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - ~~text to graph preproc (UD)~~
   - ~~use word embeddings: Glove~~
-    - run prototype on trou
+  - embed into my experiment api
+  - run on trou
   - use GAT
   - use 4Lang
   - how to aggregate node attention?
@@ -46,6 +47,7 @@ _diagram incoming_
     - embeddings Glove/BERT/AlBERT/RoBERTa
     - node weight aggregation (train it?) _important - do extensively_
     - graph preprocessing? (ideas in ud_preproc.py)
+* revisit changes for BERT and Random Baselines in pipeline!
 * __QA-GNN Baseline__
   - run QA-GNN
   - wrap QA-GNN for explainability evaluations
@@ -68,3 +70,10 @@ _diagram incoming_
   - right now we train for QA and one-shot ERASER
   - should we also try: train for ERASER, one-shot QA?
   - or unify the models, losses, ...
+
+# Environmnts
+_not all exported_
+* ma4 (<=BERTExperiment)
+* eraser_baselines (for eraser BERT+LSTM)
+* ma_gnn (development of ud_gcn)
+* ma6 (clone of ma_gnn + ma4 packages)

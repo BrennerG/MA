@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from models.bert import BertPipeline
 from models.random import RandomClassifier
+from models.gcn import GCN
 
 from tqdm import tqdm
 
@@ -47,9 +48,15 @@ class Experiment(ABC):
             print('predicting...')
             preds = []
             for sample in tqdm(self.val_set):
-                preds.append(self.model(sample, **params))
+                # preds.append(self.model(sample, **params)) # TODO changed this for GCN - still holding for Random and BERT? wich params MUST be passed here? (everything has access to params dict!!!)
+                preds.append(self.model(sample))
             logits, attentions = zip(*preds) 
-            self.val_pred = (list(logits), [a[0] for a in attentions])
+            
+            # some models don't have attention
+            if any(attentions): 
+                self.val_pred = (list(logits), [a[0] for a in attentions])
+            else:
+                self.val_pred = (list(logits), None)
 
             print('evaluating...')
             self.eval_output = self.evaluate(params)
@@ -81,10 +88,13 @@ class Experiment(ABC):
     def model_factory(self, type:str, params:{}):
         ''' This method allows to create model classes from strings'''
         if type == 'Random':
-            model = RandomClassifier(params['rnd_seed'])
+            model = RandomClassifier(params['rnd_seed']) # TODO input whole params dict!
         elif type == "BERT":
             if 'load_from' in params: print(f"LOADING MODEL FROM {params['load_from']}")
             model = BertPipeline(params=params)
+        elif type == 'UD_GCN':
+            if 'load_from' in params: raise NotImplementedError('Loading for UD_GCN not implemented yet!') # TODO
+            model = GCN(params)
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
@@ -120,7 +130,7 @@ class Experiment(ABC):
         '''create visualizations of relevant aspects of the experiment'''
         raise NotImplementedError()
 
-
+    @abstractmethod
     def save(self, params:{}):
         '''save relevant data e.g. evaluations, predictions, etc'''
         raise NotImplementedError()

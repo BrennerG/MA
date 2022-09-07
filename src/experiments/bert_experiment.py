@@ -15,6 +15,7 @@ import os
 
 # TODO huggingface_cose.py has changed! (added missing '?' to questions!)
 # re-run c.dark and verify nothing has changed...!
+# TODO set model.eval() ?
 
 class BERTExperiment(Experiment):
 
