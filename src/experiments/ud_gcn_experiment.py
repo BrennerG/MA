@@ -1,4 +1,6 @@
 import torch
+import io
+import os
 from tqdm import tqdm
 from datasets import load_dataset
 from torch.nn import CrossEntropyLoss
@@ -8,7 +10,7 @@ from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
 from data.locations import LOC
 
-# TODO saving and loading
+# TODO verify saving and loading
 # TODO experiment with different q_a graph joining methods!
 # TODO allow batching - how?
 
@@ -68,4 +70,11 @@ class UD_GCN_Experiment(Experiment):
         return None
 
     def save(self, params:{}): # TODO save model dict
-        return None
+        # no save location, no saving
+        if 'save_loc' not in params: return False
+        # create save location
+        if not os.path.exists(params['save_loc']):
+            os.mkdir(params['save_loc'])
+        # saving model
+        torch.save(self.model.state_dict(), f"{params['save_loc']}gcn.pt")
+        return True

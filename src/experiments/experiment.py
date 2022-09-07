@@ -87,14 +87,17 @@ class Experiment(ABC):
     
     def model_factory(self, type:str, params:{}):
         ''' This method allows to create model classes from strings'''
+        # print
+        if 'load_from' in params: print(f"LOADING MODEL FROM {params['load_from']}")
+        # select model
         if type == 'Random':
             model = RandomClassifier(params['rnd_seed']) # TODO input whole params dict!
         elif type == "BERT":
-            if 'load_from' in params: print(f"LOADING MODEL FROM {params['load_from']}")
             model = BertPipeline(params=params)
         elif type == 'UD_GCN':
-            if 'load_from' in params: raise NotImplementedError('Loading for UD_GCN not implemented yet!') # TODO
             model = GCN(params)
+            if 'load_from' in params: 
+                model.load_state_dict(torch.load(params['load_from']))
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
