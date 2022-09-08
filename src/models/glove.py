@@ -26,7 +26,7 @@ class GloveEmbedder():
         else:
             return None
     
-    def embed(self, sentence:str, unk_procedure='zero'):
+    def embed(self, sentence:str, unk_procedure='random'):
         tokens = self.ud_parser.tokenize(sentence)
         emb = np.zeros((len(tokens), self.dim))
         for i,t in enumerate(tokens):
