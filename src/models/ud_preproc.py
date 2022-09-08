@@ -11,26 +11,28 @@ from data.locations import LOC
 
 class UDParser():
 
-    def __init__(self, processors="tokenize,mwt,pos,lemma,depparse"):
+    def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):
+        self.params = params
         self.ud_parser = stanza.Pipeline(lang='en', processors=processors)
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize")
+        self.root_token = '[ROOT]'
 
-    def __call__(self, dataset, num_samples=-1, split='train'):
-        return self.parse(dataset, num_samples=num_samples, split=split)
+    def __call__(self, dataset, num_samples=-1, split='train', qa_join='none'):
+        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join)
 
-    def parse(self, dataset, num_samples=-1, split='train'):
+    def parse(self, dataset, num_samples=-1, split='train', qa_join='none'):
         file_path = LOC['ud_parses'] + f'cose_{split}_{str(num_samples)}.json'
         if os.path.exists(file_path):
             print(f'UD_Parsing: Accessing cached file: {file_path}')
             with open(file_path) as f:
                 edges = json.load(f)
         else:
-            edges = self.extract_edges(dataset=dataset, num_samples=num_samples)
+            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join)
             with open(file_path, 'w') as outfile:
                 json.dump(edges, outfile)
         return edges
 
-    def extract_edges(self, dataset, num_samples=-1):
+    def extract_edges(self, dataset, num_samples=-1, qa_join='none'):
         edge_indices = []
 
         for i, sample in enumerate(tqdm(dataset, desc='ud-parsing cose...')):
@@ -40,16 +42,23 @@ class UDParser():
                 # parse through stanza & extract UD edges
                 doc = self.ud_parser(f"{sample['question']} {answer}")
                 parsed = [word for sent in doc.sentences for word in sent.words] # stanza parse
-                edges = [(x.id-1, x.head-1) for x in parsed] # 0 is first tokens, -1 is root now
+                edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
                 edges = [(a,b) for (a,b) in edges if a!=-1 and b!=-1]  # remove edges to root
-                # connect answer to all other nodes 
-                tokens = [x.text for x in parsed]
-                answer_nodes = list(range(len(tokens)))[tokens.index('?')+1:]
-                for an in answer_nodes:
-                    edges.extend(
-                        zip(range(len(tokens)), [an]*len(tokens))
-                    )
-                # yield
+                # Q/A GRAPH JOINING METHOD
+                if qa_join=='a-to-all': # connect answer to all other nodes 
+                    tokens = [x.text for x in parsed]
+                    answer_nodes = list(range(len(tokens)))[tokens.index('?')+1:]
+                    for an in answer_nodes:
+                        edges.extend(
+                            zip(range(len(tokens)), [an]*len(tokens))
+                        )
+                elif qa_join=='to-root':
+                    edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
+                    edges = [(a,b) if a != -1 else (len(edges),b) for (a,b) in edges] # put root at the end of the tokens
+                elif qa_join=='none': # dont join q and a
+                    continue
+                else:
+                    raise AttributeError(f'Unknown qa_joining method: {qa_join}')
                 grouped_edges.append(list(set(edges)))
                 # TODO create post_process method for the following:
                 # TODO what about opposit edges? e.g. (1,3) & (3,1)? (rm via nx?)
@@ -63,7 +72,10 @@ class UDParser():
     def tokenize(self, sentence:str):
         doc = self.tokenizer(sentence)
         parsed = [word for sent in doc.sentences for word in sent.words] # stanza parse
-        return [x.text for x in parsed]
+        tokens = [x.text for x in parsed]
+        if 'qa_join' in self.params and self.params['qa_join'] == 'to-root':
+            tokens.append(self.root_token)
+        return tokens
 
     # show plot for graph!
     def show(self, edge_index, tokens):

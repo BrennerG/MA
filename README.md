@@ -37,8 +37,10 @@ _diagram incoming_
 * __BERT*less__ - create simple GNN Architecture with UD graphs
   - ~~text to graph preproc (UD)~~
   - ~~use word embeddings: Glove~~
-  - embed into my experiment api
-  - run on trou
+  - ~~embed into my experiment api~~
+  - ~~run on trou~~
+  - make it learn 
+    - don't connect every node to answer nodes
   - use GAT
   - use 4Lang
   - how to aggregate node attention?

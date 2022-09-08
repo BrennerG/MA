@@ -1,13 +1,13 @@
 import numpy as np
 from tqdm import tqdm
 import torch
-from tests.ud_preproc import UDParser
+from models.ud_preproc import UDParser
 
 
 class GloveEmbedder():
 
-    def __init__(self, file_location='data/glove/glove.840B.300d.txt'):
-        self.ud_parser = UDParser()
+    def __init__(self, params:{}, file_location='data/glove/glove.840B.300d.txt'):
+        self.ud_parser = UDParser(params=params)
         self.embeddings_dict = {}
         self.dim = 300
         with open(file_location) as f:
@@ -17,7 +17,7 @@ class GloveEmbedder():
                 vector = np.asarray(values[-self.dim:], "float32")
                 self.embeddings_dict[word] = vector
     
-    def __call__(self, sentence:str, unk_procedure='zero'):
+    def __call__(self, sentence:str, unk_procedure='random'):
         return self.embed(sentence, unk_procedure=unk_procedure)
     
     def get(self, word:str):

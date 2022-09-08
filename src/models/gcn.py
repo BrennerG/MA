@@ -11,7 +11,7 @@ class GCN(torch.nn.Module):
         super().__init__()
         assert 'gcn_hidden_dim' in params
         self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
-        self.embedding= GloveEmbedder(LOC['glove_embedding'])
+        self.embedding= GloveEmbedder(params, LOC['glove_embedding'])
         self.conv1 = GCNConv(self.embedding.dim, params['gcn_hidden_dim'])
         self.conv2 = GCNConv(params['gcn_hidden_dim'],1)
 

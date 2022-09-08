@@ -11,6 +11,7 @@ from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
 from data.locations import LOC
 
+# TODO get it to learn!
 # TODO verify saving and loading
 # TODO experiment with different q_a graph joining methods!
 # TODO allow batching - how?
@@ -20,14 +21,14 @@ class UD_GCN_Experiment(Experiment):
     def __init__(self, params:{}):
         assert torch.cuda.is_available()
         self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
-        self.udparser = UDParser()
+        self.udparser = UDParser(params=params)
         super().__init__(params)
         self.model.to(self.device)
 
     def init_data(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
-        edges = [self.udparser(ds, num_samples=len(ds), split=split) for (split,ds) in cose.items()]
+        edges = [self.udparser(ds, num_samples=len(ds), split=split, qa_join=params['qa_join']) for (split,ds) in cose.items()]
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('qa_graphs', edges[i])
         return cose, cose['train'], cose['validation'], cose['test']
@@ -84,7 +85,7 @@ class UD_GCN_Experiment(Experiment):
         loss_fn = CrossEntropyLoss()
         losses = []
 
-        for i,sample in enumerate(tqdm(self.val_set, desc='\tinter-train eval:')):
+        for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
             out, _ = self.model(sample)
             preds[i] = torch.argmax(out)
             loss = loss_fn(out,preds[i].long())
