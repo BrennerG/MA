@@ -1,10 +1,12 @@
+import torch
+import os
+from tqdm import tqdm
 from abc import ABC, abstractmethod
 
 from models.bert import BertPipeline
 from models.random import RandomClassifier
 from models.gcn import GCN
 
-from tqdm import tqdm
 
 '''
 This class represents a single pass through the pipeline of a single model
@@ -37,7 +39,7 @@ class Experiment(ABC):
             print('training...')
             self.train_output = self.train(params)
         else: # skip training
-            if not 'load_from' in params or params['load_from'] != None:
+            if not 'load_from' in params or params['load_from'] == None:
                 print('WARNING: training will be skipped, but no checkpoint was given (load_from) parameter (=prediction with only pre-trained model)')
             else:
                 print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!") # this already happened in experiment.model_factory()
@@ -96,8 +98,11 @@ class Experiment(ABC):
             model = BertPipeline(params=params)
         elif type == 'UD_GCN':
             model = GCN(params)
-            if 'load_from' in params: 
-                model.load_state_dict(torch.load(params['load_from']))
+            if 'load_from' in params:
+                if os.path.exists(f"{params['load_from']}/model.pt"): 
+                    model.load_state_dict(torch.load(f"{params['load_from']}/model.pt"))
+                else:
+                    print(f"load_from location {params['load_from']} either not found or empty!")
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model

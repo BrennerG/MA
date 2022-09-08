@@ -1,6 +1,7 @@
 import torch
 import io
 import os
+import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset
 from torch.nn import CrossEntropyLoss
@@ -24,10 +25,9 @@ class UD_GCN_Experiment(Experiment):
         self.model.to(self.device)
 
     def init_data(self, params:{}):
-        num_samples = params['num_samples'] if 'num_samples' in params else -1
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
-        edges = [self.udparser(ds, num_samples=num_samples, split=split) for (split,ds) in cose.items()]
+        edges = [self.udparser(ds, num_samples=len(ds), split=split) for (split,ds) in cose.items()]
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('qa_graphs', edges[i])
         return cose, cose['train'], cose['validation'], cose['test']
@@ -38,20 +38,59 @@ class UD_GCN_Experiment(Experiment):
 
         loss_fn = CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
+        acc = Accuracy(num_classes=5)
         self.model.train()
+        results = {
+            'avg_train_losses':[],
+            'avg_test_losses':[],
+            'train_accs':[],
+            'test_accs':[]
+        }
 
         # LOOP
         for epoch in range(params['epochs']):
             preds = torch.zeros(len(self.train_set))
-            for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch} training...')):
+            losses = []
+
+            for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch}')):
                 optimizer.zero_grad()
                 out, _ = self.model(sample)
                 preds[i] = torch.argmax(out)
                 loss = loss_fn(out,preds[i].long())
+                losses.append(loss.item())
                 loss.backward()
                 optimizer.step()
 
-        return 'NotImplemented: TrainingOutput' # TODO
+            # INTER TRAINING EVAL
+            test_preds, test_losses = self.intermediate_evaluation()
+            avg_train_loss = np.mean(losses)
+            avg_test_loss = np.mean(test_losses)
+            train_acc = acc(preds.int(), torch.Tensor(self.train_set['label']).int())
+            test_acc = acc(test_preds.int(), torch.Tensor(self.val_set['label']).int())
+            print(f"\tavg train loss: {avg_train_loss}")
+            print(f"\tavg test  loss: {avg_test_loss}")
+            print(f"\ttrain acc: {train_acc}")
+            print(f"\ttest  acc: {test_acc}")
+            results['avg_train_losses'].append(avg_train_loss)
+            results['avg_test_losses'].append(avg_test_loss)
+            results['train_acc'].append(train_acc)
+            results['test_acc'].append(test_acc)
+
+        return results
+    
+    def intermediate_evaluation(self):
+        self.model.eval()
+        preds = torch.zeros(len(self.train_set))
+        loss_fn = CrossEntropyLoss()
+        losses = []
+
+        for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
+            out, _ = self.model(sample)
+            preds[i] = torch.argmax(out)
+            loss = loss_fn(out,preds[i].long())
+            losses.append(loss.item())
+        
+        return preds, losses
     
     def eval_competence(self, params:{}):
         self.model.eval()
@@ -69,12 +108,12 @@ class UD_GCN_Experiment(Experiment):
     def viz(self, params:{}):
         return None
 
-    def save(self, params:{}): # TODO save model dict
+    def save(self, params:{}):
         # no save location, no saving
         if 'save_loc' not in params: return False
         # create save location
         if not os.path.exists(params['save_loc']):
             os.mkdir(params['save_loc'])
         # saving model
-        torch.save(self.model.state_dict(), f"{params['save_loc']}gcn.pt")
+        torch.save(self.model.state_dict(), f"{params['save_loc']}/model.pt")
         return True
