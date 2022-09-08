@@ -73,18 +73,18 @@ class UD_GCN_Experiment(Experiment):
             print(f"\ttest  acc: {test_acc}")
             results['avg_train_losses'].append(avg_train_loss)
             results['avg_test_losses'].append(avg_test_loss)
-            results['train_acc'].append(train_acc)
-            results['test_acc'].append(test_acc)
+            results['train_accs'].append(train_acc)
+            results['test_accs'].append(test_acc)
 
         return results
     
     def intermediate_evaluation(self):
         self.model.eval()
-        preds = torch.zeros(len(self.train_set))
+        preds = torch.zeros(len(self.val_set))
         loss_fn = CrossEntropyLoss()
         losses = []
 
-        for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
+        for i,sample in enumerate(tqdm(self.val_set, desc='\tinter-train eval:')):
             out, _ = self.model(sample)
             preds[i] = torch.argmax(out)
             loss = loss_fn(out,preds[i].long())
