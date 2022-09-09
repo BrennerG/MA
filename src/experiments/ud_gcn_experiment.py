@@ -1,6 +1,8 @@
 import torch
 import io
 import os
+import json
+
 import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset
@@ -111,10 +113,14 @@ class UD_GCN_Experiment(Experiment):
 
     def save(self, params:{}):
         # no save location, no saving
-        if 'save_loc' not in params: return False
-        # create save location
-        if not os.path.exists(params['save_loc']):
-            os.mkdir(params['save_loc'])
-        # saving model
-        torch.save(self.model.state_dict(), f"{params['save_loc']}/model.pt")
+        if 'save_loc' in params: 
+            # create save location
+            if not os.path.exists(params['save_loc']):
+                os.mkdir(params['save_loc'])
+            # saving model
+            torch.save(self.model.state_dict(), f"{params['save_loc']}/model.pt")
+            # saving cached glove vocabulary # TODO only if using glove...
+        # cache used glove embeddings
+        with open(LOC['glove_cache'], 'w') as outfile:
+            json.dump(self.model.embedding.cached_dict, outfile, sort_keys=True, indent=4)
         return True
