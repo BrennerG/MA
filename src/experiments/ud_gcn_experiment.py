@@ -42,7 +42,6 @@ class UD_GCN_Experiment(Experiment):
         loss_fn = CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
         acc = Accuracy(num_classes=5)
-        self.model.train()
         results = {
             'avg_train_losses':[],
             'avg_test_losses':[],
@@ -54,6 +53,7 @@ class UD_GCN_Experiment(Experiment):
         for epoch in range(params['epochs']):
             preds = torch.zeros(len(self.train_set))
             losses = []
+            self.model.train()
 
             for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch}')):
                 optimizer.zero_grad()

@@ -28,7 +28,5 @@ class GCN(torch.nn.Module):
             proba_vec[i] = x.mean(dim=0) # same as torch_geometric.nn.pool.glob.global_mean_pool
         return F.softmax(proba_vec, dim=0), None
     
-    def __call__(self, sample, mode='train'):
-        if mode=='train': self.train()
-        elif mode=='eval': self.eval()
+    def __call__(self, sample):
         return self.forward(sample)
