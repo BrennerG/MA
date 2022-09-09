@@ -47,10 +47,12 @@ class GloveEmbedder():
     def get(self, word:str):
         if word in self.embeddings_dict:
             emb = self.embeddings_dict[word]
-            self.cached_dict[word] = list(emb)
             if not isinstance(emb, np.ndarray): # case for cached
+                self.cached_dict[word] = list(emb)
                 return np.array(emb)
-            return emb
+            else:
+                self.cached_dict[word] = emb.tolist()
+                return emb
         else:
             print(f"WARNING token: '{word}' not in glove vocabulary (unk_procedure='{self.unk_procedure}'")
             return None
