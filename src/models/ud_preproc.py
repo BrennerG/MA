@@ -55,6 +55,10 @@ class UDParser():
                 elif qa_join=='to-root':
                     edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
                     edges = [(a,b) if a != -1 else (len(edges),b) for (a,b) in edges] # put root at the end of the tokens
+                    tokens = [x.text for x in parsed]
+                    answer_nodes = list(range(len(tokens)))[tokens.index('?')+1:]
+                    for an in answer_nodes:
+                        edges.append((an, len(tokens)))
                 elif qa_join=='none': # dont join q and a
                     continue
                 else:

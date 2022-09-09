@@ -52,7 +52,7 @@ class GloveEmbedder():
                 return np.array(emb)
             return emb
         else:
-            print(f"WARNING token: '{word}' not in glove vocabulary")
+            print(f"WARNING token: '{word}' not in glove vocabulary (unk_procedure='{self.unk_procedure}'")
             return None
     
     def embed(self, sentence:str):
