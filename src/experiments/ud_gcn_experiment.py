@@ -57,9 +57,10 @@ class UD_GCN_Experiment(Experiment):
 
             for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch}')):
                 optimizer.zero_grad()
+                target = torch.Tensor([sample['label']]).squeeze().long()
                 out, _ = self.model(sample)
                 preds[i] = torch.argmax(out)
-                loss = loss_fn(out,preds[i].long())
+                loss = loss_fn(out, target)
                 losses.append(loss.item())
                 loss.backward()
                 optimizer.step()
