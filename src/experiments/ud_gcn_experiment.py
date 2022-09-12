@@ -8,6 +8,8 @@ from tqdm import tqdm
 from datasets import load_dataset
 from torch.nn import CrossEntropyLoss
 from torchmetrics import Accuracy
+import plotly.express as px
+import pandas as pd
 
 from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
@@ -16,7 +18,8 @@ from data.locations import LOC
 # TODO get it to learn!
 # TODO verify saving and loading
 # TODO experiment with different q_a graph joining methods!
-# TODO allow batching - how?
+# TODO allow batching?
+# TODO either continue with GATs or with BERT representations
 
 class UD_GCN_Experiment(Experiment):
 
@@ -69,8 +72,8 @@ class UD_GCN_Experiment(Experiment):
             test_preds, test_losses = self.intermediate_evaluation()
             avg_train_loss = np.mean(losses)
             avg_test_loss = np.mean(test_losses)
-            train_acc = acc(preds.int(), torch.Tensor(self.train_set['label']).int())
-            test_acc = acc(test_preds.int(), torch.Tensor(self.val_set['label']).int())
+            train_acc = acc(preds.int(), torch.Tensor(self.train_set['label']).int()).item()
+            test_acc = acc(test_preds.int(), torch.Tensor(self.val_set['label']).int()).item()
             print(f"\tavg train loss: {avg_train_loss}")
             print(f"\tavg test  loss: {avg_test_loss}")
             print(f"\ttrain acc: {train_acc}")
@@ -110,7 +113,20 @@ class UD_GCN_Experiment(Experiment):
         return None
 
     def viz(self, params:{}):
-        return None
+        if not 'save_loc' in params: return False
+        # VIZ LOSS
+        num_epochs = len(self.train_output['avg_train_losses'])
+        df = pd.DataFrame(
+            list(zip(
+                list(range(num_epochs))*2,
+                self.train_output['avg_train_losses'] + self.train_output['avg_test_losses'],
+                ['train']*num_epochs + ['test']*num_epochs
+            )), 
+            columns=['epoch', 'loss', 'split']
+        )
+        fig = px.line(df, x="epoch", y="loss", color='split', title='UD+GCN train loss')
+        fig.write_image(f"{params['save_loc']}/loss.png")
+        return True
 
     def save(self, params:{}):
         # no save location, no saving
