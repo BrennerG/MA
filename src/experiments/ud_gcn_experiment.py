@@ -17,9 +17,9 @@ from data.locations import LOC
 
 # TODO get it to learn!
 # TODO verify saving and loading
-# TODO experiment with different q_a graph joining methods!
 # TODO allow batching?
-# TODO either continue with GATs or with BERT representations
+# TODO GAT (rename this)
+# TODO experiment with different q_a graph joining methods!
 
 class UD_GCN_Experiment(Experiment):
 

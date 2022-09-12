@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from models.bert import BertPipeline
 from models.random import RandomClassifier
 from models.gcn import GCN
+from models.gat import GATForMultipleChoice
 
 
 '''
@@ -103,6 +104,8 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {params['load_from']} either not found or empty!")
+        elif type == 'UD_GAT':
+            model = GATForMultipleChoice(params)
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model

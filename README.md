@@ -42,13 +42,13 @@ _diagram incoming_
   - make it learn 
     - don't connect every node to answer nodes
   - use GAT
-  - use 4Lang
+    - eval explainability
   - how to aggregate node attention?
-  - extend to 4Lang
   - Experiments
     - embeddings Glove/BERT/AlBERT/RoBERTa
     - node weight aggregation (train it?) _important - do extensively_
     - graph preprocessing? (ideas in ud_preproc.py)
+  - extend to 4Lang
 * revisit changes for BERT and Random Baselines in pipeline!
 * __QA-GNN Baseline__
   - run QA-GNN
