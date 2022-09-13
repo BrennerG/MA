@@ -56,8 +56,10 @@ class Experiment(ABC):
             logits, attentions = zip(*preds) 
             
             # some models don't have attention
-            if any(attentions): 
+            if attentions and params['model_type']=='BERT': # TODO just return stuff like in the 'elif attentions:'-case! 
                 self.val_pred = (list(logits), [a[0] for a in attentions])
+            elif attentions:
+                self.val_pred = logits, attentions
             else:
                 self.val_pred = (list(logits), None)
 

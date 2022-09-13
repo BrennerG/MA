@@ -14,6 +14,7 @@ import pandas as pd
 from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
 from data.locations import LOC
+from data.huggingface_cose import EraserCosE
 
 # TODO get it to learn!
 # TODO verify saving and loading
@@ -55,16 +56,18 @@ class UD_GCN_Experiment(Experiment):
         # LOOP
         for epoch in range(params['epochs']):
             preds = torch.zeros(len(self.train_set))
+            attentions = []
             losses = []
             self.model.train()
 
             for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch}')):
                 optimizer.zero_grad()
                 target = torch.Tensor([sample['label']]).squeeze().long()
-                out, _ = self.model(sample)
+                out, attention = self.model(sample)
                 preds[i] = torch.argmax(out)
                 loss = loss_fn(out, target)
                 losses.append(loss.item())
+                attentions.append(attention)
                 loss.backward()
                 optimizer.step()
 
@@ -106,7 +109,24 @@ class UD_GCN_Experiment(Experiment):
         ys = torch.Tensor(self.val_set['label']).int()
         return acc(preds.int(), ys)
 
-    def eval_explainability(self, params:{}):
+    def eval_explainability(self, params:{}): # TODO only for GAT models
+        split = 'validation'
+        pred, attn = self.val_pred
+        # prepare Comprehensiveness
+        comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
+        comp_edges = self.udparser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=params['qa_join'], use_cache=False)
+        for i,sample in enumerate(comp_ds):
+            sample['qa_graphs'] = comp_edges[i]
+        # prepare Sufficiency
+        suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
+        suff_edges = self.udparser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=params['qa_join'], use_cache=False)
+        for i,sample in enumerate(suff_ds):
+            sample['qa_graphs'] = suff_edges[i]
+        # predict
+        comp_pred, _ = zip(*self.model(comp_ds))
+        suff_pred, _ = zip(*self.model(suff_ds))
+        # TODO CURRENT! (bug existing from the lines above)
+
         return None
 
     def eval_efficiency(self, params:{}): # TODO
