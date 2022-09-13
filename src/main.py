@@ -15,7 +15,7 @@ An Experiment is run from start to finish using the given parameter settings.
 
 # TODO what to do with params that are only used by a single model/pipeline
 PARAMS = {
-    'model_type': 'UD_GCN', # determines the type of model for the pipeline (used by Experiment.model_factory())
+    'model_type': 'UD_GAT', # determines the type of model for the pipeline (used by Experiment.model_factory())
     # 'debug': True, # deprecated: manipulate _LIMIT variable in huggingface_cose.py manually # TODO fix this when param space is read from .yaml files!
     #'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
     #'load_from': 'data/experiments/gcn/gcn.pt', # use a checkpoint (currently only for inference) train from pretrained base if empty

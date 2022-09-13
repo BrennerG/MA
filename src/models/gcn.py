@@ -15,7 +15,7 @@ class GCN(torch.nn.Module):
         self.conv1 = GCNConv(self.embedding.dim, params['gcn_hidden_dim'])
         self.conv2 = GCNConv(params['gcn_hidden_dim'],1)
 
-    def forward(self, data):
+    def forward(self, data): # TODO assert only for single sample use
         proba_vec = torch.zeros(5)
         for i,answer in enumerate(data['answers']):
             qa = f"{data['question']} {answer}"
@@ -25,6 +25,7 @@ class GCN(torch.nn.Module):
             x = F.relu(x)
             x = F.dropout(x, training=self.training)
             x = self.conv2(x, edge_index)
+            # pooling # TODO experiment
             proba_vec[i] = x.mean(dim=0) # same as torch_geometric.nn.pool.glob.global_mean_pool
         return F.log_softmax(proba_vec, dim=0), None
     
