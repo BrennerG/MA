@@ -131,8 +131,14 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
         for i,X in enumerate(raw[:_LIMIT]):
             rationale = list(X.evidences)[0][0]
             question = docs[X.annotation_id]
-            if question[-1] != '?': question = question + ' ?'
-            assert len(weights[i]) == len(question)
+
+            # adjust len of attention weights
+            if len(weights[i]) > len(question): 
+                attn = weights[i][:len(question)]
+            elif len(weights[i]) == len(question): 
+                attn = weights[i]
+            else: 
+                raise AttributeError(f"len(question)={len(question)} can't be longer than len(attention)={len(weights[i])}")
 
             # get top_k tokens
             if k > len(weights[i]): top_idx = np.array(range(len(weights[i])))

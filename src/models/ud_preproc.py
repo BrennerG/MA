@@ -17,19 +17,20 @@ class UDParser():
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize")
         self.root_token = '[ROOT]'
 
-    def __call__(self, dataset, num_samples=-1, split='train', qa_join='none'):
-        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join)
+    def __call__(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
+        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
 
-    def parse(self, dataset, num_samples=-1, split='train', qa_join='none'):
+    def parse(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
         file_path = LOC['ud_parses'] + f'cose_{split}_{str(num_samples)}.json'
-        if os.path.exists(file_path):
+        if os.path.exists(file_path) and use_cache:
             print(f'UD_Parsing: Accessing cached file: {file_path}')
             with open(file_path) as f:
                 edges = json.load(f)
         else:
             edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join)
-            with open(file_path, 'w') as outfile:
-                json.dump(edges, outfile)
+            if use_cache:
+                with open(file_path, 'w') as outfile:
+                    json.dump(edges, outfile)
         return edges
 
     def extract_edges(self, dataset, num_samples=-1, qa_join='none'):
@@ -40,7 +41,10 @@ class UDParser():
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
                 # parse through stanza & extract UD edges
-                doc = self.ud_parser(f"{sample['question']} {answer}")
+                if '?' in sample['question']:
+                    doc = self.ud_parser(f"{sample['question']} {answer}")
+                else:
+                    doc = self.ud_parser(f"{sample['question']} ? {answer}")
                 parsed = [word for sent in doc.sentences for word in sent.words] # stanza parse
                 edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
                 edges = [(a,b) for (a,b) in edges if a!=-1 and b!=-1]  # remove edges to root
