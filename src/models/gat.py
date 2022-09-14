@@ -24,8 +24,6 @@ class GATForMultipleChoice(torch.nn.Module):
                 qa = f"{data['question']} {answer}"
             else:
                 qa = f"{data['question']} ? {answer}" 
-            if not self.embedding(qa).to(self.device).shape[0] > torch.max(torch.Tensor(data['qa_graphs'][i]).T.long().to(self.device)).item():
-                breakpoint()
             emb = self.embedding(qa).to(self.device)
             edge_index = torch.Tensor(data['qa_graphs'][i]).T.long().to(self.device)
             x = self.gatconv1(emb, edge_index) 
