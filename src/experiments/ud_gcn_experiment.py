@@ -127,7 +127,26 @@ class UD_GCN_Experiment(Experiment):
         suff_pred, _ = zip(*self.model(suff_ds))
         # TODO CURRENT! (bug existing from the lines above)
 
-        return None
+        # calcualte aopc metrics
+        aopc_intermediate = {}
+        for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
+            tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
+            # comp
+            cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
+            cp, _ = zip(*self.model(cds))
+            cl = E.from_softmax(cp, to='dict') # labels
+            # suff
+            sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
+            sp, _ = zip(*self.model(sds))
+            sl = E.from_softmax(sp, to='dict')
+            # aggregate
+            aopc_intermediate[aopc] = [aopc, cl, sl]
+        aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, params)
+
+        doc_ids = self.val_set['id']
+        er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
+        self.er_results = er_results
+        return E.classification_scores(results=er_results, mode='val', aopc_thresholds=params['aopc_thresholds'], with_ids=doc_ids)
 
     def eval_efficiency(self, params:{}): # TODO
         return None
