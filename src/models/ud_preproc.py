@@ -41,7 +41,7 @@ class UDParser():
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
                 # parse through stanza & extract UD edges
-                if '?' in sample['question']:
+                if '?' in sample['question']: # TODO do this in dataset class?
                     doc = self.ud_parser(f"{sample['question']} {answer}")
                 else:
                     doc = self.ud_parser(f"{sample['question']} ? {answer}")
@@ -57,9 +57,9 @@ class UDParser():
                             zip(range(len(tokens)), [an]*len(tokens))
                         )
                 elif qa_join=='to-root':
-                    edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
-                    edges = [(a,b) if a != -1 else (len(edges),b) for (a,b) in edges] # put root at the end of the tokens
                     tokens = [x.text for x in parsed]
+                    edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first token, -1 is root now
+                    edges = [(a,b) if a != -1 else (len(tokens),b) for (a,b) in edges] # put root at the end of the tokens
                     answer_nodes = list(range(len(tokens)))[tokens.index('?')+1:]
                     for an in answer_nodes:
                         edges.append((an, len(tokens)))
