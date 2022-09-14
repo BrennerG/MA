@@ -13,8 +13,8 @@ class UDParser():
 
     def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):
         self.params = params
-        self.ud_parser = stanza.Pipeline(lang='en', processors=processors)
-        self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize")
+        self.ud_parser = stanza.Pipeline(lang='en', processors=processors, use_gpu=params['use_cuda'])
+        self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])
         self.root_token = '[ROOT]'
 
     def __call__(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
