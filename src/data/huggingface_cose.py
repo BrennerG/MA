@@ -15,7 +15,7 @@ _CITATION = 'EMPTY'
 _DESCRIPTION = "The Cos-E task of the ERASER Benchmark Suite."
 _URL = None # 'http://www.eraserbenchmark.com/zipped/cose.tar.gz'
 _FULL = 8752
-_LIMIT = 11 # set debug split manually here
+_LIMIT = _FULL # set debug split manually here
 COSE_LOC = 'data/eraser/cose/'
 
 class EraserCosEConfig(datasets.BuilderConfig):
@@ -144,7 +144,7 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             if k > len(weights[i]): top_idx = np.array(range(len(weights[i])))
             else: top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
             # trim top_idx
-            if max(top_idx) > len(question):
+            if max(top_idx) >= len(question):
                 top_idx = [x for x in top_idx if x<len(question)]
 
             # erase the top_k tokens
