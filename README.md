@@ -39,12 +39,10 @@ _diagram incoming_
   - ~~use word embeddings: Glove~~
   - ~~embed into my experiment api~~
   - ~~run on trou~~
-  - make it learn 
-    - don't connect every node to answer nodes
-  - use GAT
-    - eval explainability
-  - how to aggregate node attention?
+  - ~~make it learn~~
+  - ~~use GAT~~
   - Experiments
+    - parameter sweeps
     - embeddings Glove/BERT/AlBERT/RoBERTa
     - node weight aggregation (train it?) _important - do extensively_
     - graph preprocessing? (ideas in ud_preproc.py)

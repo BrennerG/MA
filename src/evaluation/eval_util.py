@@ -53,26 +53,44 @@ def create_results(docids, predictions, comp_predicitons, suff_predictions, atte
     comp_dicprics = from_softmax(comp_predicitons, to='dict')
     suff_dicprics = from_softmax(suff_predictions, to='dict')
 
-    for i, docid in enumerate(docids):
-        dic = {
-            'annotation_id': docid, # str
-            'rationales': [
-                {
-                    'docid': docid, # str
-                    'soft_rationale_predictions': attentions[i] # List[float]
-                }
-            ],
-            'classification': labels[i], # str
+    if aopc_thresholded_scores != None:
+        for i, docid in enumerate(docids):
+            dic = {
+                'annotation_id': docid, # str
+                'rationales': [
+                    {
+                        'docid': docid, # str
+                        'soft_rationale_predictions': attentions[i] # List[float]
+                    }
+                ],
+                'classification': labels[i], # str
 
-            'classification_scores': dicprics[i], # Dict[str,float],
-            'comprehensiveness_classification_scores': comp_dicprics[i], # Dict[str, float] # retrained without top k%%
-            'sufficiency_classification_scores': suff_dicprics[i], # Dict[str, float] # retrained with only top K%%
+                'classification_scores': dicprics[i], # Dict[str,float],
+                'comprehensiveness_classification_scores': comp_dicprics[i], # Dict[str, float] # retrained without top k%%
+                'sufficiency_classification_scores': suff_dicprics[i], # Dict[str, float] # retrained with only top K%%
 
-            #'tokens_to_flip': None, # int
+                #'tokens_to_flip': None, # int
 
-            "thresholded_scores": aopc_thresholded_scores[i]
-        }
-        result.append(dic)
+                "thresholded_scores": aopc_thresholded_scores[i]
+            }
+            result.append(dic)
+    else:
+        for i, docid in enumerate(docids):
+            dic = {
+                'annotation_id': docid, # str
+                'rationales': [
+                    {
+                        'docid': docid, # str
+                        'soft_rationale_predictions': attentions[i] # List[float]
+                    }
+                ],
+                'classification': labels[i], # str
+
+                'classification_scores': dicprics[i], # Dict[str,float],
+                'comprehensiveness_classification_scores': comp_dicprics[i], # Dict[str, float] # retrained without top k%%
+                'sufficiency_classification_scores': suff_dicprics[i], # Dict[str, float] # retrained with only top K%%
+            }
+            result.append(dic)
 
     return result
 

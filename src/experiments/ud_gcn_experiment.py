@@ -11,6 +11,7 @@ from torch.nn import CrossEntropyLoss
 from torchmetrics import Accuracy
 import plotly.express as px
 import pandas as pd
+import wandb
 
 from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
@@ -18,10 +19,8 @@ from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
 
-# TODO get it to learn!
 # TODO verify saving and loading
 # TODO allow batching?
-# TODO GAT (rename this)
 # TODO experiment with different q_a graph joining methods!
 
 class UD_GCN_Experiment(Experiment):
@@ -33,6 +32,7 @@ class UD_GCN_Experiment(Experiment):
         super().__init__(params)
         self.model.to(self.device)
         self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
+        wandb.init(config=params, mode='online' if params['wandb_logging']==True else 'disabled')
 
     def init_data(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
@@ -58,7 +58,7 @@ class UD_GCN_Experiment(Experiment):
 
         # LOOP
         for epoch in range(params['epochs']):
-            preds = torch.zeros(len(self.train_set))
+            preds = torch.zeros(len(self.train_set),5)
             attentions = []
             losses = []
             self.model.train()
@@ -67,7 +67,7 @@ class UD_GCN_Experiment(Experiment):
                 optimizer.zero_grad()
                 target = torch.Tensor([sample['label']]).squeeze().long()
                 out, attention = self.model(sample)
-                preds[i] = torch.argmax(out)
+                preds[i] = out
                 loss = loss_fn(out, target)
                 losses.append(loss.item())
                 attentions.append(attention)
@@ -75,35 +75,41 @@ class UD_GCN_Experiment(Experiment):
                 optimizer.step()
 
             # INTER TRAINING EVAL
-            test_preds, test_losses = self.intermediate_evaluation()
+            test_preds, test_attn, test_losses = self.intermediate_evaluation()
             avg_train_loss = np.mean(losses)
             avg_test_loss = np.mean(test_losses)
-            train_acc = acc(preds.int(), torch.Tensor(self.train_set['label']).int()).item()
-            test_acc = acc(test_preds.int(), torch.Tensor(self.val_set['label']).int()).item()
-            print(f"\tavg train loss: {avg_train_loss}")
-            print(f"\tavg test  loss: {avg_test_loss}")
-            print(f"\ttrain acc: {train_acc}")
-            print(f"\ttest  acc: {test_acc}")
-            results['avg_train_losses'].append(avg_train_loss)
-            results['avg_test_losses'].append(avg_test_loss)
-            results['train_accs'].append(train_acc)
-            results['test_accs'].append(test_acc)
+            train_acc = acc(torch.argmax(preds,dim=1), torch.Tensor(self.train_set['label']).int()).item()
+            test_acc = acc(torch.argmax(test_preds,dim=1), torch.Tensor(self.val_set['label']).int()).item()
+            expl_eval = self.eval_explainability(params, pred=test_preds, attn=test_attn, skip_aopc=True)
 
-        return results
+            # log on wandb
+            wandb.log({
+                'avg_train_loss': avg_train_loss,
+                'avg_test_loss': avg_test_loss,
+                'acc_train': train_acc,
+                'acc_test': test_acc,
+                'comprehensiveness_test': expl_eval['comprehensiveness'],
+                'sufficiency_test': expl_eval['sufficiency']
+            })
+
+        return None
     
     def intermediate_evaluation(self):
         self.model.eval()
-        preds = torch.zeros(len(self.val_set))
+        preds = torch.zeros(len(self.val_set),5)
+        attentions = []
         loss_fn = CrossEntropyLoss()
         losses = []
 
         for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
-            out, _ = self.model(sample)
-            preds[i] = torch.argmax(out)
-            loss = loss_fn(out,preds[i].long())
+            out, attn = self.model(sample)
+            target = torch.Tensor([sample['label']]).squeeze().long()
+            preds[i] = out
+            attentions.append(attn)
+            loss = loss_fn(out, target)
             losses.append(loss.item())
         
-        return preds, losses
+        return preds, attentions, losses
     
     def eval_competence(self, params:{}):
         self.model.eval()
@@ -112,9 +118,10 @@ class UD_GCN_Experiment(Experiment):
         ys = torch.Tensor(self.val_set['label']).int()
         return acc(preds.int(), ys)
 
-    def eval_explainability(self, params:{}): # TODO only for GAT models
+    def eval_explainability(self, params:{}, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
         split = 'validation'
-        pred, attn = self.val_pred
+        if pred==None or attn==None:
+            pred, attn = self.val_pred
         # prepare Comprehensiveness
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         comp_edges = self.udparser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=params['qa_join'], use_cache=False)
@@ -128,29 +135,31 @@ class UD_GCN_Experiment(Experiment):
         # predict
         comp_pred, _ = zip(*self.model(comp_ds))
         suff_pred, _ = zip(*self.model(suff_ds))
-        # TODO CURRENT! (bug existing from the lines above)
 
-        # calcualte aopc metrics
-        aopc_intermediate = {}
-        for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
-            tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
-            # comp
-            cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-            ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=params['qa_join'], use_cache=False)
-            for i,sample in enumerate(cds):
-                sample['qa_graphs'] = ce[i]
-            cp, _ = zip(*self.model(cds))
-            cl = E.from_softmax(cp, to='dict') # labels
-            # suff
-            sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-            se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=params['qa_join'], use_cache=False)
-            for i,sample in enumerate(sds):
-                sample['qa_graphs'] = se[i]
-            sp, _ = zip(*self.model(sds))
-            sl = E.from_softmax(sp, to='dict')
-            # aggregate
-            aopc_intermediate[aopc] = [aopc, cl, sl]
-        aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, params)
+        # give option to do inter-train eval
+        aopc_predictions = None
+        if not skip_aopc: 
+            # calcualte aopc metrics
+            aopc_intermediate = {}
+            for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
+                tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
+                # comp
+                cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
+                ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=params['qa_join'], use_cache=False)
+                for i,sample in enumerate(cds):
+                    sample['qa_graphs'] = ce[i]
+                cp, _ = zip(*self.model(cds))
+                cl = E.from_softmax(cp, to='dict') # labels
+                # suff
+                sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
+                se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=params['qa_join'], use_cache=False)
+                for i,sample in enumerate(sds):
+                    sample['qa_graphs'] = se[i]
+                sp, _ = zip(*self.model(sds))
+                sl = E.from_softmax(sp, to='dict')
+                # aggregate
+                aopc_intermediate[aopc] = [aopc, cl, sl]
+            aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, params)
 
         doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
@@ -161,19 +170,6 @@ class UD_GCN_Experiment(Experiment):
         return None
 
     def viz(self, params:{}):
-        if not 'save_loc' in params: return False
-        # VIZ LOSS
-        num_epochs = len(self.train_output['avg_train_losses'])
-        df = pd.DataFrame(
-            list(zip(
-                list(range(num_epochs))*2,
-                self.train_output['avg_train_losses'] + self.train_output['avg_test_losses'],
-                ['train']*num_epochs + ['test']*num_epochs
-            )), 
-            columns=['epoch', 'loss', 'split']
-        )
-        fig = px.line(df, x="epoch", y="loss", color='split', title='UD+GCN train loss')
-        fig.write_image(f"{params['save_loc']}/loss.png")
         return True
 
     def save(self, params:{}):

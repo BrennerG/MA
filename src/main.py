@@ -39,7 +39,8 @@ PARAMS = {
     #'save_predictions': True,
     #'save_eraser_input': True
     'gcn_hidden_dim': 16, # hidden dim for the pure GCN Baseline
-    'qa_join': 'to-root'
+    'qa_join': 'to-root',
+    'wandb_logging': False
 }
 
 
