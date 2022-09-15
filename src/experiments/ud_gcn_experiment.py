@@ -2,6 +2,7 @@ import torch
 import io
 import os
 import json
+import math
 
 import numpy as np
 from tqdm import tqdm
@@ -15,6 +16,7 @@ from experiments.experiment import Experiment
 from models.ud_preproc import UDParser
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
+import evaluation.eval_util as E
 
 # TODO get it to learn!
 # TODO verify saving and loading
@@ -30,6 +32,7 @@ class UD_GCN_Experiment(Experiment):
         self.udparser = UDParser(params=params)
         super().__init__(params)
         self.model.to(self.device)
+        self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
 
     def init_data(self, params:{}):
         cose = load_dataset(LOC['cose_huggingface'])
@@ -133,10 +136,16 @@ class UD_GCN_Experiment(Experiment):
             tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
             # comp
             cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
+            ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=params['qa_join'], use_cache=False)
+            for i,sample in enumerate(cds):
+                sample['qa_graphs'] = ce[i]
             cp, _ = zip(*self.model(cds))
             cl = E.from_softmax(cp, to='dict') # labels
             # suff
             sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
+            se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=params['qa_join'], use_cache=False)
+            for i,sample in enumerate(sds):
+                sample['qa_graphs'] = se[i]
             sp, _ = zip(*self.model(sds))
             sl = E.from_softmax(sp, to='dict')
             # aggregate
