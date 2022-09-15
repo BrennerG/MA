@@ -46,6 +46,7 @@ class UD_GCN_Experiment(Experiment):
         assert 'learning_rate' in params
         assert 'weight_decay' in params
 
+        do_explainability_eval = 'inter_training_expl_eval' in params and params['inter_training_expl_eval']==True
         loss_fn = CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
         acc = Accuracy(num_classes=5)
@@ -80,7 +81,8 @@ class UD_GCN_Experiment(Experiment):
             avg_test_loss = np.mean(test_losses)
             train_acc = acc(torch.argmax(preds,dim=1), torch.Tensor(self.train_set['label']).int()).item()
             test_acc = acc(torch.argmax(test_preds,dim=1), torch.Tensor(self.val_set['label']).int()).item()
-            expl_eval = self.eval_explainability(params, pred=test_preds, attn=test_attn, skip_aopc=True)
+            if do_explainability_eval:
+                expl_eval = self.eval_explainability(params, pred=test_preds, attn=test_attn, skip_aopc=True)
 
             # log on wandb
             wandb.log({
@@ -88,8 +90,8 @@ class UD_GCN_Experiment(Experiment):
                 'avg_test_loss': avg_test_loss,
                 'acc_train': train_acc,
                 'acc_test': test_acc,
-                'comprehensiveness_test': expl_eval['comprehensiveness'],
-                'sufficiency_test': expl_eval['sufficiency']
+                'comprehensiveness_test': expl_eval['comprehensiveness'] if do_explainability_eval else None,
+                'sufficiency_test': expl_eval['sufficiency'] if do_explainability_eval else None
             })
 
         return None

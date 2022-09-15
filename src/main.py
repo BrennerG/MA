@@ -40,7 +40,8 @@ PARAMS = {
     #'save_eraser_input': True
     'gcn_hidden_dim': 16, # hidden dim for the pure GCN Baseline
     'qa_join': 'to-root',
-    'wandb_logging': False
+    'wandb_logging': True,
+    'inter_training_expl_eval':False
 }
 
 
