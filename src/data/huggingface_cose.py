@@ -143,6 +143,9 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             # get top_k tokens
             if k > len(weights[i]): top_idx = np.array(range(len(weights[i])))
             else: top_idx = np.sort(np.argpartition(weights[i],-k)[-k:])
+            # trim top_idx
+            if max(top_idx) >= len(question):
+                top_idx = [x for x in top_idx if x<len(question)]
 
             # erase the top_k tokens
             if mode=='comprehensiveness':
