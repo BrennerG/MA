@@ -27,7 +27,7 @@ class GCN(torch.nn.Module):
             x = self.conv2(x, edge_index)
             # pooling # TODO experiment
             proba_vec[i] = x.mean(dim=0) # same as torch_geometric.nn.pool.glob.global_mean_pool
-        return F.softmax(proba_vec, dim=0), None
+        return F.log_softmax(proba_vec, dim=0), None
     
     def __call__(self, sample):
         return self.forward(sample)
