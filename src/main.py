@@ -43,7 +43,8 @@ PARAMS = {
     'gcn_hidden_dim': 128, # hidden dim for the pure GCN Baseline
     'qa_join': 'to-root',
     'wandb_logging': True,
-    'inter_training_expl_eval':False
+    'inter_training_expl_eval': False,
+    'dropout': 0.1
 }
 
 
