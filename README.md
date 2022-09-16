@@ -41,6 +41,7 @@ _diagram incoming_
   - ~~run on trou~~
   - ~~make it learn~~
   - ~~use GAT~~
+  - does it matter if the UD graph inputs are one-/bi-directional?
   - Experiments
     - parameter sweeps
     - embeddings Glove/BERT/AlBERT/RoBERTa
