@@ -21,7 +21,7 @@ class UDParser():
         return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
 
     def parse(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
-        file_path = LOC['ud_parses'] + f'cose_{split}_{str(num_samples)}.json'
+        file_path = LOC['ud_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
         if os.path.exists(file_path) and use_cache:
             print(f'UD_Parsing: Accessing cached file: {file_path}')
             with open(file_path) as f:
@@ -64,7 +64,7 @@ class UDParser():
                     for an in answer_nodes:
                         edges.append((an, len(tokens)))
                 elif qa_join=='none': # dont join q and a
-                    continue
+                    pass
                 else:
                     raise AttributeError(f'Unknown qa_joining method: {qa_join}')
                 grouped_edges.append(list(set(edges)))
