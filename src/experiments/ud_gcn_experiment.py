@@ -85,14 +85,18 @@ class UD_GCN_Experiment(Experiment):
                 expl_eval = self.eval_explainability(params, pred=test_preds, attn=test_attn, skip_aopc=True)
 
             # log on wandb
-            wandb.log({
+            result_dict = {
                 'avg_train_loss': avg_train_loss,
                 'avg_test_loss': avg_test_loss,
                 'acc_train': train_acc,
                 'acc_test': test_acc,
                 'comprehensiveness_test': expl_eval['comprehensiveness'] if do_explainability_eval else None,
                 'sufficiency_test': expl_eval['sufficiency'] if do_explainability_eval else None
-            })
+            }
+            if 'wandb_logging' in params and params['wandb_logging']:
+                wandb.log(result_dict)
+            else:
+                print(result_dict)
 
         return None
     
