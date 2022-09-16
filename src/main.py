@@ -1,7 +1,9 @@
+import sys
+import torch
+
 #from experiments.bert_experiment import BERTExperiment
 #from experiments.random_experiment import RandomClassifierExperiment
 from experiments.ud_gcn_experiment import UD_GCN_Experiment
-import torch
 
 '''
 # ***************************** MAIN FILE ******************************** #
@@ -47,6 +49,29 @@ PARAMS = {
 
 if __name__ == "__main__":
     torch.manual_seed(PARAMS['rnd_seed'])
+
+    # get & set overwritten params
+    args = [a.replace('--','').split('=') for a in sys.argv][1:]
+    overwrites = [a for a in args if a[0] in PARAMS.keys()]
+    for o in overwrites:
+        print(f"WARNING: overwriting {o[0]} parameter: {PARAMS[o[0]]} -> {o[1]} !")
+        # parse value
+        if o[1]=='True':
+            value = True
+        elif o[1]=='False':
+            value = False
+        elif o[1].isdecimal():
+            value = int(o[1])
+        elif o[1].replace('.','',1).isdigit():
+            value = float(o[1])
+        else:
+            value = o[1]
+            print(f"WARNING: couldn't find a proper parse for parameter '{o[0]}'={value}. keeping it as string")
+        PARAMS[o[0]] = value
+
+    # run the experiment
+    print("\nSTARTING EXPERIMENT")
+    for k,v in PARAMS.items(): print(f"\t{k}={v}")
     exp = UD_GCN_Experiment(PARAMS) # TODO create Experiment Factory! (w. default params?)
     exp(PARAMS)
     print('done')
