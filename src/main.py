@@ -29,16 +29,16 @@ PARAMS = {
     #'lime_num_features': 7, # number of tokens that lime assigns a weight to
     #'lime_num_permutations': 5000, # number of input permutations per sample; default=5k :O
     #'lime_scaling': 'none', # decides how the limeweights should be scaled (per sample) # TODO add abs (apply np.abs(attn_weights))
-    'learning_rate': 0.002, # Optimizer learning rate
+    'learning_rate': 0.003, # Optimizer learning rate
     'weight_decay': 0, # TODO currently only for GCN
     #'batch_size': 16, # batch size for training and evaluation
     'epochs': 100, # epochs of training
     #'save_strategy': 'epoch', # determines rules for saving artifacts {'no', 'epoch', 'steps'} # TODO only for BERT
-    'save_loc': 'data/experiments/gcn/', # location where the above are saved
+    'save_loc': 'data/experiments/gat/', # location where the above are saved
     #'overwrite_output_dir': True, # overwrites the given output directory above
     #'save_predictions': True,
     #'save_eraser_input': True
-    'gcn_hidden_dim': 16, # hidden dim for the pure GCN Baseline
+    'gcn_hidden_dim': 128, # hidden dim for the pure GCN Baseline
     'qa_join': 'to-root',
     'wandb_logging': True,
     'inter_training_expl_eval':False
