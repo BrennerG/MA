@@ -108,6 +108,11 @@ class Experiment(ABC):
                     print(f"load_from location {params['load_from']} either not found or empty!")
         elif type == 'UD_GAT':
             model = GATForMultipleChoice(params)
+            if 'load_from' in params:
+                if os.path.exists(f"{params['load_from']}/model.pt"): 
+                    model.load_state_dict(torch.load(f"{params['load_from']}/model.pt"))
+                else:
+                    print(f"load_from location {params['load_from']} either not found or empty!")
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
