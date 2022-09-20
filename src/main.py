@@ -40,11 +40,16 @@ PARAMS = {
     #'overwrite_output_dir': True, # overwrites the given output directory above
     #'save_predictions': True,
     #'save_eraser_input': True
-    'gcn_hidden_dim': 128, # hidden dim for the pure GCN Baseline
-    'qa_join': 'to-root',
-    'wandb_logging': True,
-    'inter_training_expl_eval': False,
-    'dropout': 0.1
+
+    # GNN STUFF STARTS HERE (there is general stuff that is used for GNNs above!)
+    #'gcn_hidden_dim': 1024, # hidden dim for the pure GCN Baseline # TODO not needed if 'input_dims' param is here
+    'qa_join': 'to-root', # gnn only
+    'wandb_logging': True, # gnn only
+    'inter_training_expl_eval': False, # gnn only
+    'dropout': 0.1, # gnn only
+    'num_heads': 8, # gnn only
+    'num_layers': 7, # gnn only
+    'input_dims': [300, 1024, 512, 256, 64, 32, 16]
 }
 
 
