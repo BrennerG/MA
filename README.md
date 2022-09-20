@@ -21,7 +21,6 @@ _diagram incoming_
   - ~~rnd clf~~
   - ~~eval: competence~~
   - ~~eval: explainability~~
-    - recheck suff implementation
   - ~~eval: efficiency~~
   - __optional__ Can we do 'smarter' random? Think majority class only prediction or 'informed' random classifiers
 * ~~__BOW__ Baseline~~
@@ -41,13 +40,13 @@ _diagram incoming_
   - ~~run on trou~~
   - ~~make it learn~~
   - ~~use GAT~~
-  - does it matter if the UD graph inputs are one-/bi-directional?
   - Experiments
-    - parameter sweeps
-    - embeddings Glove/BERT/AlBERT/RoBERTa
+    - ~~parameter sweeps~~
+      - do another for network depth (num of GatConv Layers) _current_
     - node weight aggregation (train it?) _important - do extensively_
+    - does it matter if the UD graph inputs are one-/bi-directional?
     - graph preprocessing? (ideas in ud_preproc.py)
-  - extend to 4Lang
+    - extend to 4Lang _optional yet_
 * revisit changes for BERT and Random Baselines in pipeline!
 * __QA-GNN Baseline__
   - run QA-GNN
@@ -55,7 +54,9 @@ _diagram incoming_
   - ~~run QA-GNN w. UD/4Lang graphs~~ _cancelled_
   - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
 * __Minimal__ = BERT + UD/4Lang + GAT
-  - ...
+  - Experiments
+    - node weight aggregation (train it?) _important - do extensively_
+    - graph preprocessing? (ideas in ud_preproc.py)
 * __Extended__ = __Minimal__ + 4Lang expansions 
   - ...
 * __Full__ = __Extended__ + Node/Edge types
