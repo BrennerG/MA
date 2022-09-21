@@ -45,16 +45,25 @@ _diagram incoming_
       - do another for network depth (num of GatConv Layers) _current_
     - node weight aggregation (train it?) _important - do extensively_
     - does it matter if the UD graph inputs are one-/bi-directional?
+      - og QA-GNN do add reverse edges!
     - graph preprocessing? (ideas in ud_preproc.py)
     - extend to 4Lang _optional yet_
 * revisit changes for BERT and Random Baselines in pipeline!
 * __QA-GNN Baseline__
-  - run QA-GNN
+  - ~~run QA-GNN~~
   - wrap QA-GNN for explainability evaluations
+  - observations
+    - QA-GNN actually substitutes the answers in for the 'wh-words'! :O
+      - can this work for the other models on ERASER? the wh's might get thrown away
+        - the weights tend to be rather high on these words - but there are no guarantees...
+        - if the substitution happens as part of preproc, then the model won't know the samples any other way. so we're prb fine
+    - QA-GNN adds reverse edges!
+
   - ~~run QA-GNN w. UD/4Lang graphs~~ _cancelled_
   - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
 * __Minimal__ = BERT + UD/4Lang + GAT
   - Experiments
+    - try BERT*less w. BERT instead of glove
     - node weight aggregation (train it?) _important - do extensively_
     - graph preprocessing? (ideas in ud_preproc.py)
 * __Extended__ = __Minimal__ + 4Lang expansions 
