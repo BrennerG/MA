@@ -4,6 +4,7 @@ import torch.nn as nn
 from torch_geometric.nn import GAT, GATConv
 
 from models.glove import GloveEmbedder
+from models.albert_embedding import AlbertEmbedding
 from data.locations import LOC
 
 
@@ -12,7 +13,11 @@ class GATForMultipleChoice(torch.nn.Module):
     def __init__(self, params:{}):
         super().__init__()
         self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
-        self.embedding= GloveEmbedder(params, LOC['glove_embedding'])
+        # init embedding
+        if 'glove' in params['embedding']: 
+            self.embedding = GloveEmbedder(params, LOC['glove_embedding'])
+        elif 'bert' in params['embedding']: 
+            self.embedding = AlbertEmbedding(params)
         num_heads = params['num_heads'] if 'num_heads' in params else None
         num_layers = params['num_layers'] if 'num_layers' in params else None
         '''
@@ -22,7 +27,7 @@ class GATForMultipleChoice(torch.nn.Module):
         for i in range(num_layers-2): 
             inputs.append(inputs[-1] / (LAYER_DECAY*num_heads))
         '''
-        inputs = params['input_dims'][:num_layers] # meanwhile: manually # TODO test num_layers 2-7 like this
+        inputs = params['input_dims'][:num_layers] # meanwhile: manually 
         # calculate output dimensions
         outputs = []
         for i,x in enumerate(inputs):
@@ -48,7 +53,7 @@ class GATForMultipleChoice(torch.nn.Module):
                 qa = f"{data['question']} {answer}"
             else:
                 qa = f"{data['question']} ? {answer}" 
-            x = self.embedding(qa).to(self.device)
+            x = self.embedding(qa).to(self.device) # TODO CUR: get bert_map
             edge_index = torch.Tensor(data['qa_graphs'][i]).T.long().to(self.device)
             # pass through layers
             for layer in self.layers:
@@ -60,7 +65,7 @@ class GATForMultipleChoice(torch.nn.Module):
                     x = layer(x)
 
             proba_vec[i] = x.mean(dim=0) # TODO experiment with pooling
-            attentions.append(self.aggregate_attention(edges=edges, weights=edge_weights)) # TODO experiment with attn aggregation
+            attentions.append(self.aggregate_attention(edges=edges, weights=edge_weights)) # TODO experiment with attn aggregation # TODO cur: use bert_map to aggregate attention properly!
         # logits = F.log_softmax(proba_vec, dim=0) # TODO CrossEntropyLoss expects true logits - not softmax!
         return proba_vec, attentions[torch.argmax(proba_vec).item()]
         
