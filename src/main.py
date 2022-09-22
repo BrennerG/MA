@@ -49,7 +49,7 @@ PARAMS = {
     'dropout': 0.1, # gnn only
     'num_heads': 8, # gnn only
     'num_layers': 7, # gnn only
-    'input_dims': [300, 1024, 512, 256, 64, 32, 16],
+    'input_dims': [1024, 512, 256, 64, 32, 16],
     'embedding': 'albert-base-v2'
 }
 

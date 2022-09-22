@@ -5,6 +5,7 @@ class AlbertEmbedding():
     def __init__(self, params:{}):
         self.tokenizer = AlbertTokenizerFast.from_pretrained(params['embedding'])
         self.model = AlbertModel.from_pretrained(params['embedding'])
+        self.dim = self.model.config.hidden_size
     
     def __call__(self, text:str, return_bert_map=False): # TODO _call_single and _call_iterable (this is call_single)
         inputs = self.tokenizer(text.split(), return_tensors='pt', return_offsets_mapping=True, is_split_into_words=True)
