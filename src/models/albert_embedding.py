@@ -3,8 +3,9 @@ from transformers import AlbertTokenizer, AlbertTokenizerFast, AlbertModel
 class AlbertEmbedding():
     
     def __init__(self, params:{}):
+        self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
         self.tokenizer = AlbertTokenizerFast.from_pretrained(params['embedding'])
-        self.model = AlbertModel.from_pretrained(params['embedding'])
+        self.model = AlbertModel.from_pretrained(params['embedding']).to(self.device)
         self.dim = self.model.config.hidden_size
     
     def __call__(self, text:str, return_bert_map=False): # TODO _call_single and _call_iterable (this is call_single)
@@ -25,6 +26,7 @@ class AlbertEmbedding():
                 c+=1
                 bert_map.append(c)
         # run through albert
+        inputs = {k: v.to(self.device) for k, v in inputs.items()} 
         outputs = self.model(**inputs)
         if return_bert_map: return outputs.last_hidden_state, bert_map
         else: return outputs.last_hidden_state
