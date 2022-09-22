@@ -94,7 +94,7 @@ class GATForMultipleChoice(torch.nn.Module):
         for i,head in enumerate(edges[1].tolist()):
             attention[head] += weights[i].item()
         # return
-        if softmax: return F.softmax(attention)
+        if softmax: return F.softmax(attention,dim=0)
         else: return attention
     
     def aggregate_bert_attention(self, edges, weights, bert_map, mode='edge_additive', softmax=True):
@@ -104,5 +104,5 @@ class GATForMultipleChoice(torch.nn.Module):
         for i,head in enumerate(edges[1].tolist()):
             attention[bert_map[head]] += weights[i].item() # use bert_map to map sub_tokens and their attention to the actual word tokens
         # return
-        if softmax: return F.softmax(attention)
+        if softmax: return F.softmax(attention,dim=0)
         else: return attention
