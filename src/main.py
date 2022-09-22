@@ -25,7 +25,7 @@ PARAMS = {
     #'skip_evaluation': True, # skip evaluation (prediction still happens...)
     'use_cuda': True, # use cuda
     'rnd_seed': 69, # Random obligatory 
-    #'bert_base': 'albert-base-v2', # choose the pretrained bert-base # TODO rename this so it also fits glove (e.g. pretrained_embedding or sth.)
+    #'bert_base': 'albert-base-v2', # choose the pretrained bert-base # TODO rename this so it also fits glove (e.g. pretrained_embedding or sth.) (see 'embedding' below)
     #'softmax_logits': True, # TODO check what this actually does for BERT Baseline
     #'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
     #'lime_num_features': 7, # number of tokens that lime assigns a weight to
@@ -49,7 +49,8 @@ PARAMS = {
     'dropout': 0.1, # gnn only
     'num_heads': 8, # gnn only
     'num_layers': 7, # gnn only
-    'input_dims': [300, 1024, 512, 256, 64, 32, 16]
+    'input_dims': [1024, 512, 256, 64, 32, 16],
+    'embedding': 'albert-base-v2'
 }
 
 
