@@ -1,8 +1,10 @@
 import numpy as np
 
+
 class RandomClassifier():
     
-    def __init__(self, rnd_seed:int):
+    def __init__(self, params):
+        rnd_seed = params['rnd_seed']
         np.random.seed(rnd_seed)
     
     def __call__(self, inputs, **params):
@@ -25,4 +27,4 @@ class RandomClassifier():
         num_choices = len(inputs['answers'])
         probas = np.random.rand(num_choices)
         attention = np.random.rand(len(tokens))
-        return probas, [attention]
+        return probas, attention

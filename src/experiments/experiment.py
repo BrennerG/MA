@@ -30,33 +30,36 @@ Since this class is abstract most of the actual logic is implemented in the resp
 class Experiment(ABC):
 
     def __init__(self, params:{}):
-        self.complete_set, self.train_set, self.val_set, self.test_set = self.init_data(params)
-        self.model = self.model_factory(params['model_type'], params)
+        self.params = params
+        torch.manual_seed(self.params['rnd_seed'])
+        self.complete_set, self.train_set, self.val_set, self.test_set = self.init_data()
+        self.model = self.model_factory(self.params['model_type'])
 
-    def __call__(self, params:{}):
+
+    def __call__(self):
 
         # TRAINING
-        if not('skip_training' in params and params['skip_training']): # no skip
+        if not('skip_training' in self.params and self.params['skip_training']): # no skip
             print('training...')
-            self.train_output = self.train(params)
+            self.train_output = self.train()
         else: # skip training
-            if not 'load_from' in params or params['load_from'] == None:
+            if not 'load_from' in self.params or self.params['load_from'] == None:
                 print('WARNING: training will be skipped, but no checkpoint was given (load_from) parameter (=prediction with only pre-trained model)')
             else:
-                print(f"MODEL PRELOADED FROM {params['load_from']} - SKIPPING TRAINING!") # this already happened in experiment.model_factory()
+                print(f"MODEL PRELOADED FROM {self.params['load_from']} - SKIPPING TRAINING!") # this already happened in experiment.model_factory()
 
         # PREDICTION
         # EVALUATION
-        if not('skip_evaluation' in params and params['skip_evaluation']): # no skip
+        if not('skip_evaluation' in self.params and self.params['skip_evaluation']): # no skip
             print('predicting...')
             preds = []
             for sample in tqdm(self.val_set):
-                # preds.append(self.model(sample, **params)) # TODO changed this for GCN - still holding for Random and BERT? wich params MUST be passed here? (everything has access to params dict!!!)
+                # preds.append(self.model(sample, **self.params)) # TODO changed this for GCN - still holding for Random and BERT? wich self.params MUST be passed here? (everything has access to self.params dict!!!)
                 preds.append(self.model(sample))
             logits, attentions = zip(*preds) 
             
             # some models don't have attention
-            if attentions and params['model_type']=='BERT': # TODO just return stuff like in the 'elif attentions:'-case! 
+            if attentions and self.params['model_type']=='BERT': # TODO just return stuff like in the 'elif attentions:'-case! 
                 self.val_pred = (list(logits), [a[0] for a in attentions])
             elif attentions:
                 self.val_pred = logits, attentions
@@ -64,7 +67,7 @@ class Experiment(ABC):
                 self.val_pred = (list(logits), None)
 
             print('evaluating...')
-            self.eval_output = self.evaluate(params)
+            self.eval_output = self.evaluate()
         else: # skip evaluation
             print('SKIPPING EVALUATION (flag was set in param dict!)')
             self.val_pred = None
@@ -72,83 +75,83 @@ class Experiment(ABC):
         
         # VIZ
         print('visualizing...')
-        self.viz_output = self.viz(params)
+        self.viz_output = self.viz()
 
         # SAVE / PERSIST
         print('saving...')
-        self.save(params)
+        self.save()
 
         print('experiment done!')
         return self
         
-    def evaluate(self, params:{}, split='val'):
-        if 'skip_evaluation' in params and params['skip_evaluation']: 
+    def evaluate(self,split='val'):
+        if 'skip_evaluation' in self.params and self.params['skip_evaluation']: 
             return None
         return {
-            'competence':self.eval_competence(params), 
-            'explainability':self.eval_explainability(params), 
-            'efficiency':self.eval_efficiency(params)
+            'competence':self.eval_competence(),
+            'explainability':self.eval_explainability(),
+            'efficiency':self.eval_efficiency()
         }
     
-    def model_factory(self, type:str, params:{}):
+    def model_factory(self, type:str):
         ''' This method allows to create model classes from strings'''
         # print
-        if 'load_from' in params: print(f"LOADING MODEL FROM {params['load_from']}")
+        if 'load_from' in self.params: print(f"LOADING MODEL FROM {self.params['load_from']}")
         # select model
         if type == 'Random':
-            model = RandomClassifier(params['rnd_seed']) # TODO input whole params dict!
+            model = RandomClassifier(self.params)
         elif type == "BERT":
-            model = BertPipeline(params=params)
+            model = BertPipeline(self.params)
         elif type == 'UD_GCN':
-            model = GCN(params)
-            if 'load_from' in params:
-                if os.path.exists(f"{params['load_from']}/model.pt"): 
-                    model.load_state_dict(torch.load(f"{params['load_from']}/model.pt"))
+            model = GCN(self.params)
+            if 'load_from' in self.params:
+                if os.path.exists(f"{self.params['load_from']}/model.pt"): 
+                    model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
-                    print(f"load_from location {params['load_from']} either not found or empty!")
+                    print(f"load_from location {self.params['load_from']} either not found or empty!")
         elif type == 'UD_GAT':
-            model = GATForMultipleChoice(params)
-            if 'load_from' in params:
-                if os.path.exists(f"{params['load_from']}/model.pt"): 
-                    model.load_state_dict(torch.load(f"{params['load_from']}/model.pt"))
+            model = GATForMultipleChoice(self.params)
+            if 'load_from' in self.params:
+                if os.path.exists(f"{self.params['load_from']}/model.pt"): 
+                    model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
-                    print(f"load_from location {params['load_from']} either not found or empty!")
+                    print(f"load_from location {self.params['load_from']} either not found or empty!")
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
 
     @abstractmethod
-    def init_data(self, params:{}):
+    def init_data(self):
         ''' returns (complete_dataset, train_data, val_data, test_data) '''
         raise NotImplementedError()
 
     @abstractmethod
-    def train(self, params:{}):
+    def train(self):
         '''trains self.model on self.train_set'''
         raise NotImplementedError()
     
     @abstractmethod
-    def eval_competence(self, params:{}):
+    def eval_competence(self):
         '''evaluates the competence of the experiments model; returns {accuracy, precicison, recall}'''
         raise NotImplementedError()
 
     @abstractmethod
-    def eval_explainability(self, params:{}):
+    def eval_explainability(self):
         '''evaluates the quantifiable explainability of the model with the aid of the ERASER module; 
         returns a large number of metrics around comprehensiveness and sufficiency'''
         raise NotImplementedError()
 
     @abstractmethod
-    def eval_efficiency(self, params:{}):
-        '''evaluates the efficiency of the experiments modele; returns {flops, num_params}'''
+    def eval_efficiency(self):
+        '''evaluates the efficiency of the experiments modele; returns {flops, num_self.params}'''
         raise NotImplementedError()
 
     @abstractmethod
-    def viz(self, params:{}):
+    def viz(self):
         '''create visualizations of relevant aspects of the experiment'''
         raise NotImplementedError()
 
     @abstractmethod
-    def save(self, params:{}):
+    def save(self):
         '''save relevant data e.g. evaluations, predictions, etc'''
         raise NotImplementedError()
