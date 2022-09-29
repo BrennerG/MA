@@ -54,18 +54,9 @@ class Experiment(ABC):
             print('predicting...')
             preds = []
             for sample in tqdm(self.val_set):
-                # preds.append(self.model(sample, **self.params)) # TODO changed this for GCN - still holding for Random and BERT? wich self.params MUST be passed here? (everything has access to self.params dict!!!)
-                preds.append(self.model(sample))
-            logits, attentions = zip(*preds) 
-            
-            # some models don't have attention
-            if attentions and self.params['model_type']=='BERT': # TODO just return stuff like in the 'elif attentions:'-case! 
-                self.val_pred = (list(logits), [a[0] for a in attentions])
-            elif attentions:
-                self.val_pred = logits, attentions
-            else:
-                self.val_pred = (list(logits), None)
-
+                preds.append(self.model(sample)) # preds.append(self.model(sample, **self.params)) # TODO BERT needs it like this - change that!
+            self.val_pred = zip(*preds) # self.val_pred = (list(logits), [a[0] for a in attentions]) # TODO BERT needs it like this - change that!
+            # evaluating
             print('evaluating...')
             self.eval_output = self.evaluate()
         else: # skip evaluation
