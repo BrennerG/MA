@@ -17,50 +17,29 @@ _diagram incoming_
 
 ## To-Do List
 * ~~__create pipeline with random classifier and full evaluation__~~
-  - ~~saving and loading runs~~
-  - ~~rnd clf~~
-  - ~~eval: competence~~
-  - ~~eval: explainability~~
-  - ~~eval: efficiency~~
-  - __optional__ Can we do 'smarter' random? Think majority class only prediction or 'informed' random classifiers
+  - Can we do 'smarter' random? Think majority class only prediction or 'informed' random classifiers _optional_
 * ~~__BOW__ Baseline~~
-* ~~Change Experiment Structure~~
+  - ~~this doesn't work~~
 * __BERT + LIME__ Baseline
-  - ~~huggingface clf~~
-  - ~~LIME~~
-  - ~~Write Evaluation (Competence, Efficiency, Explainability)~~
-  - ~~Integrate into Pipeline (write a class with the stuff from bert_cose.py)~~
-  - ~~Experimentation / Runs~~
-    - ~~aggregate transformer attention for explanations~~ 
-      - TODO revisit _optional_
-* __BERT*less__ - create simple GNN Architecture with UD graphs
-  - ~~text to graph preproc (UD)~~
-  - ~~use word embeddings: Glove~~
-  - ~~embed into my experiment api~~
-  - ~~run on trou~~
-  - ~~make it learn~~
-  - ~~use GAT~~
-  - Experiments
-    - ~~parameter sweeps~~
-      - do another for network depth (num of GatConv Layers) _current_
-    - node weight aggregation (train it?) _important - do extensively_
-    - does it matter if the UD graph inputs are one-/bi-directional?
-      - og QA-GNN do add reverse edges!
-    - graph preprocessing? (ideas in ud_preproc.py)
-    - extend to 4Lang _optional yet_
-* revisit changes for BERT and Random Baselines in pipeline!
-* __QA-GNN Baseline__
-  - ~~run QA-GNN~~
-  - wrap QA-GNN for explainability evaluations
-  - observations
+  - other methods for aggregating attention?
+  - pass data to lime in a better way? other API or sth?
+* __BERT*less__ - glove + UD + GAT
+  - ~~parameter sweeps~~
+  - one- vs bi-directional edges
+  - wh-substitution (fill in the answers for the wh*-word)
+  - node weight aggregation (train it?) _important_
+  - other graph preprocessing? (ideas in ud_preproc.py)
+  - extend to 4Lang
+  - apply some methods from QA-GNN
     - QA-GNN actually substitutes the answers in for the 'wh-words'! :O
       - can this work for the other models on ERASER? the wh's might get thrown away
         - the weights tend to be rather high on these words - but there are no guarantees...
         - if the substitution happens as part of preproc, then the model won't know the samples any other way. so we're prb fine
     - QA-GNN adds reverse edges!
-
-  - ~~run QA-GNN w. UD/4Lang graphs~~ _cancelled_
-  - ~~make QA-GNN output compatible with my evaluation suite~~ _cancelled_
+* __QA-GNN Baseline__
+  - ~~run QA-GNN~~
+  - wrap QA-GNN for explainability evaluations _important_
+  - swap ConceptNet for 4Lang _optional_
 * __Minimal__ = BERT + UD/4Lang + GAT
   - Experiments
     - try BERT*less w. BERT instead of glove
@@ -83,7 +62,10 @@ _diagram incoming_
   - or unify the models, losses, ...
 
 # Environmnts
-_not all exported_
+## exported_
+* ma_environment.yml, ma_requirements.txt = main environment
+* ma_gnn_environment.yml = environment for QA_GNN experiments
+## not exported
 * ma4 (<=BERTExperiment)
 * eraser_baselines (for eraser BERT+LSTM)
 * ma_gnn (development of ud_gcn)
