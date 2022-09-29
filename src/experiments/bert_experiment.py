@@ -16,6 +16,9 @@ import os
 # TODO huggingface_cose.py has changed! (added missing '?' to questions!)
 # re-run c.dark and verify nothing has changed...!
 # TODO set model.eval() ?
+# TODO wandb_logging
+# TODO itner_training_expl_eval
+
 
 class BERTExperiment(Experiment):
 
