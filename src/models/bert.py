@@ -125,7 +125,7 @@ class BertPipeline(Pipeline):
 
         # output
         self.cached_inputs = None # reset cached_inputs for cleanliness
-        if output == 'proba': return probas, attn_weights
+        if output == 'proba': return probas.squeeze(), attn_weights[0] if attn_weights != None else None
         else: raise AttributeError(f'output mode {output} unknown!')
     
     def load(self, path_to_checkpoint:str):

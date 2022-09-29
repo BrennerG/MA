@@ -54,8 +54,8 @@ class Experiment(ABC):
             print('predicting...')
             preds = []
             for sample in tqdm(self.val_set):
-                preds.append(self.model(sample)) # preds.append(self.model(sample, **self.params)) # TODO BERT needs it like this - change that!
-            self.val_pred = zip(*preds) # self.val_pred = (list(logits), [a[0] for a in attentions]) # TODO BERT needs it like this - change that!
+                preds.append(self.model(sample, **self.params))  # TODO catch unwanted params for gcn experiments
+            self.val_pred = list(zip(*preds))
             # evaluating
             print('evaluating...')
             self.eval_output = self.evaluate()

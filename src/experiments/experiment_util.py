@@ -7,8 +7,8 @@ DEFAULT_PARAMS = {
     'general': {
         # 'debug': True, # deprecated: manipulate _LIMIT variable in huggingface_cose.py manually # TODO fix this when param space is read from .yaml files!
         #'load_from': 'data/experiments/gcn/gcn.pt', # use a checkpoint (currently only for inference) train from pretrained base if empty
-        #'skip_training': True, # skip training - mostly for inference with saved checkpoints
-        #'skip_evaluation': True, # skip evaluation (prediction still happens...)
+        'skip_training': False, # skip training - mostly for inference with saved checkpoints
+        'skip_evaluation': False, # skip evaluation (prediction still happens...)
         'use_cuda': True, # use cuda
         'rnd_seed': 69, # Random obligatory 
         'learning_rate': 0.005, # Optimizer learning rate
@@ -20,7 +20,7 @@ DEFAULT_PARAMS = {
     'BERT': {
         'batch_size': 16, # batch size for training and evaluation
         'bert_base': 'albert-base-v2', # choose the pretrained bert-base # TODO rename this so it also fits glove (e.g. pretrained_embedding or sth.) (see 'embedding' below)
-        'softmax_logits': True, # TODO check what this actually does for BERT Baseline
+        'softmax_logits': False, # TODO check what this actually does for BERT Baseline
         'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
         'lime_num_features': 7, # number of tokens that lime assigns a weight to
         'lime_num_permutations': 5000, # number of input permutations per sample; default=5k :O

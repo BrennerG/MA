@@ -15,9 +15,10 @@ An Experiment is run from start to finish using the given parameter settings.
 
 if __name__ == "__main__":
 
+    # parse arguments
     args = [a.replace('--','').split('=') for a in sys.argv][1:]
 
     # run the experiment
-    exp = EUT.experiment_factory('Random', args)
+    exp = EUT.experiment_factory('BERT', args)
     exp()
     print('done')
