@@ -50,8 +50,8 @@ class GATForMultipleChoice(torch.nn.Module):
         attentions = []
         for i,answer in enumerate(data['answers']):
             # mini-preprocessing step # TODO do this in Dataset class?
-            if '?' in data['question']: qa = f"{data['question']} {answer}"
-            else: qa = f"{data['question']} ? {answer}" 
+            if '?' in data['question']: qa = f"{data['question']} {answer}" 
+            else: qa = f"{data['question']} ? {answer}" # TODO this should never fire (test this!)
             # get embedding
             if isinstance(self.embedding, AlbertEmbedding): # if BERT embedding
                 x, bert_map = self.embedding(qa, return_bert_map=True)
