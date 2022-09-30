@@ -14,7 +14,6 @@ from tqdm import tqdm
 import wandb
 import os
 
-# TODO inter_training_expl_eval
 # TODO fix softmax_logits (==> softmax should be deactivated for training and eval purposes (backpropagation!!!), 
 #       but is needed for ERASER metrics! (so check for this and softmax in eval_util.py!)
 # TODO test this online (re-run c.dark and verify nothing has changed...!)
