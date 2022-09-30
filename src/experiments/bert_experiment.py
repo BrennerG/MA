@@ -14,7 +14,6 @@ import wandb
 import os
 
 # TODO huggingface_cose.py has changed! (added missing '?' to questions!)
-# TODO set model.eval() ?
 # TODO inter_training_expl_eval
 # TODO test this online (re-run c.dark and verify nothing has changed...!)
 
