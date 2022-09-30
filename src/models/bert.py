@@ -224,7 +224,7 @@ class BertPipeline(Pipeline):
         return res
 
     # TRAINING METHOD
-    def train(self, dataset, train_args:TrainingArguments=None):
+    def train(self, dataset, train_args:TrainingArguments=None, eval_func=None):
 
         @dataclass
         class DataCollatorForMultipleChoice:
@@ -264,13 +264,14 @@ class BertPipeline(Pipeline):
         overwrite = False
 
         # use trainer api for training
-        trainer = Trainer(
-            model=self.model,
-            args=train_args,
-            train_dataset=tokenized['train'],
-            eval_dataset=tokenized['validation'],
-            tokenizer=self.tokenizer,
-            data_collator=DataCollatorForMultipleChoice(tokenizer=self.tokenizer)
-        )
-
+        args = {
+            'model' : self.model,
+            'args' : train_args,
+            'train_dataset' : tokenized['train'],
+            'eval_dataset' : tokenized['validation'],
+            'tokenizer' : self.tokenizer,
+            'data_collator' : DataCollatorForMultipleChoice(tokenizer=self.tokenizer),
+        }
+        if eval_func: args['compute_metrics'] = eval_func
+        trainer = Trainer(**args)
         trainer.train()

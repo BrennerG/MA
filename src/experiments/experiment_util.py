@@ -20,7 +20,8 @@ DEFAULT_PARAMS = {
     'BERT': {
         'batch_size': 16, # batch size for training and evaluation
         'bert_base': 'albert-base-v2', # choose the pretrained bert-base # TODO rename this so it also fits glove (e.g. pretrained_embedding or sth.) (see 'embedding' below)
-        'softmax_logits': False, # TODO check what this actually does for BERT Baseline
+        'weight_decay': 0.01,
+        'softmax_logits': True, # TODO should be deactivated for training and eval purposes (backpropagation!!!), but is needed for ERASER metrics! (so check for this and softmax in eval_util.py!)
         'attention': 'lime', # how to generate token weights (relevant for explainability metrics) {'lime', 'zeros', 'random', None}
         'lime_num_features': 7, # number of tokens that lime assigns a weight to
         'lime_num_permutations': 5000, # number of input permutations per sample; default=5k :O

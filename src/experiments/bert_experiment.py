@@ -1,6 +1,7 @@
 import math
 from datasets import load_dataset
 from transformers import TrainingArguments
+from transformers import EvalPrediction
 
 from data.huggingface_cose import EraserCosE 
 from experiments.experiment import Experiment
@@ -13,8 +14,9 @@ from tqdm import tqdm
 import wandb
 import os
 
-# TODO huggingface_cose.py has changed! (added missing '?' to questions!)
 # TODO inter_training_expl_eval
+# TODO fix softmax_logits (==> softmax should be deactivated for training and eval purposes (backpropagation!!!), 
+#       but is needed for ERASER metrics! (so check for this and softmax in eval_util.py!)
 # TODO test this online (re-run c.dark and verify nothing has changed...!)
 
 class BERTExperiment(Experiment):
@@ -40,46 +42,52 @@ class BERTExperiment(Experiment):
                 per_device_train_batch_size= self.params['batch_size'],
                 per_device_eval_batch_size= self.params['batch_size'],
                 num_train_epochs= self.params['epochs'],
-                weight_decay=0.01,
+                weight_decay=self.params['weight_decay'],
                 save_strategy= self.params['save_strategy'],
                 overwrite_output_dir= self.params['overwrite_output_dir'],
                 no_cuda=(not self.params['use_cuda']),
                 report_to='wandb',
                 run_name='BERT_insert_name'
-            )
+            ),
+            eval_func=self.huggingface_eval
         )
 
         wandb.finish()
         return result
     
-    def eval_competence(self):
-        probas, attn = self.val_pred
+    def eval_competence(self, probas=None, attn=None):
+        if probas==None or attn==None:
+            probas, attn = self.val_pred
         results = {}
         results['accuracy'], results['precision'], results['recall'] = E.competence_metrics(self.val_set['label'], probas)
         return results
 
-    def eval_explainability(self):
+    def eval_explainability(self, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
         split = 'validation'
-        pred, attn = self.val_pred
+        if pred==None or attn==None:
+            pred, attn = self.val_pred
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
         comp_pred, _ = zip(*self.model(comp_ds, attention=None, softmax_logits=True))
         suff_pred, _ = zip(*self.model(suff_ds, attention=None, softmax_logits=True))
         # calcualte aopc metrics
-        aopc_intermediate = {}
-        for aopc in tqdm(self.params['aopc_thresholds'], desc='explainability_eval: '):
-            tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
-            # comp
-            cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-            cp, _ = zip(*self.model(cds, attention=None, softmax_logits=True))
-            cl = E.from_softmax(cp, to='dict') # labels
-            # suff
-            sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-            sp, _ = zip(*self.model(sds, attention=None, softmax_logits=True))
-            sl = E.from_softmax(sp, to='dict')
-            # aggregate
-            aopc_intermediate[aopc] = [aopc, cl, sl]
-        aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, self.params)
+
+        aopc_predictions = None
+        if not skip_aopc: 
+            aopc_intermediate = {}
+            for aopc in tqdm(self.params['aopc_thresholds'], desc='explainability_eval: '):
+                tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
+                # comp
+                cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
+                cp, _ = zip(*self.model(cds, attention=None, softmax_logits=True))
+                cl = E.from_softmax(cp, to='dict') # labels
+                # suff
+                sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
+                sp, _ = zip(*self.model(sds, attention=None, softmax_logits=True))
+                sl = E.from_softmax(sp, to='dict')
+                # aggregate
+                aopc_intermediate[aopc] = [aopc, cl, sl]
+            aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, self.params)
 
         doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
@@ -122,3 +130,16 @@ class BERTExperiment(Experiment):
                 documents = yaml.dump(self.er_results, file)
 
         return True
+    
+    def huggingface_eval(self, eval_prediction:EvalPrediction, *args):
+        preds = []
+        for sample in tqdm(self.val_set):
+            preds.append(self.model(sample, **self.params))  # TODO catch unwanted params for gcn experiments
+        p,a = list(zip(*preds))
+        comp = self.eval_competence(p,a)
+        expl = self.eval_explainability(p,a, skip_aopc=True)
+        return {
+            'accuracy': comp['accuracy'],
+            'comprehensiveness': expl['comprehensiveness'],
+            'sufficiency': expl['sufficiency']
+        }
