@@ -44,6 +44,7 @@ DEFAULT_PARAMS = {
     }
 }
 
+# TODO make it so load_from can be disabled in default params, but passed per CLI in order to load!
 def experiment_factory(exp_type:str, args:{}):
 
     def overwrite_params(params):
