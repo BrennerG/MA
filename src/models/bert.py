@@ -93,7 +93,7 @@ class BertPipeline(Pipeline):
             output.logits = torch.softmax(output.logits,1)
         return output
         
-    def postprocess(self, model_outputs, attention='lime', output='proba', lime_num_features=-1, lime_num_permutations=5000, lime_scaling='minmax'):
+    def postprocess(self, model_outputs, attention='lime', lime_num_features=-1, lime_num_permutations=5000, lime_scaling='minmax'):
         logits = model_outputs.logits.detach().numpy().T
         grouped = list(zip(*(iter(logits.flatten()),) * 5)) # group the predictions
         probas = np.array(grouped)
@@ -125,8 +125,7 @@ class BertPipeline(Pipeline):
 
         # output
         self.cached_inputs = None # reset cached_inputs for cleanliness
-        if output == 'proba': return probas.squeeze(), attn_weights[0] if attn_weights != None else None
-        else: raise AttributeError(f'output mode {output} unknown!')
+        return probas.squeeze(), attn_weights[0] if attention != None else None
     
     def load(self, path_to_checkpoint:str):
         loaded_model = AlbertForMultipleChoice.from_pretrained(path_to_checkpoint) 
