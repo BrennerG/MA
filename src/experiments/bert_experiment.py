@@ -129,9 +129,13 @@ class BERTExperiment(Experiment):
         return True
     
     def huggingface_eval(self, eval_prediction:EvalPrediction, *args):
+        # need to softmax logits for evaluation (actually only ERASER)
+        prediction_params = deepcopy(self.params)
+        prediction_params['softmax_logits'] = True
+        # make predictions
         preds = []
         for sample in tqdm(self.val_set):
-            preds.append(self.model(sample, **self.params))
+            preds.append(self.model(sample, **prediction_params))
         p,a = list(zip(*preds))
         comp = self.eval_competence(p,a)
         expl = self.eval_explainability(p,a, skip_aopc=True)
