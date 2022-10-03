@@ -59,7 +59,7 @@ class BERTExperiment(Experiment):
         results['accuracy'], results['precision'], results['recall'] = E.competence_metrics(self.val_set['label'], probas)
         return results
 
-    def eval_explainability(self, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
+    def eval_explainability(self, pred=None, attn=None, skip_aopc=False):
         split = 'validation'
         if pred==None or attn==None:
             pred, attn = self.val_pred
@@ -131,7 +131,7 @@ class BERTExperiment(Experiment):
     def huggingface_eval(self, eval_prediction:EvalPrediction, *args):
         preds = []
         for sample in tqdm(self.val_set):
-            preds.append(self.model(sample, **self.params))  # TODO catch unwanted params for gcn experiments
+            preds.append(self.model(sample, **self.params))
         p,a = list(zip(*preds))
         comp = self.eval_competence(p,a)
         expl = self.eval_explainability(p,a, skip_aopc=True)
