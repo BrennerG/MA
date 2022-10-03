@@ -190,6 +190,8 @@ class BertPipeline(Pipeline):
             scaled_weights = scaler.fit_transform(transposed).T
         elif scaling == 'none' or scaling == None:
             scaled_weights = np.array(ordered_weights)
+        elif scaling == 'abs':
+            scaled_weights = np.abs(ordered_weights)
         else:
             raise AttributeError(f"LIME: scaling method '{scaling}' is unknown!")
 
