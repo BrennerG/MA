@@ -1,4 +1,11 @@
 import math
+import yaml
+import wandb
+import os
+
+from tqdm import tqdm
+from copy import deepcopy
+
 from datasets import load_dataset
 from transformers import TrainingArguments
 from transformers import EvalPrediction
@@ -7,12 +14,6 @@ from data.huggingface_cose import EraserCosE
 from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
-
-import yaml
-from tqdm import tqdm
-
-import wandb
-import os
 
 # TODO test this online (re-run c.dark and verify nothing has changed...!)
 
