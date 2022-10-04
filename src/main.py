@@ -22,6 +22,6 @@ if __name__ == "__main__":
     logging.disable(logging.WARNING) # disable WARNING, INFO and DEBUG logging everywhere
 
     # run the experiment
-    exp = EUT.experiment_factory('BERT', args)
+    exp = EUT.experiment_factory('UD_GCN', args)
     exp()
     print('done')

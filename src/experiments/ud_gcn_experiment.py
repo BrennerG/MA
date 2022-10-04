@@ -18,6 +18,7 @@ from models.ud_preproc import UDParser
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
+from models.gcn import GCN
 
 # TODO verify saving and loading
 # TODO allow batching?
@@ -27,28 +28,29 @@ class UD_GCN_Experiment(Experiment):
 
     def __init__(self, params:{}):
         assert torch.cuda.is_available()
-        self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
-        self.udparser = UDParser(params=params)
-        super().__init__(params)
+        self.params = params
+        self.device = 'cuda:0' if ('use_cuda' in self.params and self.params['use_cuda']) else 'cpu'
+        self.udparser = UDParser(params=self.params)
+        super().__init__(self.params)
         self.model.to(self.device)
         self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
-        wandb.init(config=params, mode='online' if params['wandb_logging']==True else 'disabled')
+        wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
 
-    def init_data(self, params:{}):
+    def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
-        edges = [self.udparser(ds, num_samples=len(ds), split=split, qa_join=params['qa_join']) for (split,ds) in cose.items()]
+        edges = [self.udparser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('qa_graphs', edges[i])
         return cose, cose['train'], cose['validation'], cose['test']
 
-    def train(self, params):
-        assert 'learning_rate' in params
-        assert 'weight_decay' in params
+    def train(self):
+        assert 'learning_rate' in self.params
+        assert 'weight_decay' in self.params
 
-        do_explainability_eval = 'inter_training_expl_eval' in params and params['inter_training_expl_eval']==True
+        do_explainability_eval = 'inter_training_expl_eval' in self.params and self.params['inter_training_expl_eval']==True
         loss_fn = CrossEntropyLoss()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params['learning_rate'], weight_decay=self.params['weight_decay'])
         acc = Accuracy(num_classes=5)
         results = {
             'avg_train_losses':[],
@@ -58,7 +60,7 @@ class UD_GCN_Experiment(Experiment):
         }
 
         # LOOP
-        for epoch in range(params['epochs']):
+        for epoch in range(self.params['epochs']):
             preds = torch.zeros(len(self.train_set),5)
             attentions = []
             losses = []
@@ -82,7 +84,7 @@ class UD_GCN_Experiment(Experiment):
             train_acc = acc(torch.argmax(preds,dim=1), torch.Tensor(self.train_set['label']).int()).item()
             test_acc = acc(torch.argmax(test_preds,dim=1), torch.Tensor(self.val_set['label']).int()).item()
             if do_explainability_eval:
-                expl_eval = self.eval_explainability(params, pred=test_preds, attn=test_attn, skip_aopc=True)
+                expl_eval = self.eval_explainability(self.params, pred=test_preds, attn=test_attn, skip_aopc=True)
 
             # log on wandb
             result_dict = {
@@ -93,7 +95,7 @@ class UD_GCN_Experiment(Experiment):
                 'comprehensiveness_test': expl_eval['comprehensiveness'] if do_explainability_eval else None,
                 'sufficiency_test': expl_eval['sufficiency'] if do_explainability_eval else None
             }
-            if 'wandb_logging' in params and params['wandb_logging']:
+            if 'wandb_logging' in self.params and self.params['wandb_logging']:
                 wandb.log(result_dict)
             else:
                 print(result_dict)
@@ -117,25 +119,26 @@ class UD_GCN_Experiment(Experiment):
         
         return preds, attentions, losses
     
-    def eval_competence(self, params:{}):
+    def eval_competence(self):
         self.model.eval()
         acc = Accuracy(num_classes=5)
         preds = torch.stack([torch.argmax(x) for x in self.val_pred[0]])
         ys = torch.Tensor(self.val_set['label']).int()
         return acc(preds.int(), ys)
 
-    def eval_explainability(self, params:{}, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
+    def eval_explainability(self, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
+        if isinstance(self.model,GCN): return None
         split = 'validation'
         if pred==None or attn==None:
             pred, attn = self.val_pred
         # prepare Comprehensiveness
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
-        comp_edges = self.udparser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=params['qa_join'], use_cache=False)
+        comp_edges = self.udparser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
         for i,sample in enumerate(comp_ds):
             sample['qa_graphs'] = comp_edges[i]
         # prepare Sufficiency
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
-        suff_edges = self.udparser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=params['qa_join'], use_cache=False)
+        suff_edges = self.udparser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
         for i,sample in enumerate(suff_ds):
             sample['qa_graphs'] = suff_edges[i]
         # predict
@@ -147,45 +150,45 @@ class UD_GCN_Experiment(Experiment):
         if not skip_aopc: 
             # calcualte aopc metrics
             aopc_intermediate = {}
-            for aopc in tqdm(params['aopc_thresholds'], desc='explainability_eval: '):
+            for aopc in tqdm(self.params['aopc_thresholds'], desc='explainability_eval: '):
                 tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
                 # comp
                 cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-                ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=params['qa_join'], use_cache=False)
+                ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(cds):
                     sample['qa_graphs'] = ce[i]
                 cp, _ = zip(*self.model(cds))
                 cl = E.from_softmax(cp, to='dict') # labels
                 # suff
                 sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-                se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=params['qa_join'], use_cache=False)
+                se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(sds):
                     sample['qa_graphs'] = se[i]
                 sp, _ = zip(*self.model(sds))
                 sl = E.from_softmax(sp, to='dict')
                 # aggregate
                 aopc_intermediate[aopc] = [aopc, cl, sl]
-            aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, params)
+            aopc_predictions = E.reshape_aopc_intermediates(aopc_intermediate, self.params)
 
         doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=aopc_predictions)
         self.er_results = er_results
-        return E.classification_scores(results=er_results, mode='val', aopc_thresholds=params['aopc_thresholds'], with_ids=doc_ids)
+        return E.classification_scores(results=er_results, mode='val', aopc_thresholds=self.params['aopc_thresholds'], with_ids=doc_ids)
 
-    def eval_efficiency(self, params:{}): # TODO
+    def eval_efficiency(self): # TODO
         return None
 
-    def viz(self, params:{}):
+    def viz(self):
         return True
 
-    def save(self, params:{}):
+    def save(self):
         # no save location, no saving
-        if 'save_loc' in params: 
+        if 'save_loc' in self.params: 
             # create save location
-            if not os.path.exists(params['save_loc']):
-                os.mkdir(params['save_loc'])
+            if not os.path.exists(self.params['save_loc']):
+                os.mkdir(self.params['save_loc'])
             # saving model
-            torch.save(self.model.state_dict(), f"{params['save_loc']}/model.pt")
+            torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
             # saving cached glove vocabulary # TODO only if using glove...
         # cache used glove embeddings
         with open(LOC['glove_cache'], 'w') as outfile:

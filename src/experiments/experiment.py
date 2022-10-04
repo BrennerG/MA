@@ -58,7 +58,7 @@ class Experiment(ABC):
             prediction_params['softmax_logits'] = True # TODO make this param relevant for gcn experiments!
             preds = []
             for sample in tqdm(self.val_set):
-                preds.append(self.model(sample, **prediction_params))  # TODO catch unwanted params for gcn experiments
+                preds.append(self.model(sample, **prediction_params))  
             self.val_pred = list(zip(*preds))
             # evaluating
             print('evaluating...')
