@@ -15,7 +15,6 @@ from experiments.experiment import Experiment
 import evaluation.eval_util as E
 from data.locations import LOC
 
-# TODO test this online (re-run c.dark and verify nothing has changed...!)
 
 class BERTExperiment(Experiment):
 
