@@ -1,6 +1,7 @@
 import sys
 import torch
 import experiments.experiment_util as EUT
+import logging
 
 '''
 # ***************************** MAIN FILE ******************************** #
@@ -17,6 +18,8 @@ if __name__ == "__main__":
 
     # parse arguments
     args = [a.replace('--','').split('=') for a in sys.argv][1:]
+
+    logging.disable(logging.WARNING) # disable WARNING, INFO and DEBUG logging everywhere
 
     # run the experiment
     exp = EUT.experiment_factory('BERT', args)
