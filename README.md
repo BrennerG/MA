@@ -24,6 +24,9 @@ _diagram incoming_
   - experiment w. other methods for aggregating attention?
   - pass data to lime in a better way? other API or sth?
   - experiment w. scaling of lime weights 
+* __UD + GCN__
+  - experiment w. pooling
+  - don't softmax output
 * __BERT*less__ - glove + UD + GAT
   - ~~parameter sweeps~~
   - one- vs bi-directional edges
