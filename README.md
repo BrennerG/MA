@@ -21,8 +21,9 @@ _diagram incoming_
 * ~~__BOW__ Baseline~~
   - ~~this doesn't work~~
 * __BERT + LIME__ Baseline
-  - other methods for aggregating attention?
+  - experiment w. other methods for aggregating attention?
   - pass data to lime in a better way? other API or sth?
+  - experiment w. scaling of lime weights 
 * __BERT*less__ - glove + UD + GAT
   - ~~parameter sweeps~~
   - one- vs bi-directional edges

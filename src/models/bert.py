@@ -113,7 +113,6 @@ class BertPipeline(Pipeline):
         elif attention == 'random':
             attn_weights = [np.random.rand(len(x['question'].split())) for x in self.cached_inputs]
         elif attention == 'self_attention':
-            # TODO find another way to aggregate?
             last_layers_attn = model_outputs.attentions[-1]
             attn_for_predicted_label = last_layers_attn[np.argmax(probas)]
             mean_of_heads = torch.mean(attn_for_predicted_label, 0) # take mean of all attention heads
@@ -132,8 +131,6 @@ class BertPipeline(Pipeline):
         self.model = loaded_model
         return loaded_model
 
-    # TODO can lime take a mask to ignore answers in the merge_string instead of merged inputs?
-    # attribute 'mask_string'?
     # >>> https://lime-ml.readthedocs.io/en/latest/lime.html#subpackages
     def lime_weights(self, predicted_label, num_features=30, num_permutations=3, scaling='minmax'):
         # init
@@ -147,7 +144,6 @@ class BertPipeline(Pipeline):
             answers = input_str[0].split('[qsep]')[1].split('[sep]')
             rep_questions = [item for item in input_str for i in range(5)]
             rep_answers = answers*len(input_str)
-            # TODO IDEA: if labels are a single token - remove it or replace it (with a marker token e.g.:"[SOL]"")
             # encode
             encoding = self.tokenizer(rep_questions, rep_answers, return_tensors='pt', padding=True)
             inputs = {k: v.view(len(input_str), 5, -1) for k,v in encoding.items()}
