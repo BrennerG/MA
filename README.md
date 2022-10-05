@@ -25,8 +25,9 @@ _diagram incoming_
   - pass data to lime in a better way? other API or sth?
   - experiment w. scaling of lime weights 
 * __UD + GCN__
-  - experiment w. pooling
-  - don't softmax output
+  - Experiments:
+    - experiment w. pooling
+    - implement batching?
 * __BERT*less__ - glove + UD + GAT
   - ~~parameter sweeps~~
   - one- vs bi-directional edges

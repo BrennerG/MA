@@ -21,9 +21,6 @@ from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
 from models.gcn import GCN
 
-# TODO verify saving and loading
-# TODO allow batching?
-# TODO experiment with different q_a graph joining methods!
 
 class UD_GCN_Experiment(Experiment):
 
@@ -133,7 +130,7 @@ class UD_GCN_Experiment(Experiment):
             'recall' : reca(preds.int(), ys).item()
         }
 
-    def eval_explainability(self, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
+    def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
         if isinstance(self.model,GCN): return None
         split = 'validation'
         if pred==None or attn==None:
@@ -196,11 +193,13 @@ class UD_GCN_Experiment(Experiment):
                 os.mkdir(self.params['save_loc'])
             # saving model
             torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
-            # saving cached glove vocabulary # TODO only if using glove...
 
         # cache used glove embeddings
-        with open(LOC['glove_cache'], 'w') as outfile:
-            json.dump(self.model.embedding.cached_dict, outfile, sort_keys=True, indent=4)
+        if self.params['embedding'] == glove:
+            with open(LOC['glove_cache'], 'w') as outfile:
+                json.dump(self.model.embedding.cached_dict, outfile, sort_keys=True, indent=4)
+        else:
+            raise NotImplementedError('These embeddings have no implementation for caching yet')
         
         # saving evaluation
         with open(self.params['save_loc']+'evaluation.yaml', 'w') as file:
