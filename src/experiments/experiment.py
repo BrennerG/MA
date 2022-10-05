@@ -55,7 +55,7 @@ class Experiment(ABC):
             print('predicting...')
             # need to softmax logits for evaluation (actually only ERASER)
             prediction_params = deepcopy(self.params)
-            prediction_params['softmax_logits'] = True # TODO make this param relevant for gcn experiments!
+            prediction_params['softmax_logits'] = True
             preds = []
             for sample in tqdm(self.val_set):
                 preds.append(self.model(sample, **prediction_params))  
