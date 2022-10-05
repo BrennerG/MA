@@ -45,21 +45,24 @@ class GATForMultipleChoice(torch.nn.Module):
         layerlist.append(GATConv(in_channels=int(inputs_outputs[-1][0]), out_channels=int(inputs_outputs[-1][1]), concat=False, heads=1, dropout=params['dropout']))
         self.layers = nn.ModuleList(layerlist)
 
-    def forward(self, data):
+    def forward(self, data, **args):
+        softmax_logits = args['softmax_logits'] if 'softmax_logits' in args else False
         proba_vec = torch.zeros(5)
         attentions = []
         for i,answer in enumerate(data['answers']):
-            # mini-preprocessing step # TODO do this in Dataset class?
-            if '?' in data['question']: qa = f"{data['question']} {answer}" 
-            else: qa = f"{data['question']} ? {answer}" # TODO this should never fire (test this!)
+
+            qa = f"{data['question']} ? {answer}" 
+
             # get embedding
             if isinstance(self.embedding, AlbertEmbedding): # if BERT embedding
                 x, bert_map = self.embedding(qa, return_bert_map=True)
-                x = x.squeeze().to(self.device) # because batch_size=1 - TODO change if batch_size is included!
+                x = x.squeeze().to(self.device) # because batch_size=1
             else:
                 x = self.embedding(qa).to(self.device)
+
             # edge index already pre_processed during experiment.data_init()
             edge_index = torch.Tensor(data['qa_graphs'][i]).T.long().to(self.device)
+
             # pass through layers
             for layer in self.layers:
                 if layer == self.layers[-1]: # if its last layer
@@ -69,22 +72,25 @@ class GATForMultipleChoice(torch.nn.Module):
                 elif isinstance(layer, nn.ReLU): # activation
                     x = layer(x)
 
+            # pooling
             proba_vec[i] = x.mean(dim=0) # TODO experiment with pooling - current version might be an information bottleneck...
+
             # get node level attention attention
             if isinstance(self.embedding, AlbertEmbedding): # if BERT embedding
                 attentions.append(self.aggregate_bert_attention(edges=edges, weights=edge_weights, bert_map=bert_map))
             else: # another embedding
                 attentions.append(self.aggregate_attention(edges=edges, weights=edge_weights)) # TODO experiment with attn aggregation
-        # logits = F.log_softmax(proba_vec, dim=0) # TODO CrossEntropyLoss expects true logits - not softmax!
+
+        if softmax_logits: return F.log_softmax(proba_vec, dim=0), attentions[torch.argmax(proba_vec).item()] # note CrossEntropyLoss expects true logits - ERASER wants softmax!
         return proba_vec, attentions[torch.argmax(proba_vec).item()]
         
-    def __call__(self, data):
+    def __call__(self, data, **args):
         if isinstance(data, dict): # single sample
-            return self.forward(data)
+            return self.forward(data, **args)
         elif isinstance(data, list): # data set
             outputs = []
             for sample in data:
-                outputs.append(self.forward(sample))
+                outputs.append(self.forward(sample, **args))
             return outputs
     
     def aggregate_attention(self, edges, weights, mode='edge_additive', softmax=False):

@@ -67,7 +67,7 @@ class UD_GCN_Experiment(Experiment):
             for i,sample in enumerate(tqdm(self.train_set, desc=f'epoch={epoch}')):
                 optimizer.zero_grad()
                 target = torch.Tensor([sample['label']]).squeeze().long()
-                out, attention = self.model(sample)
+                out, attention = self.model(sample) # TODO call with **args? yes probably!
                 preds[i] = out
                 loss = loss_fn(out, target)
                 losses.append(loss.item())
@@ -146,8 +146,8 @@ class UD_GCN_Experiment(Experiment):
         for i,sample in enumerate(suff_ds):
             sample['qa_graphs'] = suff_edges[i]
         # predict
-        comp_pred, _ = zip(*self.model(comp_ds))
-        suff_pred, _ = zip(*self.model(suff_ds))
+        comp_pred, _ = zip(*self.model(comp_ds, softmax_logits=True))
+        suff_pred, _ = zip(*self.model(suff_ds, softmax_logits=True))
 
         # give option to do inter-train eval
         aopc_predictions = None
@@ -161,14 +161,14 @@ class UD_GCN_Experiment(Experiment):
                 ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(cds):
                     sample['qa_graphs'] = ce[i]
-                cp, _ = zip(*self.model(cds))
+                cp, _ = zip(*self.model(cds, softmax_logits=True))
                 cl = E.from_softmax(cp, to='dict') # labels
                 # suff
                 sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
                 se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(sds):
                     sample['qa_graphs'] = se[i]
-                sp, _ = zip(*self.model(sds))
+                sp, _ = zip(*self.model(sds, softmax_logits=True))
                 sl = E.from_softmax(sp, to='dict')
                 # aggregate
                 aopc_intermediate[aopc] = [aopc, cl, sl]
@@ -195,7 +195,7 @@ class UD_GCN_Experiment(Experiment):
             torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
 
         # cache used glove embeddings
-        if self.params['embedding'] == glove:
+        if self.params['embedding'] == 'glove':
             with open(LOC['glove_cache'], 'w') as outfile:
                 json.dump(self.model.embedding.cached_dict, outfile, sort_keys=True, indent=4)
         else:
