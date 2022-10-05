@@ -3,12 +3,13 @@ import io
 import os
 import json
 import math
+import yaml
 
 import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset
 from torch.nn import CrossEntropyLoss
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, Recall, Precision
 import plotly.express as px
 import pandas as pd
 import wandb
@@ -122,9 +123,15 @@ class UD_GCN_Experiment(Experiment):
     def eval_competence(self):
         self.model.eval()
         acc = Accuracy(num_classes=5)
+        prec = Precision(num_classes=5)
+        reca = Recall(num_classes=5)
         preds = torch.stack([torch.argmax(x) for x in self.val_pred[0]])
         ys = torch.Tensor(self.val_set['label']).int()
-        return acc(preds.int(), ys)
+        return {
+            'accuracy' : acc(preds.int(), ys).item(), 
+            'precision' : prec(preds.int(), ys).item(), 
+            'recall' : reca(preds.int(), ys).item()
+        }
 
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): # TODO only for GAT models
         if isinstance(self.model,GCN): return None
@@ -190,7 +197,13 @@ class UD_GCN_Experiment(Experiment):
             # saving model
             torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
             # saving cached glove vocabulary # TODO only if using glove...
+
         # cache used glove embeddings
         with open(LOC['glove_cache'], 'w') as outfile:
             json.dump(self.model.embedding.cached_dict, outfile, sort_keys=True, indent=4)
+        
+        # saving evaluation
+        with open(self.params['save_loc']+'evaluation.yaml', 'w') as file:
+            documents = yaml.dump(self.eval_output, file)
+
         return True

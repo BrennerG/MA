@@ -16,8 +16,11 @@ class GCN(torch.nn.Module):
         self.conv1 = GCNConv(self.embedding.dim, gcn_hidden_dim)
         self.conv2 = GCNConv(gcn_hidden_dim,1)
 
-    def forward(self, data): 
-        assert isinstance(data,dict)
+    def forward(self, data, **args): 
+        assert isinstance(data,dict) # single sample needed, iterable_forward not implemented!
+        # get relevant arguments
+        softmax_logits = args['softmax_logits'] if 'softmax_logits' in args else False
+
         proba_vec = torch.zeros(5)
         for i,answer in enumerate(data['answers']):
             qa = f"{data['question']} {answer}"
@@ -28,7 +31,9 @@ class GCN(torch.nn.Module):
             x = F.dropout(x, training=self.training)
             x = self.conv2(x, edge_index)
             proba_vec[i] = x.mean(dim=0) # same as torch_geometric.nn.pool.glob.global_mean_pool
-        return F.log_softmax(proba_vec, dim=0), None 
+
+        if softmax_logits: return F.log_softmax(proba_vec, dim=0), None 
+        return proba_vec, None
     
-    def __call__(self, sample, **args): # TODO feed args into forward as needed!
-        return self.forward(sample)
+    def __call__(self, sample, **args): 
+        return self.forward(sample, **args)
