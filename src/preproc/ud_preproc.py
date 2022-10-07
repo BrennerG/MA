@@ -10,8 +10,6 @@ from data.locations import LOC
 from preproc.graph_preproc import GraphPreproc
 
 
-# TODO mark cached files as UD as opposed to 4lang!
-
 class UDParser(GraphPreproc):
 
     def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):
@@ -42,10 +40,7 @@ class UDParser(GraphPreproc):
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
                 # parse through stanza & extract UD edges
-                if '?' in sample['question']: # TODO do this in dataset class?
-                    doc = self.ud_parser(f"{sample['question']} {answer}")
-                else:
-                    doc = self.ud_parser(f"{sample['question']} ? {answer}")
+                doc = self.ud_parser(f"{sample['question']} {answer}")
                 parsed = [word for sent in doc.sentences for word in sent.words] # stanza parse
                 edges = [(x.head-1, x.id-1) for x in parsed] # 0 is first tokens, -1 is root now
                 edges = [(a,b) for (a,b) in edges if a!=-1 and b!=-1]  # remove edges to root
