@@ -7,18 +7,16 @@ import json
 
 from datasets import load_dataset
 from data.locations import LOC
+from preproc.graph_preproc import GraphPreproc
 
 
-class UDParser():
+class UDParser(GraphPreproc):
 
     def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):
         self.params = params
         self.ud_parser = stanza.Pipeline(lang='en', processors=processors, use_gpu=params['use_cuda'])
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])
         self.root_token = '[ROOT]'
-
-    def __call__(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
-        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
 
     def parse(self, dataset, num_samples=-1, split='train', qa_join='none', use_cache=True):
         file_path = LOC['ud_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
