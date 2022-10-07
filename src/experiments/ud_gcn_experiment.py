@@ -15,7 +15,7 @@ import pandas as pd
 import wandb
 
 from experiments.experiment import Experiment
-from models.ud_preproc import UDParser
+from preproc.ud_preproc import UDParser
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E

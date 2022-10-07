@@ -2,7 +2,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 import torch
-from models.ud_preproc import UDParser
+from preproc.ud_preproc import UDParser
 from data.locations import LOC
 import json
 
