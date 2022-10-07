@@ -40,7 +40,7 @@ DEFAULT_PARAMS = {
         'num_layers': 7, 
         'input_dims': [512, 256, 64],
         'embedding': 'glove',
-        'graph_form': 'ud'
+        'graph_form': '4lang'
     }
 }
 

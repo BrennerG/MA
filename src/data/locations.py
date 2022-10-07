@@ -18,6 +18,7 @@ LOC = {
     'viz_dir': 'data/viz/',
     'bert_checkpoints': 'data/experiments/bert',
     'ud_parses': 'data/ud_parses/',
+    '4lang_parses': 'data/4lang_parses/',
     'glove_dir': 'data/glove',
     'glove_cache': 'data/glove/cached.json',
     'glove_embedding': 'data/glove/glove.840B.300d.txt'
