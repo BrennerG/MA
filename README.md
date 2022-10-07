@@ -24,7 +24,9 @@ _diagram incoming_
   - experiment w. other methods for aggregating attention?
   - pass data to lime in a better way? other API or sth?
   - experiment w. scaling of lime weights 
-* __UD + GCN__
+* __BERT*less GCN__ - glove + UDA + GCN
+  - Implementation:
+    - Efficiency metrics?
   - Experiments:
     - experiment w. pooling
     - implement batching?
