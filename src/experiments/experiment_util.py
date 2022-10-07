@@ -39,7 +39,8 @@ DEFAULT_PARAMS = {
         'num_heads': 2, 
         'num_layers': 7, 
         'input_dims': [512, 256, 64],
-        'embedding': 'glove'
+        'embedding': 'glove',
+        'graph_form': 'ud'
     }
 }
 

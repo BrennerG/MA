@@ -10,6 +10,8 @@ from data.locations import LOC
 from preproc.graph_preproc import GraphPreproc
 
 
+# TODO mark cached files as UD as opposed to 4lang!
+
 class UDParser(GraphPreproc):
 
     def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):

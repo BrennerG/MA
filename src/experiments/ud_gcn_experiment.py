@@ -20,6 +20,7 @@ from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
 from models.gcn import GCN
+from preproc.fourlang_preproc import FourLangParser
 
 
 class UD_GCN_Experiment(Experiment):
@@ -28,7 +29,7 @@ class UD_GCN_Experiment(Experiment):
         assert torch.cuda.is_available()
         self.params = params
         self.device = 'cuda:0' if ('use_cuda' in self.params and self.params['use_cuda']) else 'cpu'
-        self.udparser = UDParser(params=self.params)
+        self.graph_parser = self._graph_parser_factory()
         super().__init__(self.params)
         self.model.to(self.device)
         self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
@@ -37,7 +38,7 @@ class UD_GCN_Experiment(Experiment):
     def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
-        edges = [self.udparser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
+        edges = [self.graph_parser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('qa_graphs', edges[i])
         return cose, cose['train'], cose['validation'], cose['test']
@@ -137,12 +138,12 @@ class UD_GCN_Experiment(Experiment):
             pred, attn = self.val_pred
         # prepare Comprehensiveness
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
-        comp_edges = self.udparser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+        comp_edges = self.graph_parser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
         for i,sample in enumerate(comp_ds):
             sample['qa_graphs'] = comp_edges[i]
         # prepare Sufficiency
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
-        suff_edges = self.udparser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+        suff_edges = self.graph_parser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
         for i,sample in enumerate(suff_ds):
             sample['qa_graphs'] = suff_edges[i]
         # predict
@@ -158,14 +159,14 @@ class UD_GCN_Experiment(Experiment):
                 tokens_to_be_erased = math.ceil(aopc * self.avg_rational_lengths[split])
                 # comp
                 cds = EraserCosE.erase(attn, mode='comprehensiveness', split=split, k=tokens_to_be_erased)
-                ce = self.udparser(cds, num_samples=len(cds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+                ce = self.graph_parser(cds, num_samples=len(cds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(cds):
                     sample['qa_graphs'] = ce[i]
                 cp, _ = zip(*self.model(cds, softmax_logits=True))
                 cl = E.from_softmax(cp, to='dict') # labels
                 # suff
                 sds = EraserCosE.erase(attn, mode='sufficiency', split=split, k=tokens_to_be_erased)
-                se = self.udparser(sds, num_samples=len(sds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+                se = self.graph_parser(sds, num_samples=len(sds), split=split, qa_join=self.params['qa_join'], use_cache=False)
                 for i,sample in enumerate(sds):
                     sample['qa_graphs'] = se[i]
                 sp, _ = zip(*self.model(sds, softmax_logits=True))
@@ -206,3 +207,12 @@ class UD_GCN_Experiment(Experiment):
             documents = yaml.dump(self.eval_output, file)
 
         return True
+    
+    def _graph_parser_factory(self):
+        graph_form = self.params['graph_form'] if 'graph_form' in self.params else None
+        if graph_form == 'ud':
+            return UDParser(self.params)
+        elif graph_form == '4lang':
+            return FourLangParser(self.params)
+        else:
+            raise AttributeError(f"No graph formalism '{graph_form}' available! use 'ud' or '4lang'")
