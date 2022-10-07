@@ -13,6 +13,7 @@ from preproc.graph_preproc import GraphPreproc
 class UDParser(GraphPreproc):
 
     def __init__(self, params, processors="tokenize,mwt,pos,lemma,depparse"):
+        super().__init__()
         self.params = params
         self.ud_parser = stanza.Pipeline(lang='en', processors=processors, use_gpu=params['use_cuda'])
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])

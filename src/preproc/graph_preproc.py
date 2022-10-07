@@ -6,7 +6,7 @@ class GraphPreproc(ABC):
         pass
 
     def __call__(self, dataset, num_samples, split, qa_join, use_cache=True):
-        return self. parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
+        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
 
     @abstractmethod
     def parse(self, dataset, num_samples, split, qa_join, use_cache=True):
