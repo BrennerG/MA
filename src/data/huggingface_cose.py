@@ -132,6 +132,9 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
             rationale = list(X.evidences)[0][0]
             question = docs[X.annotation_id]
 
+            # remove '?' - we want to erase by words only, then re-attach the '?' afterwards
+            question.remove('?')
+
             # adjust len of attention weights
             if len(weights[i]) > len(question): 
                 attn = weights[i][:len(question)]
@@ -154,6 +157,9 @@ class EraserCosE(datasets.GeneratorBasedBuilder):
                 erased = [question[x] for x in top_idx]
             else:
                 raise AttributeError('evaluation mode unknown!')
+            
+            # re-attach '?' to form proper question
+            if '?' not in erased: erased += ['?']
 
             ret.append({
                 'id': X.annotation_id,
