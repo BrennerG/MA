@@ -37,10 +37,10 @@ DEFAULT_PARAMS = {
         'inter_training_expl_eval': False, 
         'dropout': 0.1, 
         'num_heads': 2, 
-        'num_layers': 7, 
+        'num_layers': 3, 
         'input_dims': [512, 256, 64],
         'embedding': 'glove',
-        'graph_form': '4lang'
+        'graph_form': 'ud'
     }
 }
 
