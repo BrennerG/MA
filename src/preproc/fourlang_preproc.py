@@ -49,6 +49,6 @@ class FourLangParser(GraphPreproc):
     def show(self, edge_index, tokens):
         raise NotImplementedError()
 
-    def tokens_from_nx(self, graph:networkx.Graph): # TODO this method needed?
+    def tokens_from_nx(self, graph:nx.Graph): # TODO this method needed?
         # return [x[1]['name'] for x in parse[1].nodes.data()] # TODO check order?
         return None
