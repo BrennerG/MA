@@ -91,7 +91,7 @@ def experiment_factory(exp_type:str, args:{}):
         raise AttributeError(f"experiment_type '{exp_type}' unknown!")
     
     # print start
-    print("\INITIALIZING EXPERIMENT")
+    print("INITIALIZING EXPERIMENT")
     for k,v in params.items(): print(f"\t{k}={v}")
 
     return exp
