@@ -39,6 +39,7 @@ class UDParser(GraphPreproc):
             grouped_edges = [] # 5 graphs per sample (=QA-pair)
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
+                assert sample['question'][-1] == '?'
                 # parse through stanza & extract UD edges
                 doc = self.ud_parser(f"{sample['question']} {answer}")
                 parsed = [word for sent in doc.sentences for word in sent.words] # stanza parse
