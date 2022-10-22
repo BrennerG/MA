@@ -83,7 +83,7 @@ class UD_GCN_Experiment(Experiment):
             train_acc = acc(torch.argmax(preds,dim=1), torch.Tensor(self.train_set['label']).int()).item()
             test_acc = acc(torch.argmax(test_preds,dim=1), torch.Tensor(self.val_set['label']).int()).item()
             if do_explainability_eval:
-                expl_eval = self.eval_explainability(self.params, pred=test_preds, attn=test_attn, skip_aopc=True)
+                expl_eval = self.eval_explainability(pred=test_preds, attn=test_attn, skip_aopc=True)
 
             # log on wandb
             result_dict = {
