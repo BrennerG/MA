@@ -12,9 +12,9 @@ from data.locations import LOC
 
 CPNET_VOC_PATH = "data/qa_gnn/concept.txt"
 
-TRAIN_PREDS_PATH = "data/qa_gnn/NEW_train_preds_20221026093204.csv"
-DEV_PREDS_PATH = "data/qa_gnn/NEW_dev_preds_20221026092536.csv"
-TEST_PREDS_PATH = "data/qa_gnn/NEW_test_preds_20221026094635.csv"
+TRAIN_PREDS_PATH = 'data/qa_gnn/NEW_train_preds_20221027145654.csv'
+DEV_PREDS_PATH = 'data/qa_gnn/NEW_dev_preds_20221027151911.csv'
+TEST_PREDS_PATH = 'data/qa_gnn/NEW_test_preds_20221027151244.csv'
 
 TRAIN_SET_PATH = 'data/qa_gnn/train_set.pickle'
 DEV_SET_PATH = 'data/qa_gnn/dev_set.pickle'
@@ -34,22 +34,25 @@ def get_from(qid, dataset, ds_type='og'):
 
 # def link_dataset(QA_GNN_STYLE_SPLIT='DEV')
 def run():
-    DATASET_CHOICE = 'dev'
+    DATASET_CHOICE = 'train'
 
     if DATASET_CHOICE == 'train':
         QAGNN_SET_PATH = TRAIN_SET_PATH
         QAGNN_PREDS_PATH = TRAIN_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_TRAIN_PATH
+        BATCH_SIZE = 32
 
     elif DATASET_CHOICE == 'dev':
         QAGNN_SET_PATH = DEV_SET_PATH
         QAGNN_PREDS_PATH = DEV_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_DEV_PATH
+        BATCH_SIZE = 1
 
     elif DATASET_CHOICE == 'test':
         QAGNN_SET_PATH = TEST_SET_PATH
         QAGNN_PREDS_PATH = TEST_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_TEST_PATH
+        BATCH_SIZE = 1
 
     # GET OG DATASET
     og_dataset = load_dataset(LOC['cose_huggingface'])
@@ -67,13 +70,15 @@ def run():
     preds = {}
     with open(QAGNN_PREDS_PATH) as csvfile:
         spamreader = csv.reader(csvfile, delimiter=";")
-        for row in spamreader:
-            qid = row[0]
+        for row in tqdm(spamreader, desc='reading predictions file'):
+            qids = [x.strip() for x in row[0].replace("'","").replace('[','').replace(']','').split(',')]
+            assert len(qids) <= BATCH_SIZE, 'ERROR: incorrect batch size'
             logits_str = row[1].replace(']','').replace('[','').split(',')
-            logits = np.array([float(x) for x in logits_str])
+            logits = np.array([float(x) for x in logits_str]).reshape(-1,5)
             attn_str = row[2].replace(']','').replace('[','').split(',')
-            attn = np.array([float(x) for x in attn_str]).reshape(2,5,200) # [nheads, nchoices, num_nodes]
-            preds[qid] = (logits, attn)
+            attn = np.array([float(x) for x in attn_str]).reshape(-1,2,5,200).squeeze() # [nheads, nchoices, num_nodes]
+            for b in range(len(qids)):
+                preds[qids[b]] = (logits[b], attn[b])
 
     # EXTRACT CONCEPT STRINGS FROM DATASET
     concepts = {}
@@ -86,14 +91,17 @@ def run():
         #edge_index, edge_type = self.batch_graph(edge_index, edge_type, concept_ids.size(1))
         #adj = (edge_index.to(node_type_ids.device), edge_type.to(node_type_ids.device)) #edge_index: [2, total_E]   edge_type: [total_E, ]
         # get concepts from prediction
-        pred_choice = np.argmax(preds[qids[0]][0])
-        concept_strings = [cpnet_voc[x] for x in concept_ids[pred_choice]]
-        concepts[qids[0]] = (concept_strings, node_type_ids[pred_choice])
+        for qid, batch_node_type_ids, batch_concept_ids in zip(qids, node_type_ids.view(-1,5,200), concept_ids.view(-1,5,200)):
+            pred_choice = np.argmax(preds[qid][0])
+            concept_strings = [cpnet_voc[x] for x in batch_concept_ids[pred_choice]]
+            concepts[qid] = (concept_strings, batch_node_type_ids[pred_choice])
  
-    assert list(preds.keys()) == [x[0][0] for x in dataset], 'prediction qids and dataset qids dont match!'
+    assert concepts.keys() == preds.keys()
+    #dataset[0][0][0] == list(preds.keys())[0] == list(concepts.keys())[0]
     
     # GET GROUNDED QAs
     # group by num_choice
+    # TODO CAREFUL ORDER OF GROUNDEDS DOESNT MATCH ANYMORE WITH concepts OR dataset...
     grounded = []
     with open(QAGNN_GROUNDED_PATH) as f:
         for qid in concepts.keys():
@@ -104,14 +112,12 @@ def run():
     
     # LINK (og_dataset, qagnn_dataset, grounded)
     linked_data = {}
-    ommited = 0
     for i,qid in enumerate(tqdm(concepts.keys(), desc='linking:')):
         # init
         try:
             og_sample = get_from(qid, og_dataset)
         except LookupError:
             print(f"WARNING: could not find sample {qid}. omitting...")
-            ommited += 1
             continue
         grounded_sample = grounded[i]
         concept_tokens, concept_types = concepts[qid] # only of prediction
