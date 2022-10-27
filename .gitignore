@@ -137,4 +137,5 @@ data/experiments/roberta*
 tmp
 cache
 data/glove/*
+data/qa_gnn/*
 wandb/*
