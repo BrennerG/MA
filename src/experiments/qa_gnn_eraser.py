@@ -3,9 +3,11 @@ import csv
 import pickle
 import numpy as np
 import json
+import os
 
 from tqdm import tqdm
 from datasets import load_dataset
+from copy import copy
 
 from data.locations import LOC
 
@@ -24,34 +26,98 @@ GROUNDED_TRAIN_PATH = 'data/qa_gnn/train.grounded.jsonl'
 GROUNDED_DEV_PATH = 'data/qa_gnn/dev.grounded.jsonl'
 GROUNDED_TEST_PATH = 'data/qa_gnn/test.grounded.jsonl'
 
+STATEMENTS_TRAIN_PATH = 'data/qa_gnn/train.statement.jsonl'
+STATEMENTS_DEV_PATH = 'data/qa_gnn/dev.statement.jsonl'
+STATEMENTS_TEST_PATH = 'data/qa_gnn/test.statement.jsonl'
+
+LINKED_DATA_PATH = "data/qa_gnn/linked_data_{}.json"
+
+ERASED_DATA_LOC = "data/qa_gnn/erased"
+
+#def erase(DATASET_CHOICE='dev'):
+def run(DATASET_CHOICE, DIRECTORY_STAMP):
+    # load og
+    og_dataset = load_dataset(LOC['cose_huggingface'])
+    # load linked data
+    with open(LINKED_DATA_PATH.format(DATASET_CHOICE)) as f:
+        data = json.load(f)
+    # make directory
+    DIR_PATH = f"{ERASED_DATA_LOC}/{DIRECTORY_STAMP}"
+    if not os.path.exists(DIR_PATH):
+        os.mkdir(DIR_PATH)
+    # erase tokens 
+    comp_file = open(f"{DIR_PATH}/{DATASET_CHOICE}_comp.jsonl", "a")
+    suff_file = open(f"{DIR_PATH}/{DATASET_CHOICE}_suff.jsonl", "a")
+    for qid,lsample in tqdm(data.items()):
+        logits = np.array(lsample['logits'])
+        attn = np.array(lsample['attention'])
+        ogsample = get_from(qid, og_dataset)
+        tokens = ogsample['question'].split()
+        assert len(attn) == len(tokens)
+        indices = attn.nonzero()[0]
+
+        # comprehensiveness
+        comp_tokens = tokens.copy()
+        for index in reversed(indices):
+            del comp_tokens[index]
+
+        # sufficiency
+        suff_tokens = []
+        for index in indices:
+            suff_tokens.append(tokens[index])
+
+        # form dataset
+        res_sample = {
+            "answerKey": ["A","B","C","D","E"][ogsample['label']],
+	        "id": qid,
+            "question": {
+                "question_concept": ogsample['context'],
+                "choices": [
+                    {"label": "A", "text": ogsample['answers'][0]},
+                    {"label": "B", "text": ogsample['answers'][1]},
+                    {"label": "C", "text": ogsample['answers'][2]},
+                    {"label": "D", "text": ogsample['answers'][3]},
+                    {"label": "E", "text": ogsample['answers'][4]}],
+            "stem": None}
+        }
+
+        # save datasets
+        res_sample['question']['stem'] = ' '.join(comp_tokens)
+        print (json.dumps(res_sample), file=comp_file)
+        res_sample['question']['stem'] = ' '.join(suff_tokens)
+        print (json.dumps(res_sample), file=suff_file)
+
+    return None
+
 def get_from(qid, dataset, ds_type='og'):
     assert ds_type == 'og'
-    for split in dataset:
+    for split in dataset.keys():
         for sample in dataset[split]:
             if sample['id'] == qid:
                 return sample
     raise LookupError(f"ERROR: sample {qid} not in {ds_type} dataset")
 
-# def link_dataset(QA_GNN_STYLE_SPLIT='DEV')
-def run():
-    DATASET_CHOICE = 'train'
+def link_dataset(DATASET_CHOICE='dev'):
 
     if DATASET_CHOICE == 'train':
         QAGNN_SET_PATH = TRAIN_SET_PATH
         QAGNN_PREDS_PATH = TRAIN_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_TRAIN_PATH
+        QAGNN_STATEMENT_PATH = STATEMENTS_TRAIN_PATH
         BATCH_SIZE = 32
 
     elif DATASET_CHOICE == 'dev':
         QAGNN_SET_PATH = DEV_SET_PATH
         QAGNN_PREDS_PATH = DEV_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_DEV_PATH
+        QAGNN_STATEMENT_PATH = STATEMENTS_DEV_PATH
         BATCH_SIZE = 1
 
     elif DATASET_CHOICE == 'test':
         QAGNN_SET_PATH = TEST_SET_PATH
         QAGNN_PREDS_PATH = TEST_PREDS_PATH
         QAGNN_GROUNDED_PATH = GROUNDED_TEST_PATH
+        QAGNN_STATEMENT_PATH = STATEMENTS_TEST_PATH
         BATCH_SIZE = 1
 
     # GET OG DATASET
@@ -76,7 +142,7 @@ def run():
             logits_str = row[1].replace(']','').replace('[','').split(',')
             logits = np.array([float(x) for x in logits_str]).reshape(-1,5)
             attn_str = row[2].replace(']','').replace('[','').split(',')
-            attn = np.array([float(x) for x in attn_str]).reshape(-1,2,5,200).squeeze() # [nheads, nchoices, num_nodes]
+            attn = np.array([float(x) for x in attn_str]).reshape(-1,2,5,200)
             for b in range(len(qids)):
                 preds[qids[b]] = (logits[b], attn[b])
 
@@ -97,33 +163,46 @@ def run():
             concepts[qid] = (concept_strings, batch_node_type_ids[pred_choice])
  
     assert concepts.keys() == preds.keys()
-    #dataset[0][0][0] == list(preds.keys())[0] == list(concepts.keys())[0]
     
+    # GET STATEMENTS FOR GROUNDED IDS!
+    grounded_ids = []
+    for file in [STATEMENTS_TRAIN_PATH, STATEMENTS_DEV_PATH, STATEMENTS_TEST_PATH]:
+        with open(file) as f:
+            for line in f:
+                grounded_ids.append(json.loads(line)['id'])
+ 
     # GET GROUNDED QAs
-    # group by num_choice
-    # TODO CAREFUL ORDER OF GROUNDEDS DOESNT MATCH ANYMORE WITH concepts OR dataset...
-    grounded = []
-    with open(QAGNN_GROUNDED_PATH) as f:
-        for qid in concepts.keys():
-            group = []
-            for i in range(5):
-                group.append(json.loads(f.__next__()))
-            grounded.append(group)
+    raw_grounded = []
+    for file in [GROUNDED_TRAIN_PATH, GROUNDED_DEV_PATH, GROUNDED_TEST_PATH]:
+        with open(file) as f:
+            for line in f:
+                raw_grounded.append(json.loads(line))
+    # reshape grounded
+    grounded = list(np.array(raw_grounded).reshape(-1,5))
+    grounded_dict = dict(zip(grounded_ids, grounded))
+    assert len([x for x in preds.keys() if x in grounded_ids]) == len(preds.keys())
+    # grounded_ids ist 9741, but every id from preds is in grounded_ids and vice versa...
     
     # LINK (og_dataset, qagnn_dataset, grounded)
+    # TODO we could also check for n_grams, since attn weights are concerned with n-grams of tokens
     linked_data = {}
-    for i,qid in enumerate(tqdm(concepts.keys(), desc='linking:')):
+    e=0
+    w=0
+    for qid in tqdm(concepts.keys(), desc='linking:'):
         # init
         try:
             og_sample = get_from(qid, og_dataset)
-        except LookupError:
+            grounded_sample = grounded_dict[qid]
+        except (LookupError, KeyError) as error:
             print(f"WARNING: could not find sample {qid}. omitting...")
+            e+=1
             continue
-        grounded_sample = grounded[i]
         concept_tokens, concept_types = concepts[qid] # only of prediction
         logits, attention = preds[qid]
         pred_choice = np.argmax(logits)
-        assert concept_types.tolist().count(0) == len(grounded_sample[pred_choice]['qc'])
+        if concept_types.tolist().count(0) != len(grounded_sample[pred_choice]['qc']):
+            print(f"WARNING: number of concept types doesnt match concepts @ {qid}")
+            w+=1
         # aggregate attention
         pred_attention = attention[:,pred_choice]
         agg_attention = np.mean(pred_attention, axis=0) # TODO if there's more experimentation on original arch, use the actual method for this!
@@ -131,7 +210,6 @@ def run():
         relevant_indices = (concept_types==0).nonzero().squeeze().tolist()
         relevant_attention = agg_attention.take(relevant_indices) # zip with tokens
         if isinstance(relevant_attention, np.float64): relevant_attention = [relevant_attention]
-        assert len(grounded_sample[pred_choice]['qc']) == len(relevant_attention)
         token_attn_dict = dict(zip(grounded_sample[pred_choice]['qc'], relevant_attention))
         linked_attention = [token_attn_dict[x] if x in token_attn_dict else 0.0 for x in og_sample['question'].split()]
         linked_data[qid] = {
@@ -143,4 +221,4 @@ def run():
     with open(f"data/qa_gnn/linked_data_{DATASET_CHOICE}.json", 'w', encoding ='utf8') as json_file:
         json.dump(linked_data, json_file, allow_nan=False)
 
-    return None
+    return linked_data
