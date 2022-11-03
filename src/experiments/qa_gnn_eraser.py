@@ -106,8 +106,8 @@ def run(DATASET_CHOICE, TIMESTAMP):
 
     scores = E.classification_scores(results=er_results, mode='custom', with_ids=doc_ids)
 
-    with open(f"data/qa_gnn/evaluation_{TIMESTAMP}.json", 'w') as f:
-        json.dump(scores,f)
+    with open(f"data/qa_gnn/evaluation/{DATASET_CHOICE}_eval_{TIMESTAMP}.json", 'w') as f:
+        json.dump(scores, f)
 
     return scores
 
