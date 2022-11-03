@@ -102,13 +102,19 @@ def classification_scores(results, mode, aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 
         annotations = EU.annotations_from_jsonl(LOC['cose_val'])
     elif mode == 'test':
         annotations = EU.annotations_from_jsonl(LOC['cose_test'])
+    elif mode == 'custom':
+        annotation_source = EU.annotations_from_jsonl(LOC['cose_train'])
+        annotation_source.extend(EU.annotations_from_jsonl(LOC['cose_val']))
+        annotation_source.extend(EU.annotations_from_jsonl(LOC['cose_test']))
+        assert with_ids != None
+        annotations = []
+        for ann in annotation_source:
+            if ann.annotation_id in with_ids and ann not in annotations:
+                annotations.append(ann)
+        assert len(annotations) == len(with_ids)
     else:
         raise AttributeError('mode unknown!')
     
-    # for debug or custom splits
-    if with_ids: 
-        annotations = [ann for ann in annotations if ann.annotation_id in with_ids]
-
     docs = EU.load_documents(LOC['cose'])
     assert [x['annotation_id'] for x in results] == [x['annotation_id'] for x in results]
     classifications = EM.score_classifications(results, annotations, docs, aopc_thresholds)

@@ -4,12 +4,14 @@ import pickle
 import numpy as np
 import json
 import os
+import torch
 
 from tqdm import tqdm
 from datasets import load_dataset
 from copy import copy
 
 from data.locations import LOC
+import evaluation.eval_util as E
 
 
 CPNET_VOC_PATH = "data/qa_gnn/concept.txt"
@@ -34,8 +36,88 @@ LINKED_DATA_PATH = "data/qa_gnn/linked_data_{}.json"
 
 ERASED_DATA_LOC = "data/qa_gnn/erased"
 
-#def erase(DATASET_CHOICE='dev'):
-def run(DATASET_CHOICE, DIRECTORY_STAMP):
+
+def get_preds(PATH, BATCH_SIZE):
+    preds = {}
+    csv.field_size_limit(sys.maxsize) # increase csv max reading size
+    with open(PATH) as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=";")
+        for row in tqdm(spamreader, desc='reading predictions file'):
+            qids = [x.strip() for x in row[0].replace("'","").replace('[','').replace(']','').split(',')]
+            assert len(qids) <= BATCH_SIZE, 'ERROR: incorrect batch size'
+            logits_str = row[1].replace(']','').replace('[','').split(',')
+            logits = np.array([float(x) for x in logits_str]).reshape(-1,5)
+            attn_str = row[2].replace(']','').replace('[','').split(',')
+            attn = np.array([float(x) for x in attn_str]).reshape(-1,2,5,200)
+            for b in range(len(qids)):
+                preds[qids[b]] = (logits[b], attn[b])
+    return preds
+
+# run ERASER
+def run(DATASET_CHOICE):
+    if DATASET_CHOICE == 'train':
+        preds_path = TRAIN_PREDS_PATH
+        comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_train_preds_20221031180500.csv'
+        suff_preds_path = None
+        BATCH_SIZE = 32
+    elif DATASET_CHOICE == 'dev':
+        preds_path = DEV_PREDS_PATH
+        comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_dev_preds_20221031181720.csv'
+        suff_preds_path = None
+        BATCH_SIZE = 1
+    elif DATASET_CHOICE == 'test':
+        preds_path = TEST_PREDS_PATH
+        comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_test_preds_20221101154716.csv'
+        suff_preds_path = None
+        BATCH_SIZE = 1
+
+    # INIT: GET ALL OF THESE
+    raw_pred = get_preds(preds_path, BATCH_SIZE)
+    raw_comp_pred = get_preds(comp_preds_path, BATCH_SIZE)
+    raw_suff_pred = get_preds(comp_preds_path, BATCH_SIZE) # TODO change to suff_preds_path
+
+    assert raw_comp_pred.keys() == raw_suff_pred.keys()
+    assert len(raw_pred) >= len(raw_comp_pred)
+
+    doc_ids = list(raw_comp_pred.keys())
+    choices = [np.argmax(raw_pred[qid][0],axis=0) for qid in doc_ids]
+    raw_attn = [raw_pred[qid][1] for qid in doc_ids]
+    attn = [] # TODO could write a method, bc this is also repeated in the link_data method
+    for c,a in zip(choices,raw_attn):
+        v = np.mean(a[:,c],axis=0)
+        attn.append(torch.Tensor(v))
+
+    # RE-SYNC comp-, suff- and regular-preds (indices)
+    comp_pred = [torch.Tensor(x[0]) for x in raw_comp_pred.values()]
+    suff_pred = [torch.Tensor(x[0]) for x in raw_suff_pred.values()]
+    pred = [x[1][0] for x in raw_pred.items() if x[0] in raw_comp_pred.keys()] # get rid of the qids we lost during comp-/suff-ing previously (41,1,1) for (train,dev,test)
+    
+    er_results = E.create_results(
+        docids=doc_ids,
+        predictions=pred,
+        comp_predicitons=comp_pred,
+        suff_predictions=suff_pred,
+        attentions=attn,
+        aopc_thresholded_scores=None)
+
+    scores = E.classification_scores(results=er_results, mode='custom', with_ids=doc_ids)
+    return scores
+
+    # er_results = E.create_results(
+    #   doc_ids === type list
+    #   pred === list of torch.Tensor, shape=torch.Size([5])
+    #   comp_pred === same as pred
+    #   suff_pred === same as pred
+    #   attn ===  list of torch.Tensor
+    #   aopc_thresholded_scores=aopc_predictions) === None
+
+    # return E.classification_scores(
+    #   results=er_results, === above
+    #   mode='val',  === create mode='custom'
+    #   aopc_thresholds=self.params['aopc_thresholds'], === not necessary?
+    #   with_ids=doc_ids) === see above
+
+def erase(DATASET_CHOICE, DIRECTORY_STAMP):
     # load og
     og_dataset = load_dataset(LOC['cose_huggingface'])
     # load linked data
@@ -68,7 +150,6 @@ def run(DATASET_CHOICE, DIRECTORY_STAMP):
 
         # form dataset
         res_sample = {
-            "answerKey": ["A","B","C","D","E"][ogsample['label']],
 	        "id": qid,
             "question": {
                 "question_concept": ogsample['context'],
@@ -78,8 +159,12 @@ def run(DATASET_CHOICE, DIRECTORY_STAMP):
                     {"label": "C", "text": ogsample['answers'][2]},
                     {"label": "D", "text": ogsample['answers'][3]},
                     {"label": "E", "text": ogsample['answers'][4]}],
-            "stem": None}
+                "stem": None
+            }
         }
+
+        if DATASET_CHOICE != 'test':
+            res_sample["answerKey"] = ["A","B","C","D","E"][ogsample['label']]
 
         # save datasets
         res_sample['question']['stem'] = ' '.join(comp_tokens)
@@ -132,6 +217,7 @@ def link_dataset(DATASET_CHOICE='dev'):
         dataset = pickle.load(handle)
     
     # GET PREDS
+    # TODO substitute and test this with get_preds(..)
     csv.field_size_limit(sys.maxsize) # increase csv max reading size
     preds = {}
     with open(QAGNN_PREDS_PATH) as csvfile:
@@ -204,6 +290,7 @@ def link_dataset(DATASET_CHOICE='dev'):
             print(f"WARNING: number of concept types doesnt match concepts @ {qid}")
             w+=1
         # aggregate attention
+        # TODO use aggregate_attention(..)
         pred_attention = attention[:,pred_choice]
         agg_attention = np.mean(pred_attention, axis=0) # TODO if there's more experimentation on original arch, use the actual method for this!
         # link tokens with attention scores
