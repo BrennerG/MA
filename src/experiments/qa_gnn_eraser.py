@@ -54,27 +54,27 @@ def get_preds(PATH, BATCH_SIZE):
     return preds
 
 # run ERASER
-def run(DATASET_CHOICE):
+def run(DATASET_CHOICE, TIMESTAMP):
     if DATASET_CHOICE == 'train':
         preds_path = TRAIN_PREDS_PATH
         comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_train_preds_20221031180500.csv'
-        suff_preds_path = None
+        suff_preds_path = 'data/qa_gnn/erased_predictions/suff/SUFF_train_preds_20221103104520.csv'
         BATCH_SIZE = 32
     elif DATASET_CHOICE == 'dev':
         preds_path = DEV_PREDS_PATH
         comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_dev_preds_20221031181720.csv'
-        suff_preds_path = None
+        suff_preds_path = 'data/qa_gnn/erased_predictions/suff/SUFF_dev_preds_20221103104013.csv'
         BATCH_SIZE = 1
     elif DATASET_CHOICE == 'test':
         preds_path = TEST_PREDS_PATH
         comp_preds_path = 'data/qa_gnn/erased_predictions/comp/COMP_test_preds_20221101154716.csv'
-        suff_preds_path = None
+        suff_preds_path = 'data/qa_gnn/erased_predictions/suff/SUFF_test_preds_20221103105610.csv'
         BATCH_SIZE = 1
 
     # INIT: GET ALL OF THESE
     raw_pred = get_preds(preds_path, BATCH_SIZE)
     raw_comp_pred = get_preds(comp_preds_path, BATCH_SIZE)
-    raw_suff_pred = get_preds(comp_preds_path, BATCH_SIZE) # TODO change to suff_preds_path
+    raw_suff_pred = get_preds(suff_preds_path, BATCH_SIZE)
 
     assert raw_comp_pred.keys() == raw_suff_pred.keys()
     assert len(raw_pred) >= len(raw_comp_pred)
@@ -86,11 +86,15 @@ def run(DATASET_CHOICE):
     for c,a in zip(choices,raw_attn):
         v = np.mean(a[:,c],axis=0)
         attn.append(torch.Tensor(v))
+    
+    # normalize
+    def normalize(x):
+        return (x-x.min()) / (x.max()-x.min())
 
     # RE-SYNC comp-, suff- and regular-preds (indices)
-    comp_pred = [torch.Tensor(x[0]) for x in raw_comp_pred.values()]
-    suff_pred = [torch.Tensor(x[0]) for x in raw_suff_pred.values()]
-    pred = [x[1][0] for x in raw_pred.items() if x[0] in raw_comp_pred.keys()] # get rid of the qids we lost during comp-/suff-ing previously (41,1,1) for (train,dev,test)
+    comp_pred = [torch.Tensor(normalize(x[0])) for x in raw_comp_pred.values()]
+    suff_pred = [torch.Tensor(normalize(x[0])) for x in raw_suff_pred.values()]
+    pred = [normalize(x[1][0]) for x in raw_pred.items() if x[0] in raw_comp_pred.keys()] # get rid of the qids we lost during comp-/suff-ing previously (41,1,1) for (train,dev,test)
     
     er_results = E.create_results(
         docids=doc_ids,
@@ -101,6 +105,10 @@ def run(DATASET_CHOICE):
         aopc_thresholded_scores=None)
 
     scores = E.classification_scores(results=er_results, mode='custom', with_ids=doc_ids)
+
+    with open(f"data/qa_gnn/evaluation_{TIMESTAMP}.json", 'w') as f:
+        json.dump(scores,f)
+
     return scores
 
     # er_results = E.create_results(

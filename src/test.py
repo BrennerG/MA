@@ -4,5 +4,5 @@ import datetime
 
 if __name__ == "__main__":
     dt = datetime.datetime.today().strftime('%Y%m%d%H%M%S') 
-    run('test')
-    print('DONE')
+    scores = run('test',dt)
+    print(scores)
