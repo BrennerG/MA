@@ -41,10 +41,12 @@ class FourLangParser(GraphPreproc):
     def extract_edges(self, dataset, num_samples=-1, qa_join='none'):
         edges = []
         maps = []
+        concepts = []
         for i, sample in enumerate(tqdm(dataset, desc='4lang-parsing cose...')):
             # 5 graphs per sample (=QA-pair)
             grouped_edges = [] 
             grouped_maps = []
+            grouped_concepts = []
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
                 # TODO current joining method: 'none'
@@ -62,6 +64,7 @@ class FourLangParser(GraphPreproc):
                 # append
                 grouped_edges.append(list(parse[0].edges))
                 grouped_maps.append(qa_to_4lang_map)
+                grouped_concepts.append(list(names.values()))
                 # save voc
                 for i,x in names.items():
                     if i not in self.id2concept:
@@ -73,8 +76,9 @@ class FourLangParser(GraphPreproc):
 
             edges.append(grouped_edges)
             maps.append(grouped_maps)
+            concepts.append(grouped_concepts)
 
-        return edges, maps
+        return edges, maps, concepts
     
     def tokenize(self, sentence:str):
         doc = self.tokenizer(sentence)
@@ -83,10 +87,3 @@ class FourLangParser(GraphPreproc):
         if 'qa_join' in self.params and self.params['qa_join'] == 'to-root':
             tokens.append(self.root_token)
         return tokens
-
-    def show(self, edge_index, tokens):
-        raise NotImplementedError()
-
-    def tokens_from_nx(self, graph:nx.Graph): # TODO this method needed?
-        # return [x[1]['name'] for x in parse[1].nodes.data()] # TODO check order?
-        return None

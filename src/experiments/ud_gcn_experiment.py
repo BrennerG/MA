@@ -15,12 +15,10 @@ import pandas as pd
 import wandb
 
 from experiments.experiment import Experiment
-from preproc.ud_preproc import UDParser
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
 from models.gcn import GCN
-from preproc.fourlang_preproc import FourLangParser
 
 
 class UD_GCN_Experiment(Experiment):
@@ -207,12 +205,3 @@ class UD_GCN_Experiment(Experiment):
             documents = yaml.dump(self.eval_output, file)
 
         return True
-    
-    def _graph_parser_factory(self):
-        graph_form = self.params['graph_form'] if 'graph_form' in self.params else None
-        if graph_form == 'ud':
-            return UDParser(self.params)
-        elif graph_form == '4lang':
-            return FourLangParser(self.params)
-        else:
-            raise AttributeError(f"No graph formalism '{graph_form}' available! use 'ud' or '4lang'")

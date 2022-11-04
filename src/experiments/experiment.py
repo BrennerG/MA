@@ -8,6 +8,9 @@ from models.bert import BertPipeline
 from models.random import RandomClassifier
 from models.gcn import GCN
 from models.gat import GATForMultipleChoice
+from models.bert_gat import BERT_GAT
+from preproc.ud_preproc import UDParser
+from preproc.fourlang_preproc import FourLangParser
 
 
 '''
@@ -111,9 +114,25 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
+        elif type == 'BERT_GAT':
+            model = BERT_GAT(self.params)
+            if 'load_from' in self.params:
+                if os.path.exists(f"{self.params['load_from']}/model.pt"): 
+                    model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
+                else:
+                    print(f"load_from location {self.params['load_from']} either not found or empty!")
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
+    
+    def _graph_parser_factory(self):
+        graph_form = self.params['graph_form'] if 'graph_form' in self.params else None
+        if graph_form == 'ud':
+            return UDParser(self.params)
+        elif graph_form == '4lang':
+            return FourLangParser(self.params)
+        else:
+            raise AttributeError(f"No graph formalism '{graph_form}' available! use 'ud' or '4lang'")
 
     @abstractmethod
     def init_data(self):

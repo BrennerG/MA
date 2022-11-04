@@ -1,6 +1,7 @@
 from experiments.bert_experiment import BERTExperiment
 from experiments.random_experiment import RandomClassifierExperiment
 from experiments.ud_gcn_experiment import UD_GCN_Experiment
+from experiments.final_experiment import FinalExperiment
 
 
 DEFAULT_PARAMS = {
@@ -87,6 +88,11 @@ def experiment_factory(exp_type:str, args:{}):
         params = clean_non_params(params)
         params['model_type'] = exp_type
         exp = UD_GCN_Experiment(params)
+    elif exp_type == 'final':
+        params = overwrite_params({**DEFAULT_PARAMS['general'], **DEFAULT_PARAMS['GNN']})
+        params = clean_non_params(params)
+        params['model_type'] = exp_type
+        exp = FinalExperiment(params)
     else:
         raise AttributeError(f"experiment_type '{exp_type}' unknown!")
     
