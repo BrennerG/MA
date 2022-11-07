@@ -17,6 +17,7 @@ class FinalExperiment(UD_GCN_Experiment):
         params['embedding'] = 'albert-base-v2'
         params['model_type'] = 'BERT_GAT'
         super().__init__(params)
+        self.model.GP = self.graph_parser
 
     def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])
@@ -24,7 +25,7 @@ class FinalExperiment(UD_GCN_Experiment):
         flang_parse = [self.graph_parser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('edges', flang_parse[i][0])
-            cose[split] = cose[split].add_column('qa_to_4l_map', flang_parse[i][1])
+            cose[split] = cose[split].add_column('nodes_to_qa_tokens', flang_parse[i][1])
             cose[split] = cose[split].add_column('concept_ids', flang_parse[i][2])
         return cose, cose['train'], cose['validation'], cose['test']
     

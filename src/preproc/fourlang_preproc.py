@@ -26,16 +26,31 @@ class FourLangParser(GraphPreproc):
     
     # __call__
     def parse(self, dataset, num_samples, split, qa_join, use_cache=True):
-        file_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
-        if os.path.exists(file_path) and use_cache:
-            print(f'4Lang_Parsing: Accessing cached file: {file_path}')
-            with open(file_path) as f:
+        edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
+        dicts_path = {
+            "concept2id" : LOC['4lang_parses'] + f'concept2id.json',
+            "id2concept" : LOC['4lang_parses'] + f'id2concept.json',
+            }
+        if os.path.exists(edges_path) and use_cache:
+            print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
+            with open(edges_path) as f:
                 edges = json.load(f)
+            with open(dicts_path['concept2id']) as f:
+                self.concept2id = json.load(f)
+            with open(dicts_path['id2concept']) as f:
+                self.id2concept = json.load(f)
         else:
             edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join)
             if use_cache:
-                with open(file_path, 'w') as outfile:
+                # save edges
+                with open(edges_path, 'w') as outfile:
                     json.dump(edges, outfile)
+                # save 4L dicts
+                with open(dicts_path['concept2id'], 'w') as outfile:
+                    json.dump(self.concept2id, outfile)
+                with open(dicts_path['id2concept'], 'w') as outfile:
+                    json.dump(self.id2concept, outfile)
+
         return edges
 
     def extract_edges(self, dataset, num_samples=-1, qa_join='none'):
@@ -55,15 +70,25 @@ class FourLangParser(GraphPreproc):
                 # TODO expansion mechanism here (set tfl depth>1)
                 parse = list(self.tfl(qa, depth=1, substitute=False))
                 # save mapping from qa order to 4lang ids
+                '''
                 qa_to_4lang_map = []
                 names = nx.get_node_attributes(parse[0], 'name')
                 for qai, tok in enumerate(qa_tokenized):
                     for i,w in names.items():
                         if tok == w or tok.lower() == w.lower():
                             qa_to_4lang_map.append((qai,i))
+                '''
+                # mapping from nodes to og tokens
+                nodes_to_qa_tokens = []
+                names = nx.get_node_attributes(parse[0], 'name')
+                for i,x in names.items():
+                    if x in qa_tokenized:
+                        nodes_to_qa_tokens.append(qa_tokenized.index(x))
+                    else:
+                        nodes_to_qa_tokens.append(None)
                 # append
                 grouped_edges.append(list(parse[0].edges))
-                grouped_maps.append(qa_to_4lang_map)
+                grouped_maps.append(nodes_to_qa_tokens)
                 grouped_concepts.append(list(names.values()))
                 # save voc
                 for i,x in names.items():
@@ -87,3 +112,6 @@ class FourLangParser(GraphPreproc):
         if 'qa_join' in self.params and self.params['qa_join'] == 'to-root':
             tokens.append(self.root_token)
         return tokens
+
+    def show(self, edge_index, tokens):
+        raise NotImplementedError()
