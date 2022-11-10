@@ -21,6 +21,7 @@ class BERT_GAT(torch.nn.Module):
     
     def forward(self, data, **args):
         assert isinstance(data,dict) # single sample needed, iterable_forward not implemented!
+        softmax_logits = args['softmax_logits'] if 'softmax_logits' in args else False
 
         proba_vec = torch.zeros(5)
         attentions = []
@@ -40,7 +41,7 @@ class BERT_GAT(torch.nn.Module):
             x = self.gconv1(x, edge_index)
             x = self.relu1(x)
             x, (edges, edge_attn) = self.gconv2(x, edge_index, return_attention_weights=True)
-            x = self.relu2(x)
+            # x = self.relu2(x) # TODO activate here?
 
             # pooling # TODO experiment
             proba_vec[i] = x.mean(dim=0)
@@ -55,7 +56,8 @@ class BERT_GAT(torch.nn.Module):
 
             assert len(token_attn) == len(qa_tokens)
 
-        return proba_vec, attentions
+        if softmax_logits: return F.softmax(proba_vec, dim=0), attentions[torch.argmax(proba_vec)]
+        return proba_vec, attentions[torch.argmax(proba_vec)]
     
     def __call__(self, data, **args):
         if isinstance(data, dict): # single sample
