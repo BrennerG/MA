@@ -107,7 +107,7 @@ class FourLangParser(GraphPreproc):
     def show(self, edge_index, tokens):
         raise NotImplementedError()
     
-    def save_concepts():
+    def save_concepts(self):
         # save 4L dicts
         assert self.concept2id != {} and self.id2concept != {}
         with open(dicts_path['concept2id'], 'w') as outfile:
