@@ -21,8 +21,10 @@ LOC = {
     '4lang_parses': 'data/4lang_parses/',
     'glove_dir': 'data/glove',
     'glove_cache': 'data/glove/cached.json',
-    'glove_embedding': 'data/glove/glove.840B.300d.txt'
+    'glove_embedding': 'data/glove/glove.840B.300d.txt',
 }
+LOC["4L_concept2id"] = LOC['4lang_parses'] + 'concept2id.json'
+LOC["4L_id2concept"] = LOC['4lang_parses'] + 'id2concept.json'
 
 # Creates all folders of the LOC dictionary
 def init_locations():

@@ -25,6 +25,7 @@ class FinalExperiment(UD_GCN_Experiment):
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
         flang_parse = [self.graph_parser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
+        self.graph_parser.save_concepts()
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('edges', flang_parse[i][0])
             cose[split] = cose[split].add_column('nodes_to_qa_tokens', flang_parse[i][1])
