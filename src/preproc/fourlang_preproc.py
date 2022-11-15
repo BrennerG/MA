@@ -5,6 +5,7 @@ import os.path
 import json
 import stanza
 import numpy as np
+import random
 
 from datasets import load_dataset
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
@@ -63,30 +64,37 @@ class FourLangParser(GraphPreproc):
             if num_samples > 0 and i >= num_samples: break # sample cut-off
             for answer in sample['answers']:
                 # TODO current joining method: 'none'
-                qa = f"{sample['question']} {answer}"
+                qa = f"{sample['question']} {answer}" 
                 qa_tokenized = self.tokenize(qa)
-                # TODO expansion mechanism here (set tfl depth>1)
-                parse = list(self.tfl(qa, depth=1, substitute=False))
+                parse = list(self.tfl(qa, depth=1, substitute=False)) # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
+                largest_parse = parse[np.argmax([len(x) for x in parse])]
 
-                # mapping from nodes to og tokens
-                nodes_to_qa_tokens = []
-                names = nx.get_node_attributes(parse[0], 'name')
-                for i,x in names.items():
-                    if x in qa_tokenized:
-                        nodes_to_qa_tokens.append(qa_tokenized.index(x))
-                    else:
-                        nodes_to_qa_tokens.append(None)
+                # are there any edges?
+                if len(largest_parse.edges) == 0:
+                    print("WARNING: 4L could not parse this QA. searching... (this may take a while)")
+                    running_tokens = qa_tokenized.copy()
+                    parse = largest_parse.copy()
+                    while len(running_tokens) > 0 and len(parse.edges) == 0:
+                        running_tokens = running_tokens[:-1]
+                        parse = list(self.tfl(" ".join(running_tokens), depth=1, substitute=False))[0] # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
+                    largest_parse = parse
+
+                # get mapping from nodes in order to qa_tokens
+                names = nx.get_node_attributes(largest_parse, 'name')
+                nodes_to_qa_tokens = self.map_nodes_to_og_tokens(names, qa_tokenized)
+
                 # append
-                grouped_edges.append(list(parse[0].edges))
+                grouped_edges.append(list(largest_parse.edges))
                 grouped_maps.append(nodes_to_qa_tokens)
                 grouped_concepts.append(list(names.values()))
+
                 # save voc
-                for i,x in names.items():
+                for n,x in names.items():
                     if x not in self.concept2id:
-                        if i in self.id2concept and self.id2concept[i] != x:
+                        if n in self.id2concept and self.id2concept[n] != x:
                             pos = max(self.id2concept)+1
                         else: 
-                            pos = i
+                            pos = n
                         self.id2concept[pos] = x
                         self.concept2id[x] = pos
 
@@ -110,7 +118,16 @@ class FourLangParser(GraphPreproc):
     def save_concepts(self):
         # save 4L dicts
         assert self.concept2id != {} and self.id2concept != {}
-        with open(dicts_path['concept2id'], 'w') as outfile:
+        with open(LOC['4L_concept2id'], 'w') as outfile:
             json.dump(self.concept2id, outfile)
-        with open(dicts_path['id2concept'], 'w') as outfile:
+        with open(LOC['4L_id2concept'], 'w') as outfile:
             json.dump(self.id2concept, outfile)
+
+    def map_nodes_to_og_tokens(self, names:dict, qa_tokenized:[]):
+        nodes_to_qa_tokens = []
+        for n,x in names.items():
+            if x in qa_tokenized:
+                nodes_to_qa_tokens.append(qa_tokenized.index(x))
+            else:
+                nodes_to_qa_tokens.append(None)
+        return nodes_to_qa_tokens
