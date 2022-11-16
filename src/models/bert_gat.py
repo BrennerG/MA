@@ -51,7 +51,7 @@ class BERT_GAT(torch.nn.Module):
             node_attn = self.aggregate_bert_attention(edges, edge_attn, bert_map)
             token_attn = [.0] * len(qa_tokens)
             for idx,n in enumerate(data['nodes_to_qa_tokens'][i]):
-                if n != None: 
+                if n != None and n < len(token_attn):
                     token_attn[n] = node_attn[idx].item()
             attentions.append(token_attn)
 
