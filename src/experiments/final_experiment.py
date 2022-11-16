@@ -18,6 +18,7 @@ class FinalExperiment(UD_GCN_Experiment):
         params['graph_form'] = '4lang'
         params['embedding'] = 'albert-base-v2'
         params['model_type'] = 'BERT_GAT'
+        print('WARNING: final experiment overwrites: graph_form=4lang, embedding=albert-base-v2, model_type=BERT_GAT')
         super().__init__(params)
         self.model.GP = self.graph_parser
 

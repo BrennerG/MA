@@ -10,6 +10,7 @@ class BERT_GAT(torch.nn.Module):
 
     def __init__(self, params:{}):
         super().__init__()
+        self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
         self.embedding = AlbertEmbedding(params)
         self.num_heads = params['num_heads'] if 'num_heads' in params else None
         self.gconv0 = GATConv(in_channels=768, out_channels=300, heads=self.num_heads, dropout=params['dropout'])
@@ -35,7 +36,7 @@ class BERT_GAT(torch.nn.Module):
             bert_map_with_4L_ids = [self.GP.concept2id[x] if x != None else None for x in tokens_bert_map]
 
             edge_index = self.match_bert(data['edges'][i], bert_map, bert_map_with_4L_ids)
-            edge_index = torch.tensor(edge_index).T
+            edge_index = torch.tensor(edge_index).T.to(self.device)
             x = self.gconv0(emb.squeeze(), edge_index)
             x = self.relu0(x)
             x = self.gconv1(x, edge_index)
