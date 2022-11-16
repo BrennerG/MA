@@ -98,6 +98,7 @@ class FourLangParser(GraphPreproc):
                         self.id2concept[pos] = x
                         self.concept2id[x] = pos
 
+            assert all([len(x) for x in grouped_edges]), 'ASSERTION ERROR: a 4L qa_graph has 0 edges D:' # check if #edges are >0 for all qa_graphs!
             edges.append(grouped_edges)
             maps.append(grouped_maps)
             concepts.append(grouped_concepts)
