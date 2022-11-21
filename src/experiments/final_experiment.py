@@ -3,6 +3,7 @@ import torch
 import yaml
 
 from datasets import load_dataset
+import torch.nn as nn
 
 from experiments.ud_gcn_experiment import UD_GCN_Experiment
 from data.locations import LOC
@@ -21,6 +22,10 @@ class FinalExperiment(UD_GCN_Experiment):
         print('WARNING: final experiment overwrites: graph_form=4lang, embedding=albert-base-v2, model_type=BERT_GAT')
         super().__init__(params)
         self.model.GP = self.graph_parser
+
+        # TODO ugly but we can't set this anywhere else easily
+        self.model.concept_emb = nn.Embedding(max(self.graph_parser.id2concept), 1024)
+        if 'use_cuda' in params and params['use_cuda']: self.model.concept_emb = self.model.concept_emb.cuda()
 
     def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])

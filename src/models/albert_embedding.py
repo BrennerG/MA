@@ -10,6 +10,7 @@ class AlbertEmbedding():
     
     def __call__(self, text:str, return_bert_map=False): # TODO _call_single and _call_iterable (this is call_single)
         inputs = self.tokenizer(text.split(), return_tensors='pt', return_offsets_mapping=True, is_split_into_words=True)
+
         # create bert_map
         offset_mapping = inputs.pop('offset_mapping') # not allowed as input for model!
         is_subword = (offset_mapping[0][:,0] != 0).tolist()
@@ -25,6 +26,7 @@ class AlbertEmbedding():
             else: 
                 c+=1
                 bert_map.append(c)
+
         # run through albert
         inputs = {k: v.to(self.device) for k, v in inputs.items()} 
         outputs = self.model(**inputs)
