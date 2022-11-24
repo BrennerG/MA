@@ -83,11 +83,16 @@ class FourLangParser(GraphPreproc):
                 names = nx.get_node_attributes(largest_parse, 'name')
                 nodes_to_qa_tokens = self.map_nodes_to_og_tokens(names, qa_tokenized)
 
+                # correct dict ids
+                ordered_names = {x:names[x] for x in sorted(names.keys())}
+                corr_map = dict(zip(ordered_names, range(len(ordered_names))))
+                relative_edges = [(corr_map[x], corr_map[y]) for x,y in largest_parse.edges]
+
                 # append
                 grouped_edges.append(list(largest_parse.edges))
                 grouped_maps.append(nodes_to_qa_tokens)
                 grouped_concepts.append(list(names.values()))
-
+            
                 # save voc
                 for n,x in names.items():
                     if x not in self.concept2id:
