@@ -60,9 +60,10 @@ class Experiment(ABC):
             prediction_params = deepcopy(self.params)
             prediction_params['softmax_logits'] = True
             preds = []
-            for sample in tqdm(self.val_set):
-                preds.append(self.model(sample, **prediction_params))  
-            self.val_pred = list(zip(*preds))
+            with torch.no_grad():
+                for sample in tqdm(self.val_set):
+                    preds.append(self.model(sample, **prediction_params))  
+                self.val_pred = list(zip(*preds))
             # evaluating
             print('evaluating...')
             self.eval_output = self.evaluate()
