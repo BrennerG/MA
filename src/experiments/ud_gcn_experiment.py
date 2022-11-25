@@ -106,14 +106,15 @@ class UD_GCN_Experiment(Experiment):
         loss_fn = CrossEntropyLoss()
         losses = []
 
-        for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
-            out, attn = self.model(sample)
-            target = torch.Tensor([sample['label']]).squeeze().long()
-            preds[i] = out
-            attentions.append(attn)
-            loss = loss_fn(out, target)
-            losses.append(loss.item())
-        
+        with torch.no_grad():
+            for i,sample in enumerate(tqdm(self.val_set, desc='inter-train eval:')):
+                out, attn = self.model(sample)
+                target = torch.Tensor([sample['label']]).squeeze().long()
+                preds[i] = out
+                attentions.append(attn)
+                loss = loss_fn(out, target)
+                losses.append(loss.item())
+            
         return preds, attentions, losses
     
     def eval_competence(self):
