@@ -72,8 +72,9 @@ class FinalExperiment(UD_GCN_Experiment):
             sample['concept_ids'] = suff_concept_ids[i]
 
         # erased Predictions
-        comp_pred, _ = zip(*self.model(comp_ds, softmax_logits=True))
-        suff_pred, _ = zip(*self.model(suff_ds, softmax_logits=True))
+        with torch.no_grad():
+            comp_pred, _ = zip(*self.model(comp_ds, softmax_logits=True))
+            suff_pred, _ = zip(*self.model(suff_ds, softmax_logits=True))
 
         doc_ids = self.val_set['id']
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=None) # TODO aopcs?
