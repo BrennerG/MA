@@ -5,8 +5,8 @@ class GraphPreproc(ABC):
     def __init__(self):
         self.root_token = '[ROOT]'
 
-    def __call__(self, dataset, num_samples, split, qa_join, use_cache=True):
-        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, use_cache=use_cache)
+    def __call__(self, dataset, num_samples, split, qa_join, **kwargs):
+        return self.parse(dataset, num_samples=num_samples, split=split, qa_join=qa_join, **kwargs)
 
     @abstractmethod
     def parse(self, dataset, num_samples, split, qa_join, use_cache=True):

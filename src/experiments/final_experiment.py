@@ -30,7 +30,7 @@ class FinalExperiment(UD_GCN_Experiment):
     def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])
         # add graph edges as new cols to the dataset
-        flang_parse = [self.graph_parser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join']) for (split,ds) in cose.items()]
+        flang_parse = [self.graph_parser(ds, num_samples=len(ds), split=split, qa_join=self.params['qa_join'], use_cache=True) for (split,ds) in cose.items()]
         self.graph_parser.save_concepts() # TODO put this in save?
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('edges', flang_parse[i][0])
@@ -45,7 +45,13 @@ class FinalExperiment(UD_GCN_Experiment):
 
         # prepare Comprehensiveness
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
-        comp_edges, comp_nodes_to_qa_tokens, comp_concept_ids = self.graph_parser(comp_ds, num_samples=len(comp_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+        comp_edges, comp_nodes_to_qa_tokens, comp_concept_ids = self.graph_parser(
+            comp_ds, 
+            num_samples=len(comp_ds), 
+            split=split, 
+            qa_join=self.params['qa_join'], 
+            use_cache=False,
+            use_existing_concept_ids=True)
         for i,sample in enumerate(comp_ds):
             sample['edges'] = comp_edges[i]
             sample['nodes_to_qa_tokens'] = comp_nodes_to_qa_tokens[i]
@@ -53,7 +59,13 @@ class FinalExperiment(UD_GCN_Experiment):
 
         # prepare Sufficiency
         suff_ds = EraserCosE.erase(attn, mode='sufficiency', split=split)
-        suff_edges, suff_nodes_to_qa_tokens, suff_concept_ids = self.graph_parser(suff_ds, num_samples=len(suff_ds), split=split, qa_join=self.params['qa_join'], use_cache=False)
+        suff_edges, suff_nodes_to_qa_tokens, suff_concept_ids = self.graph_parser(
+            suff_ds, 
+            num_samples=len(suff_ds), 
+            split=split, 
+            qa_join=self.params['qa_join'], 
+            use_cache=False, 
+            use_existing_concept_ids=True)
         for i,sample in enumerate(suff_ds):
             sample['edges'] = suff_edges[i]
             sample['nodes_to_qa_tokens'] = suff_nodes_to_qa_tokens[i]

@@ -37,14 +37,17 @@ class FourLangParser(GraphPreproc):
         pass
     
     # __call__
-    def parse(self, dataset, num_samples, split, qa_join, use_cache=True):
+    def parse(self, dataset, num_samples, split, qa_join, **kwargs):
+        use_cache = kwargs['use_cache'] if 'use_cache' in kwargs else False
+        use_existing_concept_ids = kwargs['use_existing_concept_ids'] if 'use_existing_concept_ids' in kwargs else False
+
         edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
                 edges = json.load(f)
         else:
-            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join)
+            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join, use_existing_concept_ids=use_existing_concept_ids)
             if use_cache:
                 # save edges
                 with open(edges_path, 'w') as outfile:
@@ -52,10 +55,11 @@ class FourLangParser(GraphPreproc):
         
         return edges
 
-    def extract_edges(self, dataset, num_samples=-1, qa_join='none'):
+    def extract_edges(self, dataset, num_samples=-1, qa_join='none', use_existing_concept_ids=False):
         edges = []
         maps = []
         concepts = []
+
         for i, sample in enumerate(tqdm(dataset, desc='4lang-parsing cose...')):
             # 5 graphs per sample (=QA-pair)
             grouped_edges = [] 
@@ -71,13 +75,30 @@ class FourLangParser(GraphPreproc):
 
                 # are there any edges?
                 if len(largest_parse.edges) == 0:
-                    print("WARNING: 4L could not parse this QA. searching... (this may take a while)")
-                    running_tokens = qa_tokenized.copy()
-                    parse = largest_parse.copy()
-                    while len(running_tokens) > 0 and len(parse.edges) == 0:
-                        running_tokens = running_tokens[:-1]
-                        parse = list(self.tfl(" ".join(running_tokens), depth=1, substitute=False))[0] # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
-                    largest_parse = parse
+                   largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse)
+                
+                # fallback method: use question context to build graph
+                if largest_parse == None:
+                    context = sample['context']
+                    largest_parse = list(self.tfl(sample['context'], depth=2, substitute=False))[0]
+                
+                # somehow the ids given by 4Lang reset during explainability eval
+                # so this clause is rather specifically for expl.eval to use the established concept ids
+                if use_existing_concept_ids:
+                    names = nx.get_node_attributes(largest_parse, 'name')
+                    old_ids = []
+                    for x in names.values():
+                        if x in self.concept2id:
+                            old_ids.append(self.concept2id[x])
+                        else:
+                            pos = max(self.id2concept)+1
+                            self.id2concept[pos] = x
+                            self.concept2id[x] = pos
+                            old_ids.append(pos)
+                    map_to_existing = dict(zip(list(largest_parse.nodes), old_ids))
+                    largest_parse = nx.relabel_nodes(largest_parse, map_to_existing)
+
+                assert len(largest_parse.edges) > 0
 
                 # get mapping from nodes in order to qa_tokens
                 names = nx.get_node_attributes(largest_parse, 'name')
@@ -137,3 +158,12 @@ class FourLangParser(GraphPreproc):
             else:
                 nodes_to_qa_tokens.append(None)
         return nodes_to_qa_tokens
+    
+    def search_for_possible_graph(self, qa_tokenized, parse):
+        running_tokens = qa_tokenized.copy()
+        while len(running_tokens) > 0 and len(parse.edges) == 0:
+            running_tokens = running_tokens[:-1]
+            if len(running_tokens) == 0: return None
+            parse = list(self.tfl(" ".join(running_tokens), depth=1, substitute=False))[0] # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
+            if len(parse.edges) > 0: return parse
+        return None
