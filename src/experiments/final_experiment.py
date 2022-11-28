@@ -24,7 +24,7 @@ class FinalExperiment(UD_GCN_Experiment):
         self.model.GP = self.graph_parser
 
         # TODO ugly but we can't set this anywhere else easily
-        self.model.concept_emb = nn.Embedding(max(self.graph_parser.id2concept), 1024)
+        self.model.concept_emb = nn.Embedding(max(self.graph_parser.id2concept)*2, 1024)
         if 'use_cuda' in params and params['use_cuda']: self.model.concept_emb = self.model.concept_emb.cuda()
 
     def init_data(self):
