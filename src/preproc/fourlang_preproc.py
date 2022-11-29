@@ -40,6 +40,8 @@ class FourLangParser(GraphPreproc):
     def parse(self, dataset, num_samples, split, qa_join, **kwargs):
         use_cache = kwargs['use_cache'] if 'use_cache' in kwargs else False
         use_existing_concept_ids = kwargs['use_existing_concept_ids'] if 'use_existing_concept_ids' in kwargs else False
+        max_num_nodes = kwargs['max_num_nodes'] if 'max_num_nodes' in kwargs else None
+        expand = kwargs['expand'] if 'expand' in kwargs else None
 
         edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
         if os.path.exists(edges_path) and use_cache:
@@ -47,7 +49,7 @@ class FourLangParser(GraphPreproc):
             with open(edges_path) as f:
                 edges = json.load(f)
         else:
-            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join, use_existing_concept_ids=use_existing_concept_ids)
+            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join, use_existing_concept_ids=use_existing_concept_ids, max_num_nodes=max_num_nodes, expand=expand)
             if use_cache:
                 # save edges
                 with open(edges_path, 'w') as outfile:
@@ -55,7 +57,7 @@ class FourLangParser(GraphPreproc):
         
         return edges
 
-    def extract_edges(self, dataset, num_samples=-1, qa_join='none', use_existing_concept_ids=False):
+    def extract_edges(self, dataset, num_samples=-1, qa_join='none', use_existing_concept_ids=False, max_num_nodes=None, expand=None):
         edges = []
         maps = []
         concepts = []
@@ -70,15 +72,15 @@ class FourLangParser(GraphPreproc):
                 # TODO current joining method: 'none'
                 qa = f"{sample['question']} {answer}" 
                 qa_tokenized = self.tokenize(qa)
-                largest_parse = self.dynamic_4lang_parse(qa, max_num_nodes=200)
+                largest_parse = self.fourlang_parse(qa, max_num_nodes=max_num_nodes, expand=expand)
 
                 # are there any edges?
                 if len(largest_parse.edges) == 0:
-                   largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse)
+                   largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse, max_num_nodes=max_num_nodes, expand=expand)
                 
                 # fallback method: use question context to build graph
                 if largest_parse == None:
-                    largest_parse = self.dynamic_4lang_parse(sample['context'], max_num_nodes=200)
+                    largest_parse = self.fourlang_parse(sample['context'], max_num_nodes=max_num_nodes, expand=expand)
                 
                 # somehow the ids given by 4Lang reset during explainability eval
                 # so this clause is rather specifically for expl.eval to use the established concept ids
@@ -157,12 +159,12 @@ class FourLangParser(GraphPreproc):
                 nodes_to_qa_tokens.append(None)
         return nodes_to_qa_tokens
     
-    def search_for_possible_graph(self, qa_tokenized, parse, max_num_nodes=200):
+    def search_for_possible_graph(self, qa_tokenized, parse, max_num_nodes, expand):
         running_tokens = qa_tokenized.copy()
         while len(running_tokens) > 0 and len(parse.edges) == 0:
             running_tokens = running_tokens[:-1]
             if len(running_tokens) == 0: return None
-            parse = self.dynamic_4lang_parse(" ".join(running_tokens), max_num_nodes)
+            parse = self.fourlang_parse(" ".join(running_tokens), max_num_nodes, expand)
             if len(parse.edges) > 0: return parse
         return None
     
@@ -182,3 +184,11 @@ class FourLangParser(GraphPreproc):
                 return initial_parse
         
         return parses[-2]
+    
+    def fourlang_parse(self, qa, max_num_nodes=None, expand=None):
+        if max_num_nodes != None:
+            return self.dynamic_4lang_parse(qa, max_num_nodes)
+        elif expand != None:
+            parse = list(self.tfl(qa, depth=expand, substitute=False))
+            largest_parse = parse[np.argmax([len(x) for x in parse])]
+            return largest_parse

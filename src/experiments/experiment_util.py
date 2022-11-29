@@ -41,7 +41,9 @@ DEFAULT_PARAMS = {
         'embedding': 'albert-base-v2',
         'graph_form': '4lang',
         'gat_hidden_dim': 200,
-        'bert_dim': 768
+        'bert_dim': 768,
+        #'max_num_nodes': 200,
+        'expand': 3
     }
 }
 
