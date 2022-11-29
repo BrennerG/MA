@@ -70,8 +70,7 @@ class FourLangParser(GraphPreproc):
                 # TODO current joining method: 'none'
                 qa = f"{sample['question']} {answer}" 
                 qa_tokenized = self.tokenize(qa)
-                parse = list(self.tfl(qa, depth=1, substitute=False)) # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
-                largest_parse = parse[np.argmax([len(x) for x in parse])]
+                largest_parse = self.dynamic_4lang_parse(qa, max_num_nodes=200)
 
                 # are there any edges?
                 if len(largest_parse.edges) == 0:
@@ -79,8 +78,7 @@ class FourLangParser(GraphPreproc):
                 
                 # fallback method: use question context to build graph
                 if largest_parse == None:
-                    context = sample['context']
-                    largest_parse = list(self.tfl(sample['context'], depth=2, substitute=False))[0]
+                    largest_parse = self.dynamic_4lang_parse(sample['context'], max_num_nodes=200)
                 
                 # somehow the ids given by 4Lang reset during explainability eval
                 # so this clause is rather specifically for expl.eval to use the established concept ids
@@ -159,11 +157,28 @@ class FourLangParser(GraphPreproc):
                 nodes_to_qa_tokens.append(None)
         return nodes_to_qa_tokens
     
-    def search_for_possible_graph(self, qa_tokenized, parse):
+    def search_for_possible_graph(self, qa_tokenized, parse, max_num_nodes=200):
         running_tokens = qa_tokenized.copy()
         while len(running_tokens) > 0 and len(parse.edges) == 0:
             running_tokens = running_tokens[:-1]
             if len(running_tokens) == 0: return None
-            parse = list(self.tfl(" ".join(running_tokens), depth=1, substitute=False))[0] # TODO expansion mechanism here (set tfl depth>1) & dynamic num_node capping
+            parse = self.dynamic_4lang_parse(" ".join(running_tokens), max_num_nodes)
             if len(parse.edges) > 0: return parse
         return None
+    
+    def dynamic_4lang_parse(self, qa, max_num_nodes=200):
+        running_depth = 0
+        fails = 0
+        initial_parse = list(self.tfl(qa, depth=running_depth, substitute=False))
+        initial_largest_parse = initial_parse[np.argmax([len(x) for x in initial_parse])]
+        parses = [initial_largest_parse]
+
+        while(len(parses[-1].nodes)<=max_num_nodes):
+            parse = list(self.tfl(qa, depth=running_depth, substitute=False))
+            largest_parse = parse[np.argmax([len(x) for x in parse])]
+            parses.append(largest_parse)
+            running_depth += 1
+            if len(largest_parse.edges) < 1 or len(largest_parse.nodes) < 1:
+                return initial_parse
+        
+        return parses[-2]
