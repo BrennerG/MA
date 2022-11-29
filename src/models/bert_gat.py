@@ -36,7 +36,7 @@ class BERT_GAT(torch.nn.Module):
 
     def forward(self, data, **args):
         assert isinstance(data,dict) # single sample needed, iterable_forward not implemented!
-        softmax_logits = args['softmax_logits'] if 'softmax_logits' in args else False
+        softmax_logits = args['softmax_logits'] if 'softmax_logits' in args else True
         proba_vec = torch.zeros(5)
         attentions = []
 
