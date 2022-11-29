@@ -205,4 +205,8 @@ class UD_GCN_Experiment(Experiment):
         with open(self.params['save_loc']+'evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
 
+        # saving evaluation
+        with open(self.params['save_loc']+'params.yaml', 'w') as file:
+            saved_params = yaml.dump(self.params, file)
+
         return True
