@@ -36,12 +36,12 @@ DEFAULT_PARAMS = {
         'weight_decay': 0,
         'qa_join': 'to-root',
         'inter_training_expl_eval': False, 
-        'dropout': 0.1, 
+        'dropout': 0.2,
         'num_heads': 2, 
-        'num_layers': 3, 
-        'input_dims': [512, 256, 64],
-        'embedding': 'glove',
-        'graph_form': 'ud'
+        'embedding': 'albert-base-v2',
+        'graph_form': '4lang',
+        'gat_hidden_dim': 200,
+        'bert_dim': 768
     }
 }
 

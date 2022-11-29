@@ -17,16 +17,17 @@ class BERT_GAT(torch.nn.Module):
         # PARAMS
         self.device = 'cuda:0' if ('use_cuda' in params and params['use_cuda']) else 'cpu'
         self.num_heads = params['num_heads'] if 'num_heads' in params else None
-        self.gat_hidden_dim = 200
-        self.bert_dim = 768
-        self.dropout_rate = 0.2
+        self.gat_hidden_dim = params['gat_hidden_dim'] if 'gat_hidden_dim' in params else 200
+        self.bert_dim = params['bert_dim'] if 'bert_dim' in params else 768
+        self.dropout_rate = params['dropout'] if 'dropout' in params else 0.2
+        self.inital_concept_dim = 1024
 
         # MODULES
         self.activation = nn.GELU()
         self.embedding = AlbertEmbedding(params)
         self.sentence_linear = nn.Linear(self.bert_dim, self.gat_hidden_dim)
         self.concept_emb = None # nn.Embedding(None, 1024)
-        self.concept_linear = nn.Linear(1024, self.gat_hidden_dim)
+        self.concept_linear = nn.Linear(self.initial_concept_dim , self.gat_hidden_dim)
         self.pre_gnn_dropout = nn.Dropout(self.dropout_rate)
         self.gat_layers = GatModule(params) # TODO
         self.pooler = Pooler(params,self.bert_dim,self.gat_hidden_dim)
