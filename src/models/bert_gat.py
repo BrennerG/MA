@@ -20,7 +20,7 @@ class BERT_GAT(torch.nn.Module):
         self.gat_hidden_dim = params['gat_hidden_dim'] if 'gat_hidden_dim' in params else 200
         self.bert_dim = params['bert_dim'] if 'bert_dim' in params else 768
         self.dropout_rate = params['dropout'] if 'dropout' in params else 0.2
-        self.inital_concept_dim = 1024
+        self.initial_concept_dim = 1024
 
         # MODULES
         self.activation = nn.GELU()
