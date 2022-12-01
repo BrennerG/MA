@@ -6,6 +6,7 @@ import json
 import stanza
 import numpy as np
 import random
+import unicodedata
 
 from datasets import load_dataset
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
@@ -13,8 +14,6 @@ from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from data.locations import LOC
 from preproc.graph_preproc import GraphPreproc
 
-
-# TODO do qa_joining centrally or is this not possible?
 
 class FourLangParser(GraphPreproc):
 
@@ -43,13 +42,20 @@ class FourLangParser(GraphPreproc):
         max_num_nodes = kwargs['max_num_nodes'] if 'max_num_nodes' in kwargs else None
         expand = kwargs['expand'] if 'expand' in kwargs else None
 
-        edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
+        edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}_X{expand}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
                 edges = json.load(f)
         else:
-            edges = self.extract_edges(dataset=dataset, num_samples=num_samples, qa_join=qa_join, use_existing_concept_ids=use_existing_concept_ids, max_num_nodes=max_num_nodes, expand=expand)
+            edges = self.extract_edges(
+                dataset=dataset, 
+                num_samples=num_samples, 
+                qa_join=qa_join, 
+                use_existing_concept_ids=use_existing_concept_ids, 
+                max_num_nodes=max_num_nodes, 
+                expand=expand
+            )
             if use_cache:
                 # save edges
                 with open(edges_path, 'w') as outfile:
@@ -63,14 +69,22 @@ class FourLangParser(GraphPreproc):
         concepts = []
 
         for i, sample in enumerate(tqdm(dataset, desc='4lang-parsing cose...')):
+
             # 5 graphs per sample (=QA-pair)
             grouped_edges = [] 
             grouped_maps = []
             grouped_concepts = []
             if num_samples > 0 and i >= num_samples: break # sample cut-off
-            for answer in sample['answers']:
-                # TODO current joining method: 'none'
-                qa = f"{sample['question']} {answer}" 
+
+            # prepare QAs
+            if self.params['qa_join'] == 'statements':
+                QAs = sample['statements']
+            else: # == "to_root"
+                QAs = [f"{sample['question']} {a}" for a in sample['answers']]
+
+            # PARSE
+            for qa in QAs:
+                qa = unicodedata.normalize('NFD', qa).encode('ascii', 'ignore').decode('utf-8') # strip special characters
                 qa_tokenized = self.tokenize(qa)
                 largest_parse = self.fourlang_parse(qa, max_num_nodes=max_num_nodes, expand=expand)
 

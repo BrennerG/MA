@@ -9,6 +9,7 @@ from experiments.ud_gcn_experiment import UD_GCN_Experiment
 from data.locations import LOC
 from data.huggingface_cose import EraserCosE
 import evaluation.eval_util as E
+from data.statements_cose import StatementLoader
 
 
 # 4LANG + BERT + GAT
@@ -29,10 +30,17 @@ class FinalExperiment(UD_GCN_Experiment):
 
     def init_data(self):
         cose = load_dataset(LOC['cose_huggingface'])
+
         # get params
         use_cache = self.params['use_cache'] if 'use_cache' in self.params else True
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
         expand = self.params['expand'] if 'expand' in self.params else None
+
+        # use_qagnn_statements
+        if self.params['qa_join']=='statements':
+            statement_loader = StatementLoader()
+            cose = statement_loader.add_statements(cose)
+
         # parse all splits
         flang_parse = [
             self.graph_parser(
@@ -45,11 +53,13 @@ class FinalExperiment(UD_GCN_Experiment):
                 expand=expand) 
         for (split,ds) in cose.items()]
         self.graph_parser.save_concepts() # TODO put this in save?
+
         # add graph edges as new cols to the dataset
         for i,split in enumerate(cose):
             cose[split] = cose[split].add_column('edges', flang_parse[i][0])
             cose[split] = cose[split].add_column('nodes_to_qa_tokens', flang_parse[i][1])
             cose[split] = cose[split].add_column('concept_ids', flang_parse[i][2])
+
         return cose, cose['train'], cose['validation'], cose['test']
 
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
