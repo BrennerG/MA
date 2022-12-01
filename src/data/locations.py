@@ -24,8 +24,6 @@ LOC = {
     'glove_embedding': 'data/glove/glove.840B.300d.txt',
     'statements_folder': 'data/statements/'
 }
-LOC["4L_concept2id"] = LOC['4lang_parses'] + 'concept2id.json'
-LOC["4L_id2concept"] = LOC['4lang_parses'] + 'id2concept.json'
 
 # Creates all folders of the LOC dictionary
 def init_locations():

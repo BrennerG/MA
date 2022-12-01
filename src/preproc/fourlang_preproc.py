@@ -22,18 +22,23 @@ class FourLangParser(GraphPreproc):
         self.params = params
         self.tfl = TextTo4lang("en", "en_nlp_cache")
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])
-        if os.path.exists(LOC['4L_concept2id']) and use_cache:
-            with open(LOC['4L_concept2id']) as f:
+
+        expand = params['expand'] if 'expand' in params else ""
+        self.concept2id_path = LOC['4lang_parses'] + f"X{expand}/" + 'concept2id.json'
+        self.id2concept_path = LOC['4lang_parses'] + f"X{expand}/" + 'id2concept.json'
+
+        if os.path.exists(self.concept2id_path) and use_cache:
+            with open(self.concept2id_path) as f:
                 self.concept2id = json.load(f)
         else:
             self.concept2id = {}
-        if os.path.exists(LOC['4L_id2concept']) and use_cache:
-            with open(LOC['4L_id2concept']) as f:
+
+        if os.path.exists(self.id2concept_path) and use_cache:
+            with open(self.id2concept_path) as f:
                 self.id2concept = json.load(f)
                 self.id2concept = {int(k):v for k,v in self.id2concept.items()}
         else:
             self.id2concept = {}
-        pass
     
     # __call__
     def parse(self, dataset, num_samples, split, qa_join, **kwargs):
@@ -42,7 +47,7 @@ class FourLangParser(GraphPreproc):
         max_num_nodes = kwargs['max_num_nodes'] if 'max_num_nodes' in kwargs else None
         expand = kwargs['expand'] if 'expand' in kwargs else None
 
-        edges_path = LOC['4lang_parses'] + f'cose_{split}_{str(num_samples)}_{qa_join}_X{expand}.json'
+        edges_path = LOC['4lang_parses'] + f"X{str(expand)}/" + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
@@ -159,9 +164,9 @@ class FourLangParser(GraphPreproc):
     def save_concepts(self):
         # save 4L dicts
         assert self.concept2id != {} and self.id2concept != {}
-        with open(LOC['4L_concept2id'], 'w') as outfile:
+        with open(self.concept2id_path, 'w') as outfile:
             json.dump(self.concept2id, outfile)
-        with open(LOC['4L_id2concept'], 'w') as outfile:
+        with open(self.id2concept_path, 'w') as outfile:
             json.dump(self.id2concept, outfile)
 
     def map_nodes_to_og_tokens(self, names:dict, qa_tokenized:[]):
