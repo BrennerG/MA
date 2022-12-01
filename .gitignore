@@ -139,3 +139,4 @@ cache
 data/glove/*
 data/qa_gnn/*
 wandb/*
+data/4lang_parses/X3/*
