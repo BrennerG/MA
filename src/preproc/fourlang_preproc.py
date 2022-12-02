@@ -82,6 +82,9 @@ class FourLangParser(GraphPreproc):
 
         for i, sample in enumerate(tqdm(dataset, desc='4lang-parsing cose...')):
 
+            if i < 80: 
+                continue
+
             # 5 graphs per sample (=QA-pair)
             grouped_edges = [] 
             grouped_maps = []
@@ -200,13 +203,12 @@ class FourLangParser(GraphPreproc):
         parses = [initial_largest_parse]
 
         while(len(parses[-1].nodes)<=max_num_nodes):
+            running_depth += 1
             parse = list(self.tfl(qa, depth=running_depth, substitute=False))
             largest_parse = parse[np.argmax([len(x) for x in parse])]
             parses.append(largest_parse)
-            running_depth += 1
             if len(largest_parse.edges) < 1 or len(largest_parse.nodes) < 1:
-                return initial_parse
-        
+                return initial_largest_parse
         return parses[-2]
 
     def fourlang_parse(self, qa, max_num_nodes=None, expand=None):
