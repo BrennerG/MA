@@ -67,6 +67,10 @@ class FinalExperiment(UD_GCN_Experiment):
         if pred==None or attn==None:
             pred, attn = self.val_pred
 
+        # get params
+        max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
+        expand = self.params['expand'] if 'expand' in self.params else None
+
         # prepare Comprehensiveness
         comp_ds = EraserCosE.erase(attn, mode='comprehensiveness', split=split)
         comp_edges, comp_nodes_to_qa_tokens, comp_concept_ids = self.graph_parser(
@@ -75,7 +79,10 @@ class FinalExperiment(UD_GCN_Experiment):
             split=split, 
             qa_join=self.params['qa_join'], 
             use_cache=False,
-            use_existing_concept_ids=True)
+            use_existing_concept_ids=True,
+            max_num_nodes=max_num_nodes,
+            expand=expand
+        )
         for i,sample in enumerate(comp_ds):
             sample['edges'] = comp_edges[i]
             sample['nodes_to_qa_tokens'] = comp_nodes_to_qa_tokens[i]
@@ -89,7 +96,10 @@ class FinalExperiment(UD_GCN_Experiment):
             split=split, 
             qa_join=self.params['qa_join'], 
             use_cache=False, 
-            use_existing_concept_ids=True)
+            use_existing_concept_ids=True,
+            max_num_nodes=max_num_nodes,
+            expand=expand
+        )
         for i,sample in enumerate(suff_ds):
             sample['edges'] = suff_edges[i]
             sample['nodes_to_qa_tokens'] = suff_nodes_to_qa_tokens[i]

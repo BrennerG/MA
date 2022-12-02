@@ -23,9 +23,16 @@ class FourLangParser(GraphPreproc):
         self.tfl = TextTo4lang("en", "en_nlp_cache")
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])
 
-        expand = params['expand'] if 'expand' in params else ""
-        self.concept2id_path = LOC['4lang_parses'] + f"X{expand}/" + 'concept2id.json'
-        self.id2concept_path = LOC['4lang_parses'] + f"X{expand}/" + 'id2concept.json'
+        expand = params['expand'] if 'expand' in params else None
+        max_num_nodes = params['max_num_nodes'] if 'max_num_nodes' in params else None
+        if max_num_nodes == None and expand != None:
+            self.folder_path = f"X{expand}/"
+        elif max_num_nodes != None and expand == None:
+            self.folder_path = f"MAX{max_num_nodes}/"
+        else:
+            raise AttributeError("Either max_num_nodes or expand must be set for 4Lang preprocessing")
+        self.concept2id_path = LOC['4lang_parses'] + self.folder_path + 'concept2id.json'
+        self.id2concept_path = LOC['4lang_parses'] + self.folder_path + 'id2concept.json'
 
         if os.path.exists(self.concept2id_path) and use_cache:
             with open(self.concept2id_path) as f:
@@ -47,7 +54,7 @@ class FourLangParser(GraphPreproc):
         max_num_nodes = kwargs['max_num_nodes'] if 'max_num_nodes' in kwargs else None
         expand = kwargs['expand'] if 'expand' in kwargs else None
 
-        edges_path = LOC['4lang_parses'] + f"X{str(expand)}/" + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
+        edges_path = LOC['4lang_parses'] + self.folder_path + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
@@ -93,14 +100,12 @@ class FourLangParser(GraphPreproc):
                 qa_tokenized = self.tokenize(qa)
                 largest_parse = self.fourlang_parse(qa, max_num_nodes=max_num_nodes, expand=expand)
 
-                # are there any edges?
-                if len(largest_parse.edges) == 0:
-                   largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse, max_num_nodes=max_num_nodes, expand=expand)
-                
-                # fallback method: use question context to build graph
-                if largest_parse == None:
+                # fallback methods
+                if largest_parse == None: # use question context to build graph
                     largest_parse = self.fourlang_parse(sample['context'], max_num_nodes=max_num_nodes, expand=expand)
-                
+                elif len(largest_parse.edges) == 0:# are there any edges?
+                    largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse, max_num_nodes=max_num_nodes, expand=expand)
+               
                 # somehow the ids given by 4Lang reset during explainability eval
                 # so this clause is rather specifically for expl.eval to use the established concept ids
                 if use_existing_concept_ids:
@@ -203,7 +208,7 @@ class FourLangParser(GraphPreproc):
                 return initial_parse
         
         return parses[-2]
-    
+
     def fourlang_parse(self, qa, max_num_nodes=None, expand=None):
         if max_num_nodes != None:
             return self.dynamic_4lang_parse(qa, max_num_nodes)
@@ -211,3 +216,5 @@ class FourLangParser(GraphPreproc):
             parse = list(self.tfl(qa, depth=expand, substitute=False))
             largest_parse = parse[np.argmax([len(x) for x in parse])]
             return largest_parse
+        else:
+            raise AttributeError('either max_num_nodes or expand has to not be None!')
