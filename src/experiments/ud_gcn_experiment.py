@@ -96,6 +96,10 @@ class UD_GCN_Experiment(Experiment):
                 wandb.log(result_dict)
             else:
                 print(result_dict)
+            
+            # save model
+            saved = self.save_model()
+            print(f"SAVED MODEL TO: {saved}")
 
         return None
     
@@ -186,13 +190,8 @@ class UD_GCN_Experiment(Experiment):
         return True
 
     def save(self):
-        # no save location, no saving
-        if 'save_loc' in self.params: 
-            # create save location
-            if not os.path.exists(self.params['save_loc']):
-                os.mkdir(self.params['save_loc'])
-            # saving model
-            torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
+        # save the model
+        self.save_model()
 
         # cache used glove embeddings
         if self.params['embedding'] == 'glove':
@@ -210,3 +209,14 @@ class UD_GCN_Experiment(Experiment):
             saved_params = yaml.dump(self.params, file)
 
         return True
+    
+    def save_model(self):
+        if 'save_loc' in self.params: 
+            filepath = f"{self.params['save_loc']}/model.pt"
+            # create save location
+            if not os.path.exists(self.params['save_loc']):
+                os.mkdir(self.params['save_loc'])
+            # saving model
+            torch.save(self.model.state_dict(), filepath)
+            return filepath
+        return "NOT SAVED"
