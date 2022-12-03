@@ -141,3 +141,4 @@ data/qa_gnn/*
 wandb/*
 data/4lang_parses/X2/*
 data/4lang_parses/X3/*
+data/4lang_parses/MAX200/*
