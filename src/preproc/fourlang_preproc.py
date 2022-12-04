@@ -105,6 +105,8 @@ class FourLangParser(GraphPreproc):
                     largest_parse = self.fourlang_parse(sample['context'], max_num_nodes=max_num_nodes, expand=expand)
                 elif len(largest_parse.edges) == 0:# are there any edges?
                     largest_parse = self.search_for_possible_graph(qa_tokenized, largest_parse, max_num_nodes=max_num_nodes, expand=expand)
+                    if largest_parse == None:
+                        largest_parse = self.fourlang_parse(sample['context'], max_num_nodes=max_num_nodes, expand=expand)
                
                 # somehow the ids given by 4Lang reset during explainability eval
                 # so this clause is rather specifically for expl.eval to use the established concept ids
