@@ -21,6 +21,7 @@ class BERT_GAT(torch.nn.Module):
         self.bert_dim = params['bert_dim'] if 'bert_dim' in params else 768
         self.dropout_rate = params['dropout'] if 'dropout' in params else 0.2
         self.initial_concept_dim = 1024
+        self.bidirectional = params['bidirectional'] if 'bidirectional' in params else False
 
         # MODULES
         self.activation = nn.GELU()
@@ -61,6 +62,9 @@ class BERT_GAT(torch.nn.Module):
             # GAT
             # edge_index = self.match_bert(data['edges'][i], bert_map, bert_map_with_4L_ids)
             edge_index = self.relative_edges(concept_tokens, data['edges'][i])
+            if self.bidirectional:
+                inv_edges = [[b,a] for a,b in edge_index if [b,a] not in edge_index]
+                edge_index.extend(inv_edges)
             edge_index = torch.tensor(edge_index).T.to(self.device)
             gnn_input = self.pre_gnn_dropout(torch.cat((sentence_node,nodes),dim=0))
             gnn_output, edge_attn = self.gat_layers(gnn_input, edge_index)

@@ -43,7 +43,8 @@ DEFAULT_PARAMS = {
         'gat_hidden_dim': 200,
         'bert_dim': 768,
         'max_num_nodes': None,
-        'expand': None
+        'expand': None,
+        'bidirectional': True
     }
 }
 
