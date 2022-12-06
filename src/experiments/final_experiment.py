@@ -126,7 +126,7 @@ class FinalExperiment(UD_GCN_Experiment):
             torch.save(self.model.state_dict(), f"{self.params['save_loc']}/model.pt")
 
         # saving evaluation
-        with open(self.params['save_loc']+'evaluation.yaml', 'w') as file:
+        with open(self.params['save_loc']+'/evaluation.yaml', 'w') as file:
             documents = yaml.dump(self.eval_output, file)
 
         return True
