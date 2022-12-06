@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 
+from torch.nn import GELU
 from torch_geometric.nn import GAT, GATConv
 from models.albert_embedding import AlbertEmbedding
 
@@ -33,7 +34,8 @@ class BERT_GAT(torch.nn.Module):
         self.gat_layers = GatModule(params) # TODO
         self.pooler = Pooler(params,self.bert_dim,self.gat_hidden_dim)
         self.fc_dropout = nn.Dropout(self.dropout_rate)
-        self.fc = nn.Linear(self.gat_hidden_dim*2 + self.bert_dim,1)
+        #self.old_fc = nn.Linear(self.gat_hidden_dim*2 + self.bert_dim,1)
+        self.fc = MLP(input_size=self.gat_hidden_dim*2+self.bert_dim, hidden_size=self.gat_hidden_dim, output_size=1, num_layers=0, dropout=self.dropout_rate, layer_norm=True)
    
 
     def forward(self, data, **args):
@@ -231,3 +233,45 @@ class MatrixVectorScaledDotProductAttention(nn.Module):
         attn = self.dropout(attn)
         output = (attn.unsqueeze(2) * v).sum(1)
         return output, attn
+
+class MLP(nn.Module):
+    """
+    Multi-layer perceptron
+
+    Parameters
+    ----------
+    num_layers: number of hidden layers
+    """
+    activation_classes = {'gelu': GELU, 'relu': nn.ReLU, 'tanh': nn.Tanh}
+
+    def __init__(self, input_size, hidden_size, output_size, num_layers, dropout, batch_norm=False,
+                 init_last_layer_bias_to_zero=False, layer_norm=False, activation='gelu'):
+        super().__init__()
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.batch_norm = batch_norm
+        self.layer_norm = layer_norm
+
+        assert not (self.batch_norm and self.layer_norm)
+
+        self.layers = nn.Sequential()
+        for i in range(self.num_layers + 1):
+            n_in = self.input_size if i == 0 else self.hidden_size
+            n_out = self.hidden_size if i < self.num_layers else self.output_size
+            self.layers.add_module(f'{i}-Linear', nn.Linear(n_in, n_out))
+            if i < self.num_layers:
+                self.layers.add_module(f'{i}-Dropout', nn.Dropout(self.dropout))
+                if self.batch_norm:
+                    self.layers.add_module(f'{i}-BatchNorm1d', nn.BatchNorm1d(self.hidden_size))
+                if self.layer_norm:
+                    self.layers.add_module(f'{i}-LayerNorm', nn.LayerNorm(self.hidden_size))
+                self.layers.add_module(f'{i}-{activation}', self.activation_classes[activation.lower()]())
+        if init_last_layer_bias_to_zero:
+            self.layers[-1].bias.data.fill_(0)
+
+    def forward(self, input):
+        return self.layers(input)
