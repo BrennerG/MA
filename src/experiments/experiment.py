@@ -9,6 +9,7 @@ from models.random import RandomClassifier
 from models.gcn import GCN
 from models.gat import GATForMultipleChoice
 from models.bert_gat import BERT_GAT
+from models.qagnn.modeling_qagnn import LM_QAGNN
 from preproc.ud_preproc import UDParser
 from preproc.fourlang_preproc import FourLangParser
 
@@ -122,6 +123,27 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
+        elif type == "qagnn":
+            num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
+            assert num_concepts != None
+            model = LM_QAGNN(
+                args=None,
+                model_name='bert-large-uncased',
+                k=5,
+                n_ntype=1, # basic case
+                n_etype=1 , # basic case,
+                n_concept=num_concepts, # TODO pass this here
+                concept_dim=100,
+                concept_in_dim=1024,
+                n_attention_head=2,
+                fc_dim=200,
+                n_fc_layer=0,
+                p_emb=0.2,
+                p_gnn=0.2,
+                p_fc=0.2
+            )
+            if 'load_from' in self.params:
+                raise AttributeError('ERR: no loading for qagnn implemented yet!')
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
