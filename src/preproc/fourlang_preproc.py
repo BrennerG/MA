@@ -201,7 +201,7 @@ class FourLangParser(GraphPreproc):
         initial_largest_parse = initial_parse[np.argmax([len(x) for x in initial_parse])]
         parses = [initial_largest_parse]
 
-        while(len(parses[-1].nodes)<=max_num_nodes):
+        while(len(parses[-1].nodes)<max_num_nodes):
             running_depth += 1
             parse = list(self.tfl(qa, depth=running_depth, substitute=False))
             largest_parse = parse[np.argmax([len(x) for x in parse])]
