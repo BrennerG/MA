@@ -275,16 +275,16 @@ class LM_QAGNN_DataLoader(object):
         num_choice = self.train_encoder_data[0].size(1)
         self.num_choice = num_choice
         print ('num_choice', num_choice)
-        *self.train_decoder_data, self.train_adj_data = load_sparse_adj_data_with_contextnode(train_adj_path, max_node_num, num_choice, args)
+        *self.train_decoder_data, self.train_adj_data = DUMMY_load_sparse_adj_data_with_contextnode(train_adj_path, max_node_num, num_choice, args)
 
-        *self.dev_decoder_data, self.dev_adj_data = load_sparse_adj_data_with_contextnode(dev_adj_path, max_node_num, num_choice, args)
-        assert all(len(self.train_qids) == len(self.train_adj_data[0]) == x.size(0) for x in [self.train_labels] + self.train_encoder_data + self.train_decoder_data)
-        assert all(len(self.dev_qids) == len(self.dev_adj_data[0]) == x.size(0) for x in [self.dev_labels] + self.dev_encoder_data + self.dev_decoder_data)
+        *self.dev_decoder_data, self.dev_adj_data = DUMMY_load_sparse_adj_data_with_contextnode(dev_adj_path, max_node_num, num_choice, args)
+        #assert all(len(self.train_qids) == len(self.train_adj_data[0]) == x.size(0) for x in [self.train_labels] + self.train_encoder_data + self.train_decoder_data)
+        #assert all(len(self.dev_qids) == len(self.dev_adj_data[0]) == x.size(0) for x in [self.dev_labels] + self.dev_encoder_data + self.dev_decoder_data)
 
         if test_statement_path is not None:
             self.test_qids, self.test_labels, *self.test_encoder_data = load_input_tensors(test_statement_path, model_type, model_name, max_seq_length)
-            *self.test_decoder_data, self.test_adj_data = load_sparse_adj_data_with_contextnode(test_adj_path, max_node_num, num_choice, args)
-            assert all(len(self.test_qids) == len(self.test_adj_data[0]) == x.size(0) for x in [self.test_labels] + self.test_encoder_data + self.test_decoder_data)
+            *self.test_decoder_data, self.test_adj_data = DUMMY_load_sparse_adj_data_with_contextnode(test_adj_path, max_node_num, num_choice, args)
+            #assert all(len(self.test_qids) == len(self.test_adj_data[0]) == x.size(0) for x in [self.test_labels] + self.test_encoder_data + self.test_decoder_data)
 
 
         if self.is_inhouse:

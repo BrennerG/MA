@@ -76,6 +76,9 @@ class MultiGPUSparseAdjDataBatchGenerator(object):
             return obj.to(device)
 
 
+def DUMMY_load_sparse_adj_data_with_contextnode(adj_pk_path, max_node_num, num_choice, args):
+    return None, None
+
 def load_sparse_adj_data_with_contextnode(adj_pk_path, max_node_num, num_choice, args):
     cache_path = adj_pk_path +'.loaded_cache'
     use_cache = True
