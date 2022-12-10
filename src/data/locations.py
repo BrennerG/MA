@@ -22,7 +22,10 @@ LOC = {
     'glove_dir': 'data/glove',
     'glove_cache': 'data/glove/cached.json',
     'glove_embedding': 'data/glove/glove.840B.300d.txt',
-    'statements_folder': 'data/statements/'
+    'statements_folder': 'data/statements/',
+    'qagnn_train': 'data/qa_gnn/raw/train_rand_split.jsonl',
+    'qagnn_dev': 'data/qa_gnn/raw/dev_rand_split.jsonl',
+    'qagnn_test': 'data/qa_gnn/raw/test_rand_split_no_answers.jsonl'
 }
 
 # Creates all folders of the LOC dictionary

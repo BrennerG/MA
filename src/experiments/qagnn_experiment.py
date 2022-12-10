@@ -29,7 +29,10 @@ class QagnnExperiment(FinalExperiment):
         self.params['model_type'] == 'qagnn'
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
-        self.device = 'cuda:0' if ('use_cuda' in self.params and self.params['use_cuda']) else 'cpu'
+        # set devices # TODO don't hardcode
+        # self.device = 'cuda:0' if ('use_cuda' in self.params and self.params['use_cuda']) else 'cpu'
+        self.device0 = torch.device("cpu") 
+        self.device1 = torch.device("cpu")
         # prepare graph parser
         self.graph_parser = self._graph_parser_factory()
         # general stuff
@@ -40,17 +43,54 @@ class QagnnExperiment(FinalExperiment):
         self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
 
     def init_data(self):
-        cose = load_dataset(LOC['cose_huggingface'])
+        # IMITATE PARAMETERS / ARGS
+        args = Namespace(**self.params)
 
-        # get params
+        # qagnn data_loader params
+        args.train_statements = 'data/qa_gnn/train.statement.jsonl'
+        args.train_adj = None
+        args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
+        args.dev_adj = None
+        args.test_statements = 'data/qa_gnn/test.statement.jsonl'
+        args.test_adj = None
+        args.batch_size = 32
+        args.eval_batch_size = 16
+        args.encoder = 'bert-large-uncased'
+        args.max_node_num = self.params['max_num_nodes']
+        args.drop_partial_batch = False
+        args.fill_partial_batch = False
+
+        # fourlang_parser params
         use_cache = self.params['use_cache'] if 'use_cache' in self.params else True
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
         expand = self.params['expand'] if 'expand' in self.params else None
 
-        # use_qagnn_statements
-        if self.params['qa_join']=='statements':
-            statement_loader = StatementLoader()
-            cose = statement_loader.add_statements(cose)
+        # LOAD DATA
+        dataset = LM_QAGNN_DataLoader(
+            args,
+            args.train_statements,
+            args.train_adj,
+            args.dev_statements,
+            args.dev_adj,
+            args.test_statements,
+            args.test_adj,
+            batch_size=args.batch_size,
+            eval_batch_size=args.eval_batch_size,
+            device=(self.device0, self.device1),
+            model_name=args.encoder,
+            max_node_num=args.max_node_num,
+
+            #is_inhouse=True, # TODO correct?
+            #inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt" # TODO above
+
+            #max_seq_length=args.max_seq_len,)
+            #subsample=args.subsample,  # 1.0
+            #use_cache=args.use_cache) # True
+        )
+
+        self.train_set = self.prepare_qagnn_data(path=LOC['qagnn_train'])
+        self.dev_set = self.prepare_qagnn_data(path=LOC['qagnn_dev'])
+        self.test_set = self.prepare_qagnn_data(path=LOC['qagnn_test'])
 
         # parse all splits
         self.flang_train, self.flang_dev, self.flang_test = [
@@ -62,12 +102,37 @@ class QagnnExperiment(FinalExperiment):
                 use_cache=use_cache,
                 max_num_nodes=max_num_nodes,
                 expand=expand
-            ) for (split,ds) in cose.items()
+            ) for (split, ds) in zip(['train','dev','test'], [self.train_set, self.dev_set, self.test_set])
         ]
 
         self.graph_parser.save_concepts() # TODO put this in save?
         return cose, cose['train'], cose['validation'], cose['test']
     
+    # load data used by qagnn and parse into compatible format
+    def prepare_qagnn_data(self, path):
+        parselabel = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
+        result = []
+        sl = StatementLoader()
+
+        data = []
+        with open(path, 'r') as f:
+            for line in f:
+                data.append(json.loads(line))
+        
+        for i,X in enumerate(data):
+            question = X['question']['stem']
+            if len(question) > 0 and question[-1] != '?': question = question + ' ?'
+            result.append({
+                'id': X['id'],
+                'question': question,
+                'context': X['question']['question_concept'],
+                'answers': [x['text'] for x in X['question']['choices']],
+                'label': int(parselabel[X['answerKey']]),
+                'statements': sl.data[X['id']]
+            })
+        
+        return result
+           
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
     def add_4lang_adj_data(self, dataset, split='train'):
@@ -130,19 +195,7 @@ class QagnnExperiment(FinalExperiment):
     def train(self):
         # IMITATE PARAMETERS / ARGS
         args = Namespace(**self.params)
-        # for data_loader
-        args.train_statements = 'data/qa_gnn/train.statement.jsonl'
-        args.train_adj = None
-        args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
-        args.dev_adj = None
-        args.test_statements = 'data/qa_gnn/test.statement.jsonl'
-        args.test_adj = None
-        args.batch_size = 32
-        args.eval_batch_size = 16
-        args.encoder = 'bert-large-uncased'
-        args.max_node_num = self.params['max_num_nodes']
-        args.drop_partial_batch = False
-        args.fill_partial_batch = False
+
         # for model
         args.k = 5
         args.gnn_dim = self.params['gat_hidden_dim']
@@ -187,59 +240,32 @@ class QagnnExperiment(FinalExperiment):
         print('| num_concepts: {} |'.format(concept_num))
         '''
 
-        # TODO change this back after debugging
-        # TODO shift this to init
-        '''
-        if torch.cuda.device_count() >= 2 and args.cuda:
-            device0 = torch.device("cuda:0")
-            device1 = torch.device("cuda:1")
-        elif torch.cuda.device_count() == 1 and args.cuda:
-            device0 = torch.device("cuda:0")
-            device1 = torch.device("cuda:0")
-        else:
-            device0 = torch.device("cpu")
-            device1 = torch.device("cpu")
-        '''
-        device0 = torch.device("cpu") 
-        device1 = torch.device("cpu")
-
-        # LOAD DATA
-        dataset = LM_QAGNN_DataLoader(args, args.train_statements, args.train_adj,
-                                            args.dev_statements, args.dev_adj,
-                                            args.test_statements, args.test_adj,
-                                            batch_size=args.batch_size, eval_batch_size=args.eval_batch_size,
-                                            device=(device0, device1),
-                                            model_name=args.encoder,
-                                            max_node_num=args.max_node_num)
-                                            #max_seq_length=args.max_seq_len,)
-                                            #is_inhouse=args.inhouse, # False
-                                            #inhouse_train_qids_path=args.inhouse_train_qids, # path to .txt
-                                            #subsample=args.subsample,  # 1.0
-                                            #use_cache=args.use_cache) # True
-
+        
         dataset = self.add_4lang_adj_data(dataset)
         test = list(dataset.train())
         assert False, "test ends here"
 
         # BUILD MODEL
         print ('args.num_relation', args.num_relation)
-        model = LM_QAGNN(args, args.encoder, 
-                                k=args.k, 
-                                n_ntype=4, 
-                                n_etype=args.num_relation, 
-                                n_concept=args.num_concepts,
-                                concept_dim=args.gnn_dim,
-                                concept_in_dim=args.concept_dim,
-                                n_attention_head=args.att_head_num, 
-                                fc_dim=args.fc_dim, 
-                                n_fc_layer=args.fc_layer_num,
-                                p_emb=args.dropouti, 
-                                p_gnn=args.dropoutg, 
-                                p_fc=args.dropoutf,
-                                pretrained_concept_emb=None)
-                                # freeze_ent_emb=args.freeze_ent_emb,
-                                # init_range=args.init_range,
-                                # encoder_config={})
+        model = LM_QAGNN(
+            args, 
+            args.encoder, 
+            k=args.k, 
+            n_ntype=4, 
+            n_etype=args.num_relation, 
+            n_concept=args.num_concepts,
+            concept_dim=args.gnn_dim,
+            concept_in_dim=args.concept_dim,
+            n_attention_head=args.att_head_num, 
+            fc_dim=args.fc_dim, 
+            n_fc_layer=args.fc_layer_num,
+            p_emb=args.dropouti, 
+            p_gnn=args.dropoutg, 
+            p_fc=args.dropoutf,
+            pretrained_concept_emb=None)
+            # freeze_ent_emb=args.freeze_ent_emb,
+            # init_range=args.init_range,
+            # encoder_config={})
 
         '''
         if args.load_model_path:
