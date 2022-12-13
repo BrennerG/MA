@@ -25,7 +25,10 @@ LOC = {
     'statements_folder': 'data/statements/',
     'qagnn_train': 'data/qa_gnn/raw/train_rand_split.jsonl',
     'qagnn_dev': 'data/qa_gnn/raw/dev_rand_split.jsonl',
-    'qagnn_test': 'data/qa_gnn/raw/test_rand_split_no_answers.jsonl'
+    'qagnn_test': 'data/qa_gnn/raw/test_rand_split_no_answers.jsonl',
+    'qagnn_statements_train': 'data/statements/train.statement.jsonl',
+    'qagnn_statements_dev': 'data/statements/dev.statement.jsonl',
+    'qagnn_statements_test': 'data/statements/test.statement.jsonl'
 }
 
 # Creates all folders of the LOC dictionary

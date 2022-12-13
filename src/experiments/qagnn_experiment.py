@@ -40,18 +40,22 @@ class QagnnExperiment(FinalExperiment):
         self.params['num_concepts'] = max(self.graph_parser.id2concept)
         self.params['num_relation'] = 1 # basic case
         self.model = self.model_factory(self.params['model_type']) # .to(self.device) # TODO shift device assignment from train() to here
-        self.avg_rational_lengths = EraserCosE.avg_rational_length(self.complete_set)
+        raw_cose = load_dataset(LOC['cose_huggingface'])
+        self.avg_rational_lengths = EraserCosE.avg_rational_length(raw_cose)
 
     def init_data(self):
         # IMITATE PARAMETERS / ARGS
         args = Namespace(**self.params)
 
         # qagnn data_loader params
-        args.train_statements = 'data/qa_gnn/train.statement.jsonl'
+        #args.train_statements = 'data/qa_gnn/train.statement.jsonl'
+        args.train_statements = LOC['qagnn_statements_train']
         args.train_adj = None
-        args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
+        #args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
+        args.dev_statements = LOC['qagnn_statements_dev']
         args.dev_adj = None
-        args.test_statements = 'data/qa_gnn/test.statement.jsonl'
+        #args.test_statements = 'data/qa_gnn/test.statement.jsonl'
+        args.test_statements = LOC['qagnn_statements_test']
         args.test_adj = None
         args.batch_size = 32
         args.eval_batch_size = 16
@@ -80,17 +84,17 @@ class QagnnExperiment(FinalExperiment):
             model_name=args.encoder,
             max_node_num=args.max_node_num,
 
-            #is_inhouse=True, # TODO correct?
-            #inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt" # TODO above
+            is_inhouse=True, # TODO correct?
+            inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt" # TODO above
 
             #max_seq_length=args.max_seq_len,)
             #subsample=args.subsample,  # 1.0
             #use_cache=args.use_cache) # True
         )
 
-        self.train_set = self.prepare_qagnn_data(path=LOC['qagnn_train'])
-        self.dev_set = self.prepare_qagnn_data(path=LOC['qagnn_dev'])
-        self.test_set = self.prepare_qagnn_data(path=LOC['qagnn_test'])
+        train_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_train'])
+        dev_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_dev'])
+        test_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_test'])
 
         # parse all splits
         self.flang_train, self.flang_dev, self.flang_test = [
@@ -102,11 +106,11 @@ class QagnnExperiment(FinalExperiment):
                 use_cache=use_cache,
                 max_num_nodes=max_num_nodes,
                 expand=expand
-            ) for (split, ds) in zip(['train','dev','test'], [self.train_set, self.dev_set, self.test_set])
+            ) for (split, ds) in zip(['train','dev','test'], [train_set, dev_set, test_set])
         ]
 
         self.graph_parser.save_concepts() # TODO put this in save?
-        return cose, cose['train'], cose['validation'], cose['test']
+        return dataset, train_set, dev_set, test_set
     
     # load data used by qagnn and parse into compatible format
     def prepare_qagnn_data(self, path):
@@ -239,11 +243,8 @@ class QagnnExperiment(FinalExperiment):
         concept_num, concept_dim = cp_emb.size(0), cp_emb.size(1)
         print('| num_concepts: {} |'.format(concept_num))
         '''
-
         
-        dataset = self.add_4lang_adj_data(dataset)
-        test = list(dataset.train())
-        assert False, "test ends here"
+        dataset = self.add_4lang_adj_data(self.complete_set)
 
         # BUILD MODEL
         print ('args.num_relation', args.num_relation)
