@@ -144,8 +144,8 @@ class QagnnExperiment(FinalExperiment):
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
         N = len(self.train_set)
 
-        concept_ids = torch.zeros(N, 5, max_num_nodes) # [n,nc,n_node]
-        node_type_ids = torch.zeros(N, 5, max_num_nodes) # [n,nc,n_node]
+        concept_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
+        node_type_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
         node_scores = torch.ones(N, 5, max_num_nodes, 1) # [n,nc,n_nodes,1] = [8459, 5, 200, 1]
         adj_lengths = torch.zeros(N,5) # [n,nc]
         edge_index = [] # [n,nc,[2,e]] list(list(tensor)))
@@ -174,8 +174,9 @@ class QagnnExperiment(FinalExperiment):
                     node_type_ids[i,a,qm_i+1] = 0
 
                 # CONCEPT IDS
-                concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] for c in concept_names])
-                concept_ids[i,a] = F.pad(concept_tensor, (0,  max_num_nodes-len(concept_tensor)))
+                concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] for c in concept_names]).long()
+                concept_ids[i,a] = F.pad(concept_tensor, (0,  max_num_nodes-len(concept_tensor)), 'constant', 1)
+                pass
 
                 # NODE SCORES ?
                 pass
@@ -184,11 +185,11 @@ class QagnnExperiment(FinalExperiment):
                 adj_lengths[i,a] = len(concept_names) + 1
 
                 # EDGE INDEX
-                c_edges = torch.Tensor(X_flang_edges[a])
+                c_edges = torch.Tensor(X_flang_edges[a]).view(2,-1).long()
                 c_edge_index[a] = c_edges
 
                 # EDGE TYPES
-                c_edge_types[a] = torch.zeros(c_edges.shape[0])
+                c_edge_types[a] = torch.zeros(c_edges.shape[1]).long()
             
             edge_index.append(c_edge_index)
             edge_types.append(c_edge_types)
@@ -199,7 +200,6 @@ class QagnnExperiment(FinalExperiment):
     def train(self):
         # IMITATE PARAMETERS / ARGS
         args = Namespace(**self.params)
-
         # for model
         args.k = 5
         args.gnn_dim = self.params['gat_hidden_dim']
@@ -210,6 +210,9 @@ class QagnnExperiment(FinalExperiment):
         args.dropouti = self.params['dropout']
         args.dropoutg = self.params['dropout']
         args.dropoutf = self.params['dropout']
+        args.encoder = 'bert-large-uncased'
+        args.num_relation = 1
+        args.encoder_layer = -1
         # for training
         args.weight_decay = 0.01
         args.encoder_lr = 2e-05
@@ -219,7 +222,13 @@ class QagnnExperiment(FinalExperiment):
         args.loss = 'cross_entropy'
         args.unfreeze_epoch = 4
         args.refreeze_epoch = 10000
-
+        args.mini_batch_size = 1
+        args.fp16 = False
+        args.max_grad_norm = 1.0
+        args.log_interval = 10
+        args.save_model = False
+        args.save_dir = './saved_models/qagnn/' # in params
+        args.max_epochs_before_stop = 10 # in params
         # SET RANDOM SEEDS
         random.seed(args.rnd_seed)
         np.random.seed(args.rnd_seed)
@@ -276,8 +285,8 @@ class QagnnExperiment(FinalExperiment):
         '''
 
         # TODO move this to init
-        self.model.encoder.to(device0)
-        self.model.decoder.to(device1)
+        self.model.encoder.to(self.device0)
+        self.model.decoder.to(self.device1)
 
         # TODO hardcode this (maybe put this in its own function)
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
