@@ -9,6 +9,7 @@ from argparse import Namespace
 import torch.nn as nn
 try: from transformers import (ConstantLRSchedule, WarmupLinearSchedule, WarmupConstantSchedule)
 except: from transformers import get_constant_schedule, get_constant_schedule_with_warmup,  get_linear_schedule_with_warmup
+from tqdm import tqdm
 
 from experiments.final_experiment import FinalExperiment
 from data.locations import LOC
@@ -26,7 +27,7 @@ class QagnnExperiment(FinalExperiment):
     def __init__(self, params:{}):
         # overwrite
         self.params = params
-        self.params['model_type'] == 'qagnn'
+        self.params['offset_concepts'] = True
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
         # set devices # TODO don't hardcode
@@ -371,7 +372,7 @@ class QagnnExperiment(FinalExperiment):
             self.model.train()
 
             # SAMPLES
-            for qids, labels, *input_data in dataset.train():
+            for qids, labels, *input_data in tqdm(dataset.train()):
                 optimizer.zero_grad()
                 bs = labels.size(0)
                 for a in range(0, bs, args.mini_batch_size):
@@ -410,56 +411,56 @@ class QagnnExperiment(FinalExperiment):
                     start_time = time.time()
                 global_step += 1
 
-                model.eval()
-                dev_acc = evaluate_accuracy(dataset.dev(), model)
-                save_test_preds = args.save_model
-                if not save_test_preds:
-                    test_acc = evaluate_accuracy(dataset.test(), model) if args.test_statements else 0.0
-                else:
-                    eval_set = dataset.test()
-                    total_acc = []
-                    count = 0
-                    preds_path = os.path.join(args.save_dir, 'test_e{}_preds.csv'.format(epoch_id))
-                    with open(preds_path, 'w') as f_preds:
-                        with torch.no_grad():
-                            for qids, labels, *input_data in tqdm(eval_set):
-                                count += 1
-                                logits, _, concept_ids, node_type_ids, edge_index, edge_type = model(*input_data, detail=True)
-                                predictions = logits.argmax(1) #[bsize, ]
-                                preds_ranked = (-logits).argsort(1) #[bsize, n_choices]
-                                for i, (qid, label, pred, _preds_ranked, cids, ntype, edges, etype) in enumerate(zip(qids, labels, predictions, preds_ranked, concept_ids, node_type_ids, edge_index, edge_type)):
-                                    acc = int(pred.item()==label.item())
-                                    print ('{},{}'.format(qid, chr(ord('A') + pred.item())), file=f_preds)
-                                    f_preds.flush()
-                                    total_acc.append(acc)
-                    test_acc = float(sum(total_acc))/len(total_acc)
+            model.eval()
+            dev_acc = evaluate_accuracy(dataset.dev(), model)
+            save_test_preds = args.save_model
+            if not save_test_preds:
+                test_acc = evaluate_accuracy(dataset.test(), model) if args.test_statements else 0.0
+            else:
+                eval_set = dataset.test()
+                total_acc = []
+                count = 0
+                preds_path = os.path.join(args.save_dir, 'test_e{}_preds.csv'.format(epoch_id))
+                with open(preds_path, 'w') as f_preds:
+                    with torch.no_grad():
+                        for qids, labels, *input_data in tqdm(eval_set):
+                            count += 1
+                            logits, _, concept_ids, node_type_ids, edge_index, edge_type = model(*input_data, detail=True)
+                            predictions = logits.argmax(1) #[bsize, ]
+                            preds_ranked = (-logits).argsort(1) #[bsize, n_choices]
+                            for i, (qid, label, pred, _preds_ranked, cids, ntype, edges, etype) in enumerate(zip(qids, labels, predictions, preds_ranked, concept_ids, node_type_ids, edge_index, edge_type)):
+                                acc = int(pred.item()==label.item())
+                                print ('{},{}'.format(qid, chr(ord('A') + pred.item())), file=f_preds)
+                                f_preds.flush()
+                                total_acc.append(acc)
+                test_acc = float(sum(total_acc))/len(total_acc)
 
-                print('-' * 71)
-                print('| epoch {:3} | step {:5} | dev_acc {:7.4f} | test_acc {:7.4f} |'.format(epoch_id, global_step, dev_acc, test_acc))
-                print('-' * 71)
-                with open(log_path, 'a') as fout:
-                    fout.write('{},{},{}\n'.format(global_step, dev_acc, test_acc))
-                if dev_acc >= best_dev_acc:
-                    best_dev_acc = dev_acc
-                    final_test_acc = test_acc
-                    best_dev_epoch = epoch_id
-                    if args.save_model:
-                        torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
-                        # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
-                        #     for p in model.named_parameters():
-                        #         print (p, file=f)
-                        print(f'model saved to {model_path}.{epoch_id}')
-                else:
-                    if args.save_model:
-                        torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
-                        # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
-                        #     for p in model.named_parameters():
-                        #         print (p, file=f)
-                        print(f'model saved to {model_path}.{epoch_id}')
-                model.train()
-                start_time = time.time()
-                if epoch_id > args.unfreeze_epoch and epoch_id - best_dev_epoch >= args.max_epochs_before_stop:
-                    break
+            print('-' * 71)
+            print('| epoch {:3} | step {:5} | dev_acc {:7.4f} | test_acc {:7.4f} |'.format(epoch_id, global_step, dev_acc, test_acc))
+            print('-' * 71)
+            with open(log_path, 'a') as fout:
+                fout.write('{},{},{}\n'.format(global_step, dev_acc, test_acc))
+            if dev_acc >= best_dev_acc:
+                best_dev_acc = dev_acc
+                final_test_acc = test_acc
+                best_dev_epoch = epoch_id
+                if args.save_model:
+                    torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
+                    # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
+                    #     for p in model.named_parameters():
+                    #         print (p, file=f)
+                    print(f'model saved to {model_path}.{epoch_id}')
+            else:
+                if args.save_model:
+                    torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
+                    # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
+                    #     for p in model.named_parameters():
+                    #         print (p, file=f)
+                    print(f'model saved to {model_path}.{epoch_id}')
+            model.train()
+            start_time = time.time()
+            if epoch_id > args.unfreeze_epoch and epoch_id - best_dev_epoch >= args.max_epochs_before_stop:
+                break
 
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
         pass
@@ -467,19 +468,12 @@ class QagnnExperiment(FinalExperiment):
     def save(self):
         pass
 
-
-class ParsedDataset:
-
-    def __init__(self, complete_set, **kwargs):
-        self.train_set = self.init_train(complete_set['train'])
-        self.val_set = None
-        self.test_set = None
-        self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else 1
-    
-    def init_train(self, train_set):
-        set = []
-        
-        return set
-
-    def train():
-        return self.train_set
+def evaluate_accuracy(eval_set, model):
+    n_samples, n_correct = 0, 0
+    model.eval()
+    with torch.no_grad():
+        for qids, labels, *input_data in tqdm(eval_set):
+            logits, _ = model(*input_data)
+            n_correct += (logits.argmax(1) == labels).sum().item()
+            n_samples += labels.size(0)
+    return n_correct / n_samples

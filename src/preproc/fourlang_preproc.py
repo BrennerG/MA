@@ -23,8 +23,11 @@ class FourLangParser(GraphPreproc):
         self.tfl = TextTo4lang("en", "en_nlp_cache")
         self.tokenizer = stanza.Pipeline(lang='en', processors="tokenize", use_gpu=params['use_cuda'])
 
+        # params
         expand = params['expand'] if 'expand' in params else None
         max_num_nodes = params['max_num_nodes'] if 'max_num_nodes' in params else None
+        offset_concepts = params['offset_concepts'] if 'offset_concepts' in params else False
+
         if max_num_nodes == None and expand != None:
             self.folder_path = f"X{expand}/"
         elif max_num_nodes != None and expand == None:
@@ -46,6 +49,20 @@ class FourLangParser(GraphPreproc):
                 self.id2concept = {int(k):v for k,v in self.id2concept.items()}
         else:
             self.id2concept = {}
+        
+        if offset_concepts==True:
+            if self.concept2id == {} and self.id2concept == {}:
+                self.concept2id['ab_extra'] = 0
+                self.concept2id['ab_intra'] = 1
+                self.id2concept[0] = 'ab_extra'
+                self.id2concept[1] = 'ab_intra'
+            else:
+                self.concept2id = {k:v+2 for k,v in self.concept2id.items()}
+                self.concept2id['ab_extra'] = 0
+                self.concept2id['ab_intra'] = 1
+                self.id2concept = {k+2:v for k,v in self.id2concept.items()}
+                self.id2concept[0] = 'ab_extra'
+                self.id2concept[1] = 'ab_intra'
     
     # __call__
     def parse(self, dataset, num_samples, split, qa_join, **kwargs):
@@ -131,12 +148,13 @@ class FourLangParser(GraphPreproc):
                 nodes_to_qa_tokens = self.map_nodes_to_og_tokens(names, qa_tokenized)
 
                 # correct dict ids
-                ordered_names = {x:names[x] for x in sorted(names.keys())}
+                # ordered_names = {x:names[x] for x in sorted(names.keys())}
+                ordered_names = names
                 corr_map = dict(zip(ordered_names, range(len(ordered_names))))
                 relative_edges = [(corr_map[x], corr_map[y]) for x,y in largest_parse.edges]
 
                 # append
-                grouped_edges.append(list(largest_parse.edges))
+                grouped_edges.append(list(relative_edges))
                 grouped_maps.append(nodes_to_qa_tokens)
                 grouped_concepts.append(list(names.values()))
             
@@ -149,6 +167,11 @@ class FourLangParser(GraphPreproc):
                             pos = n
                         self.id2concept[pos] = x
                         self.concept2id[x] = pos
+                
+                # breakpoint
+                res_e = [(self.id2concept[a], self.id2concept[b]) for (a,b) in largest_parse.edges]
+                res_r = [(list(names.values())[a], list(names.values())[b]) for (a,b) in relative_edges]
+                assert res_e == res_r
 
             assert all([len(x) for x in grouped_edges]), 'ASSERTION ERROR: a 4L qa_graph has 0 edges D:' # check if #edges are >0 for all qa_graphs!
             edges.append(grouped_edges)
