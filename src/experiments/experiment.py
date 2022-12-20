@@ -4,6 +4,8 @@ from tqdm import tqdm
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
+from argparse import Namespace
+
 from models.bert import BertPipeline
 from models.random import RandomClassifier
 from models.gcn import GCN
@@ -124,10 +126,11 @@ class Experiment(ABC):
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
         elif type == "qagnn":
+            args = Namespace(**self.params)
             num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
             assert num_concepts != None
             model = LM_QAGNN(
-                args=None,
+                args=args,
                 model_name='bert-large-uncased',
                 k=5,
                 n_ntype=1, # basic case

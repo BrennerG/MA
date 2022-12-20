@@ -30,10 +30,15 @@ class QagnnExperiment(FinalExperiment):
         self.params['offset_concepts'] = True
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
+
         # set devices # TODO don't hardcode
-        # self.device = 'cuda:0' if ('use_cuda' in self.params and self.params['use_cuda']) else 'cpu'
-        self.device0 = torch.device("cpu") 
-        self.device1 = torch.device("cpu")
+        if 'use_cuda' in self.params and self.params['use_cuda']:
+            self.device0 = torch.device("cuda:0") 
+            self.device1 = torch.device("cuda:0")
+        else:
+            self.device0 = torch.device("cpu") 
+            self.device1 = torch.device("cpu")
+
         # prepare graph parser
         self.graph_parser = self._graph_parser_factory()
         # general stuff

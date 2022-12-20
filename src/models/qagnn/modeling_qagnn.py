@@ -196,7 +196,7 @@ class LM_QAGNN(nn.Module):
                  pretrained_concept_emb=None, freeze_ent_emb=True,
                  init_range=0.0, encoder_config={}):
         super().__init__()
-        self.encoder = TextEncoder(model_name, **encoder_config)
+        self.encoder = TextEncoder(model_name, output_token_states=False, from_checkpoint=None, kwargs=vars(args))
         self.decoder = QAGNN(args, k, n_ntype, n_etype, self.encoder.sent_dim,
                                         n_concept, concept_dim, concept_in_dim, n_attention_head,
                                         fc_dim, n_fc_layer, p_emb, p_gnn, p_fc,

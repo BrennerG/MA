@@ -106,6 +106,12 @@ class TextEncoder(nn.Module):
             if self.model_type in ('gpt',):
                 self.module.resize_token_embeddings(get_gpt_token_num())
             self.sent_dim = self.module.config.n_embd if self.model_type in ('gpt',) else self.module.config.hidden_size
+        
+        # EDIT gbreiner 20.12.22
+        if kwargs['kwargs']['use_cuda']:
+            self.module.to('cuda:0')
+        else:
+            self.module.to('cpu')
 
     def forward(self, *inputs, layer_id=-1):
         '''
