@@ -85,8 +85,8 @@ class QagnnExperiment(FinalExperiment):
             model_name=args.encoder,
             max_node_num=args.max_node_num,
 
-            is_inhouse=True, # TODO correct?
-            inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt" # TODO above
+            is_inhouse=False,
+            #inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt"
 
             #max_seq_length=args.max_seq_len,)
             #subsample=args.subsample,  # 1.0
@@ -140,10 +140,20 @@ class QagnnExperiment(FinalExperiment):
            
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
-    def add_4lang_adj_data(self, dataset, split='train'):
-        assert split == 'train'
+    def add_4lang_adj_data(self, split='train'):
+        # determine dataset
+        if split == 'train':
+            target_flang = self.flang_train
+            target_set = self.train_set
+        elif split == 'dev':
+            target_flang = self.flang_dev
+            target_set = self.val_set
+        elif split == 'test':
+            target_flang = self.flang_test
+            target_set = self.test_set
+
+        N = len(target_set)
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
-        N = len(self.train_set)
 
         concept_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
         node_type_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
@@ -152,7 +162,7 @@ class QagnnExperiment(FinalExperiment):
         edge_index = [] # [n,nc,[2,e]] list(list(tensor)))
         edge_types = [] # [n,nc,e] list(list(tensor))
 
-        for i,(X_flang_edges, X_mapping, X_flang_concepts, X_og) in enumerate(tqdm(zip(self.flang_train[0], self.flang_train[1], self.flang_train[2], self.train_set), desc='adding 4lang to qagnn data')):
+        for i,(X_flang_edges, X_flang_mapping, X_flang_concepts, X_og) in enumerate(tqdm(zip(*target_flang, target_set), desc=f"adding 4lang to qagnn data.{split}")):
             
             c_edge_index = [None] * 5
             c_edge_types = [None] * 5
@@ -195,8 +205,8 @@ class QagnnExperiment(FinalExperiment):
             edge_index.append(c_edge_index)
             edge_types.append(c_edge_types)
 
-        *dataset.train_decoder_data, dataset.train_adj_data = concept_ids, node_type_ids, node_scores, adj_lengths, (edge_index, edge_types)
-        return dataset
+        # *dataset.train_decoder_data, dataset.train_adj_data = concept_ids, node_type_ids, node_scores, adj_lengths, (edge_index, edge_types)
+        return concept_ids, node_type_ids, node_scores, adj_lengths, (edge_index, edge_types)
 
     def train(self):
         # IMITATE PARAMETERS / ARGS
@@ -246,32 +256,28 @@ class QagnnExperiment(FinalExperiment):
         with open(log_path, 'w') as fout:
             fout.write('step,dev_acc,test_acc\n')
 
-        '''
-        cp_emb = [np.load(path) for path in args.ent_emb_paths]
-        cp_emb = torch.tensor(np.concatenate(cp_emb, 1), dtype=torch.float)
-
-        concept_num, concept_dim = cp_emb.size(0), cp_emb.size(1)
-        print('| num_concepts: {} |'.format(concept_num))
-        '''
-        
-        dataset = self.add_4lang_adj_data(self.complete_set)
+        # ADD FOURLANG ADJ DATA!
+        dataset = self.complete_set # TODO this is kinda ugly...
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(split='train')
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(split='dev')
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(split='test')
 
         # BUILD MODEL
         print ('args.num_relation', args.num_relation)
         model = LM_QAGNN(
-            args, 
-            args.encoder, 
-            k=args.k, 
-            n_ntype=4, 
-            n_etype=args.num_relation, 
+            args,
+            args.encoder,
+            k=args.k,
+            n_ntype=4,
+            n_etype=args.num_relation,
             n_concept=args.num_concepts,
             concept_dim=args.gnn_dim,
             concept_in_dim=args.concept_dim,
-            n_attention_head=args.att_head_num, 
-            fc_dim=args.fc_dim, 
+            n_attention_head=args.att_head_num,
+            fc_dim=args.fc_dim,
             n_fc_layer=args.fc_layer_num,
-            p_emb=args.dropouti, 
-            p_gnn=args.dropoutg, 
+            p_emb=args.dropouti,
+            p_gnn=args.dropoutg,
             p_fc=args.dropoutf,
             pretrained_concept_emb=None)
             # freeze_ent_emb=args.freeze_ent_emb,
@@ -279,6 +285,7 @@ class QagnnExperiment(FinalExperiment):
             # encoder_config={})
 
         '''
+        # TODO implement model loading!
         if args.load_model_path:
             print (f'loading and initializing model from {args.load_model_path}')
             model_state_dict, old_args = torch.load(args.load_model_path, map_location=torch.device('cpu'))
