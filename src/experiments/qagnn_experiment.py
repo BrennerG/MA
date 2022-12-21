@@ -216,7 +216,7 @@ class QagnnExperiment(FinalExperiment):
     def train(self):
         # IMITATE PARAMETERS / ARGS
         args = Namespace(**self.params)
-        # for model
+        # FOR MODEL
         args.k = 5
         args.gnn_dim = self.params['gat_hidden_dim']
         args.concept_dim = 1024
@@ -229,7 +229,7 @@ class QagnnExperiment(FinalExperiment):
         args.encoder = 'bert-large-uncased'
         args.num_relation = 1
         args.encoder_layer = -1
-        # for training
+        # FOR TRAINING
         args.weight_decay = 0.01
         args.encoder_lr = 2e-05
         args.decoder_lr = 0.001
@@ -245,6 +245,10 @@ class QagnnExperiment(FinalExperiment):
         args.save_model = False
         args.save_dir = './saved_models/qagnn/' # in params
         args.max_epochs_before_stop = 10 # in params
+        # ACTUALLY ALREADY IN __INIT__()
+        # args.dev_statements = LOC['qagnn_statements_dev']
+        args.test_statements = LOC['qagnn_statements_test']
+
         # SET RANDOM SEEDS
         random.seed(args.rnd_seed)
         np.random.seed(args.rnd_seed)
