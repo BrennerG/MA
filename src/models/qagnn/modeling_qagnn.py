@@ -203,7 +203,7 @@ class LM_QAGNN(nn.Module):
                                         pretrained_concept_emb=pretrained_concept_emb, freeze_ent_emb=freeze_ent_emb,
                                         init_range=init_range)
 
-    def forward(self, *inputs, layer_id=-1, cache_output=False, detail=False):
+    def forward(self, *inputs, **kwargs):
         """
         sent_vecs: (batch_size, num_choice, d_sent)    -> (batch_size * num_choice, d_sent)
         concept_ids: (batch_size, num_choice, n_node)  -> (batch_size * num_choice, n_node)
@@ -216,6 +216,11 @@ class LM_QAGNN(nn.Module):
                                                          -> (total E, )
         returns: (batch_size, 1)
         """
+        # get params
+        layer_id = -1
+        cache_output = False
+        detail = False
+
         bs, nc = inputs[0].size(0), inputs[0].size(1)
 
         #Here, merge the batch dimension and the num_choice dimension

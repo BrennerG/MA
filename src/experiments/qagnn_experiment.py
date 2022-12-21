@@ -10,6 +10,7 @@ import torch.nn as nn
 try: from transformers import (ConstantLRSchedule, WarmupLinearSchedule, WarmupConstantSchedule)
 except: from transformers import get_constant_schedule, get_constant_schedule_with_warmup,  get_linear_schedule_with_warmup
 from tqdm import tqdm
+from copy import deepcopy
 
 from experiments.final_experiment import FinalExperiment
 from data.locations import LOC
@@ -57,6 +58,62 @@ class QagnnExperiment(FinalExperiment):
         self.model = self.model_factory(self.params['model_type']) # .to(self.device) # TODO shift device assignment from train() to here
         raw_cose = load_dataset(LOC['cose_huggingface'])
         self.avg_rational_lengths = EraserCosE.avg_rational_length(raw_cose)
+
+    def __call__(self):
+
+        # TRAINING
+        if not('skip_training' in self.params and self.params['skip_training']): # no skip
+            print('training...')
+            self.train_output = self.train()
+        else: # skip training
+            if not 'load_from' in self.params or self.params['load_from'] == None:
+                print('WARNING: training will be skipped, but no checkpoint was given (load_from) parameter (=prediction with only pre-trained model)')
+            else:
+                print(f"MODEL PRELOADED FROM {self.params['load_from']} - SKIPPING TRAINING!") # this already happened in experiment.model_factory()
+
+        # PREDICTION
+        # EVALUATION
+        if not('skip_evaluation' in self.params and self.params['skip_evaluation']): # no skip
+            print('predicting...')
+            # need to softmax logits for evaluation (actually only ERASER)
+            prediction_params = deepcopy(self.params)
+            prediction_params['softmax_logits'] = True
+            preds = []
+            with torch.no_grad():
+                for qids, labels, *input_data in tqdm(self.val_set):
+                    preds.append(self.model(*input_data, **prediction_params))
+                _val_pred = list(zip(*preds))
+                self.val_pred = [None] * 2
+                self.val_pred[0] = torch.cat(_val_pred[0], dim=0) # debatch logits
+                self.val_pred[1] = None 
+
+                # DEBATCH AND AVERAGE ATTENTION # TODO mb turn this into a function
+                attn = [x.view(-1,5,2,200) for x in _val_pred[1]] # reshape entries
+                attn = torch.cat(attn,dim=0) # concat to sample as first dim
+                for _attn, _map in zip(attn, self.flang_dev[1]):
+                    _attn = _attn.mean(dim=1)
+                    for a, m in zip(_attn, _map):
+                        pass # TODO now we need the num_tokens (so we need to zip with self.val_set somehow (but what feature are we taking?))
+                        assert False, "TODO CURRENT"
+
+            # evaluating
+            print('evaluating...')
+            self.eval_output = self.evaluate()
+        else: # skip evaluation
+            print('SKIPPING EVALUATION (flag was set in param dict!)')
+            self.val_pred = None
+            self.eval_output = None
+        
+        # VIZ
+        print('visualizing...')
+        self.viz_output = self.viz()
+
+        # SAVE / PERSIST
+        print('saving...')
+        self.save()
+
+        print('experiment done!')
+        return self
 
     def init_data(self):
         # IMITATE PARAMETERS / ARGS
@@ -125,7 +182,12 @@ class QagnnExperiment(FinalExperiment):
         ]
 
         self.graph_parser.save_concepts() # TODO put this in save?
-        return dataset, train_set, dev_set, test_set
+
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=train_set)
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=dev_set)
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=test_set)
+
+        return dataset, dataset.train(), dataset.dev(), dataset.test()
     
     # load data used by qagnn and parse into compatible format
     def prepare_qagnn_data(self, path):
@@ -154,18 +216,7 @@ class QagnnExperiment(FinalExperiment):
            
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
-    def add_4lang_adj_data(self, split='train'):
-        # determine dataset
-        if split == 'train':
-            target_flang = self.flang_train
-            target_set = self.train_set
-        elif split == 'dev':
-            target_flang = self.flang_dev
-            target_set = self.val_set
-        elif split == 'test':
-            target_flang = self.flang_test
-            target_set = self.test_set
-
+    def add_4lang_adj_data(self, target_flang, target_set):
         N = len(target_set)
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
 
@@ -176,7 +227,7 @@ class QagnnExperiment(FinalExperiment):
         edge_index = [] # [n,nc,[2,e]] list(list(tensor)))
         edge_types = [] # [n,nc,e] list(list(tensor))
 
-        for i,(X_flang_edges, X_flang_mapping, X_flang_concepts, X_og) in enumerate(tqdm(zip(*target_flang, target_set), desc=f"adding 4lang to qagnn data.{split}")):
+        for i,(X_flang_edges, X_flang_mapping, X_flang_concepts, X_og) in enumerate(tqdm(zip(*target_flang, target_set), desc=f"adding 4lang to qagnn data")):
             
             c_edge_index = [None] * 5
             c_edge_types = [None] * 5
@@ -274,12 +325,7 @@ class QagnnExperiment(FinalExperiment):
         with open(log_path, 'w') as fout:
             fout.write('step,dev_acc,test_acc\n')
 
-        # ADD FOURLANG ADJ DATA!
-        dataset = self.complete_set # TODO this is kinda ugly...
-        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(split='train')
-        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(split='dev')
-        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(split='test')
-
+        
         '''
         # TODO implement model loading!
         if args.load_model_path:
