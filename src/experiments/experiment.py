@@ -129,11 +129,11 @@ class Experiment(ABC):
             args = Namespace(**self.params)
             num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
             assert num_concepts != None
-            model = LM_QAGNN(
+            model = LM_QAGNN( # TODO have these as defaults in params for args, so that don't have to hardcode params here!
                 args=args,
                 model_name='bert-large-uncased',
                 k=5,
-                n_ntype=1, # basic case
+                n_ntype=4, # basic case
                 n_etype=1 , # basic case,
                 n_concept=num_concepts, # TODO pass this here
                 concept_dim=100,

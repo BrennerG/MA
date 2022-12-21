@@ -203,7 +203,6 @@ class LM_QAGNN(nn.Module):
                                         pretrained_concept_emb=pretrained_concept_emb, freeze_ent_emb=freeze_ent_emb,
                                         init_range=init_range)
 
-
     def forward(self, *inputs, layer_id=-1, cache_output=False, detail=False):
         """
         sent_vecs: (batch_size, num_choice, d_sent)    -> (batch_size * num_choice, d_sent)
@@ -274,7 +273,7 @@ class LM_QAGNN_DataLoader(object):
 
         num_choice = self.train_encoder_data[0].size(1)
         self.num_choice = num_choice
-        print ('num_choice', num_choice)
+        #print ('num_choice', num_choice)
         *self.train_decoder_data, self.train_adj_data = DUMMY_load_sparse_adj_data_with_contextnode(train_adj_path, max_node_num, num_choice, args)
 
         *self.dev_decoder_data, self.dev_adj_data = DUMMY_load_sparse_adj_data_with_contextnode(dev_adj_path, max_node_num, num_choice, args)

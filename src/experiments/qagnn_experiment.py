@@ -31,13 +31,22 @@ class QagnnExperiment(FinalExperiment):
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
 
-        # set devices # TODO don't hardcode
+        # set devices
+        '''
         if 'use_cuda' in self.params and self.params['use_cuda']:
             self.device0 = torch.device("cuda:0") 
             self.device1 = torch.device("cuda:0")
         else:
             self.device0 = torch.device("cpu") 
             self.device1 = torch.device("cpu")
+        '''
+        # 4h30
+        '''
+        self.device0 = torch.device('cpu') # encoder
+        self.device1 = torch.device('cuda:0') # decoder
+        '''
+        self.device0 = torch.device('cuda:0') # encoder
+        self.device1 = torch.device('cpu') # decoder
 
         # prepare graph parser
         self.graph_parser = self._graph_parser_factory()
@@ -271,28 +280,6 @@ class QagnnExperiment(FinalExperiment):
         *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(split='dev')
         *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(split='test')
 
-        # BUILD MODEL
-        print ('args.num_relation', args.num_relation)
-        model = LM_QAGNN(
-            args,
-            args.encoder,
-            k=args.k,
-            n_ntype=4,
-            n_etype=args.num_relation,
-            n_concept=args.num_concepts,
-            concept_dim=args.gnn_dim,
-            concept_in_dim=args.concept_dim,
-            n_attention_head=args.att_head_num,
-            fc_dim=args.fc_dim,
-            n_fc_layer=args.fc_layer_num,
-            p_emb=args.dropouti,
-            p_gnn=args.dropoutg,
-            p_fc=args.dropoutf,
-            pretrained_concept_emb=None)
-            # freeze_ent_emb=args.freeze_ent_emb,
-            # init_range=args.init_range,
-            # encoder_config={})
-
         '''
         # TODO implement model loading!
         if args.load_model_path:
@@ -395,10 +382,10 @@ class QagnnExperiment(FinalExperiment):
                     b = min(a + args.mini_batch_size, bs)
                     if args.fp16:
                         with torch.cuda.amp.autocast():
-                            logits, _ = model(*[x[a:b] for x in input_data], layer_id=args.encoder_layer)
+                            logits, _ = self.model(*[x[a:b] for x in input_data], layer_id=args.encoder_layer)
                             loss = compute_loss(logits, labels[a:b])
                     else:
-                        logits, _ = model(*[x[a:b] for x in input_data], layer_id=args.encoder_layer)
+                        logits, _ = self.model(*[x[a:b] for x in input_data], layer_id=args.encoder_layer)
                         loss = compute_loss(logits, labels[a:b])
                     loss = loss * (b - a) / bs
                     if args.fp16:
@@ -409,9 +396,9 @@ class QagnnExperiment(FinalExperiment):
                 if args.max_grad_norm > 0:
                     if args.fp16:
                         scaler.unscale_(optimizer)
-                        nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                        nn.utils.clip_grad_norm_(self.model.parameters(), args.max_grad_norm)
                     else:
-                        nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                        nn.utils.clip_grad_norm_(self.model.parameters(), args.max_grad_norm)
                 scheduler.step()
                 if args.fp16:
                     scaler.step(optimizer)
@@ -427,11 +414,11 @@ class QagnnExperiment(FinalExperiment):
                     start_time = time.time()
                 global_step += 1
 
-            model.eval()
-            dev_acc = evaluate_accuracy(dataset.dev(), model)
+            self.model.eval()
+            dev_acc = evaluate_accuracy(dataset.dev(), self.model)
             save_test_preds = args.save_model
             if not save_test_preds:
-                test_acc = evaluate_accuracy(dataset.test(), model) if args.test_statements else 0.0
+                test_acc = evaluate_accuracy(dataset.test(), self.model) if args.test_statements else 0.0
             else:
                 eval_set = dataset.test()
                 total_acc = []
@@ -441,7 +428,7 @@ class QagnnExperiment(FinalExperiment):
                     with torch.no_grad():
                         for qids, labels, *input_data in tqdm(eval_set):
                             count += 1
-                            logits, _, concept_ids, node_type_ids, edge_index, edge_type = model(*input_data, detail=True)
+                            logits, _, concept_ids, node_type_ids, edge_index, edge_type = self.model(*input_data, detail=True)
                             predictions = logits.argmax(1) #[bsize, ]
                             preds_ranked = (-logits).argsort(1) #[bsize, n_choices]
                             for i, (qid, label, pred, _preds_ranked, cids, ntype, edges, etype) in enumerate(zip(qids, labels, predictions, preds_ranked, concept_ids, node_type_ids, edge_index, edge_type)):
@@ -461,28 +448,28 @@ class QagnnExperiment(FinalExperiment):
                 final_test_acc = test_acc
                 best_dev_epoch = epoch_id
                 if args.save_model:
-                    torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
+                    torch.save([self.model.state_dict(), args], f"{model_path}.{epoch_id}")
                     # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
                     #     for p in model.named_parameters():
                     #         print (p, file=f)
                     print(f'model saved to {model_path}.{epoch_id}')
             else:
                 if args.save_model:
-                    torch.save([model.state_dict(), args], f"{model_path}.{epoch_id}")
+                    torch.save([self.model.state_dict(), args], f"{model_path}.{epoch_id}")
                     # with open(model_path +".{}.log.txt".format(epoch_id), 'w') as f:
                     #     for p in model.named_parameters():
                     #         print (p, file=f)
                     print(f'model saved to {model_path}.{epoch_id}')
-            model.train()
+            self.model.train()
             start_time = time.time()
             if epoch_id > args.unfreeze_epoch and epoch_id - best_dev_epoch >= args.max_epochs_before_stop:
                 break
 
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
-        pass
+        raise NotImplementedError()
 
     def save(self):
-        pass
+        raise NotImplementedError()
 
 def evaluate_accuracy(eval_set, model):
     n_samples, n_correct = 0, 0
