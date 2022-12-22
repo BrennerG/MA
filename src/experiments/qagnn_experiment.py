@@ -11,6 +11,7 @@ try: from transformers import (ConstantLRSchedule, WarmupLinearSchedule, WarmupC
 except: from transformers import get_constant_schedule, get_constant_schedule_with_warmup,  get_linear_schedule_with_warmup
 from tqdm import tqdm
 from copy import deepcopy
+from torchmetrics import Accuracy, Recall, Precision
 
 from experiments.final_experiment import FinalExperiment
 from data.locations import LOC
@@ -85,16 +86,24 @@ class QagnnExperiment(FinalExperiment):
                 _val_pred = list(zip(*preds))
                 self.val_pred = [None] * 2
                 self.val_pred[0] = torch.cat(_val_pred[0], dim=0) # debatch logits
-                self.val_pred[1] = None 
 
                 # DEBATCH AND AVERAGE ATTENTION # TODO mb turn this into a function
-                attn = [x.view(-1,5,2,200) for x in _val_pred[1]] # reshape entries
+                attn = [x.view(-1,5,2,200) for x in _val_pred[1]] # reshape entries # TODO de-hardcode
                 attn = torch.cat(attn,dim=0) # concat to sample as first dim
-                for _attn, _map in zip(attn, self.flang_dev[1]):
+                qa_lens = [[len(a.split()) for a in x['statements']] for x in self.dev_statements]
+                self.val_pred[1] = []
+                for _attn, _map, _qa_lens in zip(attn, self.flang_dev[1], qa_lens):
                     _attn = _attn.mean(dim=1)
-                    for a, m in zip(_attn, _map):
-                        pass # TODO now we need the num_tokens (so we need to zip with self.val_set somehow (but what feature are we taking?))
-                        assert False, "TODO CURRENT"
+                    grouped_attn = []
+                    for a, m, l in zip(_attn, _map, _qa_lens):
+                        if any([_ for _ in m if _ != None]):
+                            assert max([_ for _ in m if _ != None]) < l
+                        attn_vec = [.0] * l
+                        for i,p in enumerate(m):
+                            if p != None:
+                                attn_vec[p] = a[i].item()
+                                grouped_attn.append(attn_vec)
+                    self.val_pred[1].append(grouped_attn)
 
             # evaluating
             print('evaluating...')
@@ -164,9 +173,9 @@ class QagnnExperiment(FinalExperiment):
             #use_cache=args.use_cache) # True
         )
 
-        train_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_train'])
-        dev_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_dev'])
-        test_set = self.prepare_qagnn_data(path=LOC['qagnn_statements_test'])
+        self.train_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_train'])
+        self.dev_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_dev'])
+        self.test_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_test'])
 
         # parse all splits
         self.flang_train, self.flang_dev, self.flang_test = [
@@ -178,14 +187,14 @@ class QagnnExperiment(FinalExperiment):
                 use_cache=use_cache,
                 max_num_nodes=max_num_nodes,
                 expand=expand
-            ) for (split, ds) in zip(['train','dev','test'], [train_set, dev_set, test_set])
+            ) for (split, ds) in zip(['train','dev','test'], [self.train_statements, self.dev_statements, self.test_statements])
         ]
 
         self.graph_parser.save_concepts() # TODO put this in save?
 
-        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=train_set)
-        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=dev_set)
-        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=test_set)
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements)
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements)
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements)
 
         return dataset, dataset.train(), dataset.dev(), dataset.test()
     
@@ -511,8 +520,23 @@ class QagnnExperiment(FinalExperiment):
             if epoch_id > args.unfreeze_epoch and epoch_id - best_dev_epoch >= args.max_epochs_before_stop:
                 break
 
+    def eval_competence(self):
+        self.model.eval()
+        acc = Accuracy(num_classes=5)
+        prec = Precision(num_classes=5)
+        reca = Recall(num_classes=5)
+        preds = torch.stack([torch.argmax(x) for x in self.val_pred[0]])
+        ys = torch.cat(list(x[1] for x in self.val_set))
+        return {
+            'accuracy' : acc(preds.int(), ys).item(), 
+            'precision' : prec(preds.int(), ys).item(), 
+            'recall' : reca(preds.int(), ys).item()
+        }
+
+    '''
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
         raise NotImplementedError()
+    '''
 
     def save(self):
         raise NotImplementedError()
