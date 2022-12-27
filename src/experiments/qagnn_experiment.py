@@ -83,6 +83,8 @@ class QagnnExperiment(FinalExperiment):
             with torch.no_grad():
                 for qids, labels, *input_data in tqdm(self.val_set):
                     preds.append(self.model(*input_data, **prediction_params))
+
+                # DEBATCH
                 _val_pred = list(zip(*preds))
                 self.val_pred = [None] * 2
                 self.val_pred[0] = torch.cat(_val_pred[0], dim=0) # debatch logits
@@ -102,7 +104,7 @@ class QagnnExperiment(FinalExperiment):
                         for i,p in enumerate(m):
                             if p != None:
                                 attn_vec[p] = a[i].item()
-                                grouped_attn.append(attn_vec)
+                        grouped_attn.append(attn_vec)
                     self.val_pred[1].append(grouped_attn)
 
             # evaluating
@@ -123,6 +125,60 @@ class QagnnExperiment(FinalExperiment):
 
         print('experiment done!')
         return self
+
+    '''
+    def load_qagnn_dataset(self, **kwargs):
+        # IMITATE PARAMETERS / ARGS
+        args = Namespace(**self.params)
+
+        # qagnn data_loader params
+        #args.train_statements = 'data/qa_gnn/train.statement.jsonl'
+        args.train_statements = LOC['qagnn_statements_train']
+        args.train_adj = None
+        #args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
+        args.dev_statements = LOC['qagnn_statements_dev']
+        args.dev_adj = None
+        #args.test_statements = 'data/qa_gnn/test.statement.jsonl'
+        args.test_statements = LOC['qagnn_statements_test']
+        args.test_adj = None
+        args.batch_size = 32
+        args.eval_batch_size = 16
+        args.encoder = 'bert-large-uncased'
+        args.max_node_num = self.params['max_num_nodes']
+        args.drop_partial_batch = False
+        args.fill_partial_batch = False
+
+        # overwrite parameters
+        print('breakpoint')
+
+        # fourlang_parser params
+        use_cache = self.params['use_cache'] if 'use_cache' in self.params else True
+        max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
+        expand = self.params['expand'] if 'expand' in self.params else None
+
+        # LOAD DATA
+        dataset = LM_QAGNN_DataLoader(
+            args,
+            args.train_statements,
+            args.train_adj,
+            args.dev_statements,
+            args.dev_adj,
+            args.test_statements,
+            args.test_adj,
+            batch_size=args.batch_size,
+            eval_batch_size=args.eval_batch_size,
+            device=(self.device0, self.device1),
+            model_name=args.encoder,
+            max_node_num=args.max_node_num,
+
+            is_inhouse=False,
+            #inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt"
+            #max_seq_length=args.max_seq_len,)
+            #subsample=args.subsample,  # 1.0
+            #use_cache=args.use_cache) # True
+        )
+        return dataset
+    '''
 
     def init_data(self):
         # IMITATE PARAMETERS / ARGS
@@ -533,10 +589,103 @@ class QagnnExperiment(FinalExperiment):
             'recall' : reca(preds.int(), ys).item()
         }
 
-    '''
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
-        raise NotImplementedError()
-    '''
+        max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
+        expand = self.params['expand'] if 'expand' in self.params else None
+        pred, attentions = self.val_pred
+        k = round(self.avg_rational_lengths['validation'])
+
+        def persist_statements(statements, name):
+            int_to_label = {-1:'A', 1:'B', 2:'C', 3:'D', 4:'E'}
+            path = f"{self.params['save_loc']}/{name}.dev.statement.jsonl"
+            file = open(path, "w")
+
+            for sample in statements: 
+                _labels = np.zeros(4)
+                _labels[sample['label']] = 0
+
+                res_sample = {
+                    "answerKey": int_to_label[sample['label']],
+                    "id": sample['id'],
+                    "question": {
+                        "question_concept": sample['context'],
+                        "choices": [
+                            {"label": "A", "text": sample['answers'][-1]},
+                            {"label": "B", "text": sample['answers'][0]},
+                            {"label": "C", "text": sample['answers'][1]},
+                            {"label": "D", "text": sample['answers'][2]},
+                            {"label": "E", "text": sample['answers'][3]}
+                        ],
+                        "stem": sample['question'],
+                    },
+                    "statements": [{'label':bool(_labels[i]), 'statement':sample['statements'][i]} for i in range(4)]
+                }
+                print(json.dumps(res_sample), file=comp_file)
+
+            return None
+        
+        # statements
+        dev_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_dev'])
+        comp_statements = dev_statements.deepcopy()
+        suff_statements = dev_statements.deepcopy()
+
+        # ERASE
+        for i,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
+            for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
+                tokens = stmnt.split()
+                assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
+                top_idx = [i for i,x in enumerate(attn) if x>0]
+                if 0 < len(top_idx) < len(tokens): # default case
+                    comp_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
+                    suff_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
+                elif len(top_idx) == 0: # attn is all 0
+                    comp_statements[idx][a] = sample['answers'][a] # backup method or comp is empty
+                    suff_statements[idx][a] = stmnt # everything is selected for suff
+                elif len(top_idx) == len(tokens): # attn is non-0 everywhere!
+                    comp_statements[idx][a] = stmnt # everything is selected for comp
+                    suff_statements[idx][a] = sample['answers'][a] # nothing is in suff, so backup
+        
+        assert False, "Mysterious ERASE Bug test concluded"
+
+        persist_statements(comp_statements, 'comp') 
+        persist_statements(suff_statements, 'suff') 
+        comp_dataset = self.load_qagnn_dataset(dev_statements="data/qa_gnn/dev.statement.jsonl")
+    
+        # ADD 4LANG ADJ DATA (=DECODER DATA)
+        erased_flang_dev = self.graph_parser(
+            dev_statements, 
+            num_samples=len(dev_statements),
+            split='erased_dev',
+            qa_join=self.params['qa_join'],
+            use_cache=True, # TODO set False
+            max_num_nodes=max_num_nodes,
+            expand=expand,
+            use_existing_concept_ids=True
+        )
+
+        *comp_dataset.dev_decoder_data, comp_dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=erased_flang_dev, target_set=dev_statements)
+
+        # PREDICT
+        prediction_params = deepcopy(self.params)
+        prediction_params['softmax_logits'] = True
+        comp_preds = []
+        with torch.no_grad():
+            for qids, labels, *input_data in tqdm(self.val_set):
+                comp_preds.append(self.model(*input_data, **prediction_params))
+
+        # DEBATCH
+        _val_pred = list(zip(*comp_preds))
+        comp_logits = torch.cat(_val_pred[0], dim=0) # debatch logits
+
+        return None
+        doc_ids = [x['id'] for x in self.dev_statements]
+        pred = self.val_pred[0].tolist()
+        comp_pred = comp_logits.tolist()
+        suff_pred = None
+        attn = self.val_pred[1]
+        aopc_thresholded_scores=None
+        # er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=None)
+
 
     def save(self):
         raise NotImplementedError()
