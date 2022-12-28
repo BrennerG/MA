@@ -99,11 +99,14 @@ class Experiment(ABC):
         ''' This method allows to create model classes from strings'''
         # print
         if 'load_from' in self.params: print(f"LOADING MODEL FROM {self.params['load_from']}")
+
         # select model
         if type == 'Random':
             model = RandomClassifier(self.params)
+
         elif type == "BERT":
             model = BertPipeline(self.params)
+
         elif type == 'UD_GCN':
             model = GCN(self.params)
             if 'load_from' in self.params:
@@ -111,6 +114,7 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
+
         elif type == 'UD_GAT':
             model = GATForMultipleChoice(self.params)
             if 'load_from' in self.params:
@@ -118,6 +122,7 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
+
         elif type == 'BERT_GAT':
             model = BERT_GAT(self.params)
             if 'load_from' in self.params:
@@ -125,9 +130,11 @@ class Experiment(ABC):
                     model.load_state_dict(torch.load(f"{self.params['load_from']}/model.pt"))
                 else:
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
+
         elif type == "qagnn":
             args = Namespace(**self.params)
             num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
+            # if 'offset_concepts' in self.params and self.params['offset_concepts']: num_concepts += 2 # TODO why doesn't this work?
             assert num_concepts != None
             model = LM_QAGNN( # TODO have these as defaults in params for args, so that don't have to hardcode params here!
                 args=args,

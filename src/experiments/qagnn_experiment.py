@@ -696,8 +696,7 @@ class QagnnExperiment(FinalExperiment):
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=None) 
         return E.classification_scores(results=er_results, mode='custom', aopc_thresholds=self.params['aopc_thresholds'], with_ids=doc_ids)
 
-    def save(self):
-        raise NotImplementedError()
+    # def save(self): raise NotImplementedError()
 
 def evaluate_accuracy(eval_set, model):
     n_samples, n_correct = 0, 0
