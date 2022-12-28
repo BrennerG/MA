@@ -3,6 +3,7 @@ from experiments.random_experiment import RandomClassifierExperiment
 from experiments.ud_gcn_experiment import UD_GCN_Experiment
 from experiments.final_experiment import FinalExperiment
 from experiments.qagnn_experiment import QagnnExperiment
+from data.locations import LOC
 
 
 DEFAULT_PARAMS = {
@@ -17,6 +18,7 @@ DEFAULT_PARAMS = {
         'aopc_thresholds':[0.01, 0.05, 0.1, 0.2, 0.5], # ERASER thresholds to determine k
         'save_loc': 'data/experiments/default/', # location where the above are saved
         'wandb_logging': True, 
+        'use_cache': True
     },
     'BERT': {
         'batch_size': 16, # batch size for training and evaluation
@@ -46,6 +48,50 @@ DEFAULT_PARAMS = {
         'max_num_nodes': None,
         'expand': None,
         'bidirectional': True
+    },
+    'QAGNN': {
+        # FROM GNN
+        'qa_join': 'statements',
+        'graph_form': '4lang',
+        'bert_dim': 768, # TODO needed
+        # 'max_num_nodes': 200,
+        'max_node_num': 200, # TODO same as above, but we're using this one bc qagnn does
+        'expand': None,
+        # TRAIN
+        'k':5, # num of gat layers
+        'gat_hidden_dim': 200,
+        'concept_dim': 1024,
+        'num_heads': 2, 
+        'clf_layer_dim': 200,
+        'clf_layer_depth': 0, # +1
+        'dropout': 0.2,
+        'embedding': 'bert-large-uncased', # TODO same as 'encoder' ...
+        'num_relation': 1,
+        'weight_decay': 0.01,
+        'encoder_lr': 2e-05,
+        'decoder_lr': 0.001,
+        'optim': 'radam',
+        'lr_schedule': 'fixed',
+        'loss': 'cross_entropy',
+        'unfreeze_epoch': 4,
+        'refreeze_epoch': 10000,
+        'mini_batch_size': 1,
+        'encoder_layer': -1,
+        'fp16': False,
+        'max_grad_norm': 1.0,
+        'log_interval': 10,
+        'save_model': False,
+        'save_dir': './saved_models/qagnn/', # in params
+        'max_epochs_before_stop': 10, # in params
+        # DATALOADER
+        'train_statements': LOC['qagnn_statements_train'],
+        'dev_statements': LOC['qagnn_statements_dev'],
+        'test_statements': LOC['qagnn_statements_test'],
+        'batch_size': 32,
+        'eval_batch_size': 16,
+        'encoder': 'bert-large-uncased', # TODO same as 'embedding' ...
+        'drop_partial_batch': False,
+        'fill_partial_batch': False
     }
 }
 
@@ -98,7 +144,7 @@ def experiment_factory(exp_type:str, args:{}):
         params['model_type'] = exp_type
         exp = FinalExperiment(params)
     elif exp_type == 'qagnn':
-        params = overwrite_params({**DEFAULT_PARAMS['general'], **DEFAULT_PARAMS['GNN']})
+        params = overwrite_params({**DEFAULT_PARAMS['general'], **DEFAULT_PARAMS['QAGNN']})
         params = clean_non_params(params)
         params['model_type'] = exp_type
         exp = QagnnExperiment(params)

@@ -31,23 +31,12 @@ class QagnnExperiment(FinalExperiment):
         # overwrite
         self.params = params
         self.params['offset_concepts'] = True
+        self.params['max_num_nodes'] = params['max_node_num'] # TODO stupid synonym
+        self.params['expand'] = None # TODO why do I have to do this?
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
 
         # set devices
-        '''
-        if 'use_cuda' in self.params and self.params['use_cuda']:
-            self.device0 = torch.device("cuda:0") 
-            self.device1 = torch.device("cuda:0")
-        else:
-            self.device0 = torch.device("cpu") 
-            self.device1 = torch.device("cpu")
-        '''
-        # 4h30
-        '''
-        self.device0 = torch.device('cpu') # encoder
-        self.device1 = torch.device('cuda:0') # decoder
-        '''
         self.device0 = torch.device('cuda:0') # encoder
         self.device1 = torch.device('cpu') # decoder
 
@@ -56,10 +45,10 @@ class QagnnExperiment(FinalExperiment):
         # general stuff
         self.complete_set, self.train_set, self.val_set, self.test_set = self.init_data()
         self.params['num_concepts'] = max(self.graph_parser.id2concept)
-        self.params['num_relation'] = 1 # basic case
         self.model = self.model_factory(self.params['model_type']) # .to(self.device) # TODO shift device assignment from train() to here
-        raw_cose = load_dataset(LOC['cose_huggingface'])
-        self.avg_rational_lengths = EraserCosE.avg_rational_length(raw_cose)
+        # TODO uncomment if we do k-erasing
+        #raw_cose = load_dataset(LOC['cose_huggingface'])
+        #self.avg_rational_lengths = EraserCosE.avg_rational_length(raw_cose)
 
     def __call__(self):
 
@@ -127,34 +116,21 @@ class QagnnExperiment(FinalExperiment):
         print('experiment done!')
         return self
 
+    def parse_params_to_args(self, params, **kwargs):
+        args = Namespace(**params)
+
+        # overwrite
+        for arg in kwargs:
+            print('!')
+
+        return args
+
     def load_qagnn_dataset(self, **kwargs):
-        # IMITATE PARAMETERS / ARGS
-        args = Namespace(**self.params)
-
-        # qagnn data_loader params
-        #args.train_statements = 'data/qa_gnn/train.statement.jsonl'
-        args.train_statements = LOC['qagnn_statements_train']
-        args.train_adj = None
-        #args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
-        args.dev_statements = LOC['qagnn_statements_dev']
-        args.dev_adj = None
-        #args.test_statements = 'data/qa_gnn/test.statement.jsonl'
-        args.test_statements = LOC['qagnn_statements_test']
-        args.test_adj = None
-        args.batch_size = 32
-        args.eval_batch_size = 16
-        args.encoder = 'bert-large-uncased'
-        args.max_node_num = self.params['max_num_nodes']
-        args.drop_partial_batch = False
-        args.fill_partial_batch = False
-
-        # overwrite parameters
+        args = self.parse_params_to_args(self.params)
         args.dev_statements = kwargs['dev_statements'] if 'dev_statements' in kwargs else args.dev_statements
-
-        # fourlang_parser params
-        use_cache = self.params['use_cache'] if 'use_cache' in self.params else True
-        max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
-        expand = self.params['expand'] if 'expand' in self.params else None
+        args.train_adj = None
+        args.dev_adj = None
+        args.test_adj = None
 
         # LOAD DATA
         dataset = LM_QAGNN_DataLoader(
@@ -174,37 +150,17 @@ class QagnnExperiment(FinalExperiment):
             is_inhouse=False,
             #inhouse_train_qids_path="data/qa_gnn/inhouse_split_qids.txt"
             #max_seq_length=args.max_seq_len,)
-            #subsample=args.subsample,  # 1.0
+            #subsample=args.subsample,  # 0.0
             #use_cache=args.use_cache) # True
         )
         return dataset
 
     def init_data(self):
-        # IMITATE PARAMETERS / ARGS
-        args = Namespace(**self.params)
-
-        # qagnn data_loader params
-        #args.train_statements = 'data/qa_gnn/train.statement.jsonl'
-        args.train_statements = LOC['qagnn_statements_train']
+        args = self.parse_params_to_args(self.params)
         args.train_adj = None
-        #args.dev_statements = 'data/qa_gnn/dev.statement.jsonl'
-        args.dev_statements = LOC['qagnn_statements_dev']
         args.dev_adj = None
-        #args.test_statements = 'data/qa_gnn/test.statement.jsonl'
-        args.test_statements = LOC['qagnn_statements_test']
         args.test_adj = None
-        args.batch_size = 32
-        args.eval_batch_size = 16
-        args.encoder = 'bert-large-uncased'
-        args.max_node_num = self.params['max_num_nodes']
-        args.drop_partial_batch = False
-        args.fill_partial_batch = False
-
-        # fourlang_parser params
-        use_cache = self.params['use_cache'] if 'use_cache' in self.params else True
-        max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
-        expand = self.params['expand'] if 'expand' in self.params else None
-
+        
         # LOAD DATA
         dataset = LM_QAGNN_DataLoader(
             args,
@@ -239,9 +195,9 @@ class QagnnExperiment(FinalExperiment):
                 num_samples=len(ds), 
                 split=split, 
                 qa_join=self.params['qa_join'], 
-                use_cache=use_cache,
-                max_num_nodes=max_num_nodes,
-                expand=expand
+                use_cache=args.use_cache,
+                max_num_nodes=args.max_node_num,
+                expand=args.expand
             ) for (split, ds) in zip(['train','dev','test'], [self.train_statements, self.dev_statements, self.test_statements])
         ]
 
@@ -338,40 +294,9 @@ class QagnnExperiment(FinalExperiment):
         return concept_ids, node_type_ids, node_scores, adj_lengths, (edge_index, edge_types)
 
     def train(self):
-        # IMITATE PARAMETERS / ARGS
-        args = Namespace(**self.params)
-        # FOR MODEL
-        args.k = 5
-        args.gnn_dim = self.params['gat_hidden_dim']
-        args.concept_dim = 1024
-        args.att_head_num = 2
-        args.fc_dim = 200 # hidden dim for final MLP layer
-        args.fc_layer_num = 0 # nr layers for final MLP layer + 1
-        args.dropouti = self.params['dropout']
-        args.dropoutg = self.params['dropout']
-        args.dropoutf = self.params['dropout']
-        args.encoder = 'bert-large-uncased'
-        args.num_relation = 1
-        args.encoder_layer = -1
-        # FOR TRAINING
-        args.weight_decay = 0.01
-        args.encoder_lr = 2e-05
-        args.decoder_lr = 0.001
-        args.optim = 'radam'
-        args.lr_schedule = 'fixed'
-        args.loss = 'cross_entropy'
-        args.unfreeze_epoch = 4
-        args.refreeze_epoch = 10000
-        args.mini_batch_size = 1
-        args.fp16 = False
-        args.max_grad_norm = 1.0
-        args.log_interval = 10
-        args.save_model = False
-        args.save_dir = './saved_models/qagnn/' # in params
-        args.max_epochs_before_stop = 10 # in params
-        # ACTUALLY ALREADY IN __INIT__()
-        # args.dev_statements = LOC['qagnn_statements_dev']
-        args.test_statements = LOC['qagnn_statements_test']
+        
+        args = self.parse_params_to_args(self.params)
+        dataset = self.complete_set
 
         # SET RANDOM SEEDS
         random.seed(args.rnd_seed)
@@ -389,20 +314,10 @@ class QagnnExperiment(FinalExperiment):
         with open(log_path, 'w') as fout:
             fout.write('step,dev_acc,test_acc\n')
 
-        
-        '''
-        # TODO implement model loading!
-        if args.load_model_path:
-            print (f'loading and initializing model from {args.load_model_path}')
-            model_state_dict, old_args = torch.load(args.load_model_path, map_location=torch.device('cpu'))
-            model.load_state_dict(model_state_dict)
-        '''
-
-        # TODO move this to init
         self.model.encoder.to(self.device0)
         self.model.decoder.to(self.device1)
 
-        # TODO hardcode this (maybe put this in its own function)
+        # OPTIMIZER
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         grouped_parameters = [
             {'params': [p for n, p in self.model.encoder.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay, 'lr': args.encoder_lr},
@@ -412,7 +327,7 @@ class QagnnExperiment(FinalExperiment):
         ]
         optimizer = OPTIMIZER_CLASSES[args.optim](grouped_parameters)
 
-        # TODO is probably always 'fixed' anyway
+        # SCHEDULE
         if args.lr_schedule == 'fixed':
             try:
                 scheduler = ConstantLRSchedule(optimizer)
@@ -594,7 +509,7 @@ class QagnnExperiment(FinalExperiment):
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
         expand = self.params['expand'] if 'expand' in self.params else None
         pred, attentions = self.val_pred
-        k = round(self.avg_rational_lengths['validation'])
+        # k = round(self.avg_rational_lengths['validation'])
 
         # writes erased statements to files (coz dataset class needs files)
         def persist_statements(statements, name):
