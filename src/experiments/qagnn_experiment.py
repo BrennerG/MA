@@ -4,6 +4,7 @@ import wandb
 import random
 import numpy as np
 import torch
+import wandb
 
 from argparse import Namespace
 import torch.nn as nn
@@ -34,7 +35,11 @@ class QagnnExperiment(FinalExperiment):
         self.params['max_num_nodes'] = params['max_node_num'] # TODO stupid synonym
         self.params['expand'] = None # TODO why do I have to do this?
         torch.manual_seed(self.params['rnd_seed'])
-        wandb.init(config=self.params, mode='online' if self.params['wandb_logging']==True else 'disabled')
+        wandb.init(
+            config=self.params, 
+            mode='online' if self.params['wandb_logging']==True else 'disabled',
+            project='qagnn_4lang'
+        )
 
         # set devices
         self.device0 = torch.device('cuda:0') # encoder
@@ -387,6 +392,7 @@ class QagnnExperiment(FinalExperiment):
 
         global_step, best_dev_epoch = 0, 0
         best_dev_acc, final_test_acc, total_loss = 0.0, 0.0, 0.0
+        epoch_loss = 0.0
         start_time = time.time()
         self.model.train()
         freeze_net(self.model.encoder)
@@ -418,6 +424,8 @@ class QagnnExperiment(FinalExperiment):
                     else:
                         loss.backward()
                     total_loss += loss.item()
+                    epoch_loss += loss.item()
+
                 if args.max_grad_norm > 0:
                     if args.fp16:
                         scaler.unscale_(optimizer)
@@ -431,10 +439,11 @@ class QagnnExperiment(FinalExperiment):
                 else:
                     optimizer.step()
 
+
                 if (global_step + 1) % args.log_interval == 0:
                     total_loss /= args.log_interval
                     ms_per_batch = 1000 * (time.time() - start_time) / args.log_interval
-                    print('| step {:5} |  lr: {:9.7f} | loss {:7.4f} | ms/batch {:7.2f} |'.format(global_step, scheduler.get_lr()[0], total_loss, ms_per_batch))
+                    print('| step {:5} |  lr: {:9.7f} | loss {:7.4f} | ms/batch {:7.2f} |'.format(global_step, scheduler.get_last_lr()[0], total_loss, ms_per_batch))
                     total_loss = 0
                     start_time = time.time()
                 global_step += 1
@@ -463,11 +472,27 @@ class QagnnExperiment(FinalExperiment):
                                 total_acc.append(acc)
                 test_acc = float(sum(total_acc))/len(total_acc)
 
-            print('-' * 71)
-            print('| epoch {:3} | step {:5} | dev_acc {:7.4f} | test_acc {:7.4f} |'.format(epoch_id, global_step, dev_acc, test_acc))
-            print('-' * 71)
-            with open(log_path, 'a') as fout:
-                fout.write('{},{},{}\n'.format(global_step, dev_acc, test_acc))
+            # LOG
+            if args.wandb_logging:
+                result_dict = {
+                    'avg_train_loss': epoch_loss / len(dataset.train()),
+                    #'avg_test_loss': avg_test_loss, # TODO
+                    'acc_train': evaluate_accuracy(dataset.train(), self.model),
+                    'acc_dev': dev_acc,
+                    'acc_test': test_acc
+                    #'comprehensiveness_test': expl_eval['comprehensiveness'] if do_explainability_eval else None, # TODO??? we never used this anyway
+                    #'sufficiency_test': expl_eval['sufficiency'] if do_explainability_eval else None # TODO??? we never used this anyway
+                }
+                wandb.log(result_dict)
+            else:
+                print('-' * 71)
+                print('| epoch {:3} | step {:5} | dev_acc {:7.4f} | test_acc {:7.4f} |'.format(epoch_id, global_step, dev_acc, test_acc))
+                print('-' * 71)
+                with open(log_path, 'a') as fout:
+                    fout.write('{},{},{}\n'.format(global_step, dev_acc, test_acc))
+            epoch_loss = 0.0
+
+            # SAVE
             if dev_acc >= best_dev_acc:
                 best_dev_acc = dev_acc
                 final_test_acc = test_acc
