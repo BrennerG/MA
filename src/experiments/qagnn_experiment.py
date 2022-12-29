@@ -119,6 +119,10 @@ class QagnnExperiment(FinalExperiment):
         self.save()
 
         print('experiment done!')
+        if self.params['wandb_logging']:
+            wandb.run.summary['eval_output'] = self.eval_output
+        else:
+            print(self.eval_output)
         return self
 
     def parse_params_to_args(self, params, **kwargs):
