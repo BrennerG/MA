@@ -237,6 +237,11 @@ class LM_QAGNN(nn.Module):
                                     node_type_ids, node_scores, adj_lengths, adj,
                                     emb_data=None, cache_output=cache_output)
         logits = logits.view(bs, nc)
+
+        # edit by gbreiner 05.01.23
+        if 'softmax_logits' in kwargs and kwargs['softmax_logits']:
+            logits = torch.softmax(logits,dim=1)
+
         if not detail:
             return logits, attn
         else:
