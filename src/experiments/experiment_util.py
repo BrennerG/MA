@@ -59,13 +59,14 @@ DEFAULT_PARAMS = {
         'expand': None,
         # TRAIN
         'k':5, # num of gat layers
-        'gat_hidden_dim': 200,
+        'gat_hidden_dim': 100,
         'concept_dim': 1024,
         'num_heads': 2, 
         'clf_layer_dim': 200,
         'clf_layer_depth': 0, # +1
         'dropout': 0.2,
         'embedding': 'bert-large-uncased', # TODO same as 'encoder' ...
+        'num_node_types': 4,
         'num_relation': 1,
         'weight_decay': 0.01,
         'encoder_lr': 2e-05,

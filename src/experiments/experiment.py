@@ -139,18 +139,18 @@ class Experiment(ABC):
             model = LM_QAGNN( # TODO have these as defaults in params for args, so that don't have to hardcode params here!
                 args=args,
                 model_name='bert-large-uncased',
-                k=5,
-                n_ntype=4, # basic case
-                n_etype=1 , # basic case,
-                n_concept=num_concepts, # TODO pass this here
-                concept_dim=100,
-                concept_in_dim=1024,
-                n_attention_head=2,
-                fc_dim=200,
-                n_fc_layer=0,
-                p_emb=0.2,
-                p_gnn=0.2,
-                p_fc=0.2
+                k=args.k,
+                n_ntype=args.num_node_types,
+                n_etype=args.num_relation,
+                n_concept=num_concepts,
+                concept_dim=args.gat_hidden_dim, # TODO this the correct args for the param?
+                concept_in_dim=args.concept_dim,
+                n_attention_head=args.num_heads,
+                fc_dim=args.clf_layer_dim,
+                n_fc_layer=args.clf_layer_depth,
+                p_emb=args.dropout,
+                p_gnn=args.dropout,
+                p_fc=args.dropout
             )
             if 'load_from' in self.params:
                 raise AttributeError('ERR: no loading for qagnn implemented yet!')

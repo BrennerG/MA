@@ -198,6 +198,7 @@ class QagnnExperiment(FinalExperiment):
         self.test_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_test'])
 
         # parse all splits
+        add_edge_types = args.num_relation == 3
         self.flang_train, self.flang_dev, self.flang_test = [
             self.graph_parser(
                 ds, 
@@ -206,15 +207,16 @@ class QagnnExperiment(FinalExperiment):
                 qa_join=self.params['qa_join'], 
                 use_cache=args.use_cache,
                 max_num_nodes=args.max_node_num,
-                expand=args.expand
+                expand=args.expand,
+                add_edge_types=add_edge_types
             ) for (split, ds) in zip(['train','dev','test'], [self.train_statements, self.dev_statements, self.test_statements])
         ]
 
         self.graph_parser.save_concepts() # TODO put this in save?
 
-        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements)
-        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements)
-        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements)
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types)
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types)
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types)
 
         return dataset, dataset.train(), dataset.dev(), dataset.test()
     
@@ -245,7 +247,7 @@ class QagnnExperiment(FinalExperiment):
            
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
-    def add_4lang_adj_data(self, target_flang, target_set):
+    def add_4lang_adj_data(self, target_flang, target_set, add_edge_types=False):
         N = len(target_set)
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
 
@@ -290,11 +292,18 @@ class QagnnExperiment(FinalExperiment):
                 adj_lengths[i,a] = len(concept_names) + 1
 
                 # EDGE INDEX
-                c_edges = torch.Tensor(X_flang_edges[a]).view(2,-1).long()
+                if add_edge_types:
+                    c_edges = torch.Tensor(X_flang_edges[a][0]).view(2,-1).long()
+                else:
+                    c_edges = torch.Tensor(X_flang_edges[a]).view(2,-1).long()
                 c_edge_index[a] = c_edges
 
                 # EDGE TYPES
-                c_edge_types[a] = torch.zeros(c_edges.shape[1]).long()
+                if add_edge_types:
+                    c_edge_types[a] = torch.Tensor(X_flang_edges[a][1]).long()
+                    assert c_edge_types[a].shape[0] == c_edges.shape[1]
+                else:
+                    c_edge_types[a] = torch.zeros(c_edges.shape[1]).long()
             
             edge_index.append(c_edge_index)
             edge_types.append(c_edge_types)

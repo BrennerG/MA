@@ -52,10 +52,12 @@ class FourLangParser(GraphPreproc):
         
         if offset_concepts==True:
             if self.concept2id == {} and self.id2concept == {}:
+                '''
                 self.concept2id['ab_extra'] = 0
                 self.concept2id['ab_intra'] = 1
                 self.id2concept[0] = 'ab_extra'
                 self.id2concept[1] = 'ab_intra'
+                '''
             else:
                 self.concept2id = {k:v+2 for k,v in self.concept2id.items()}
                 self.concept2id['ab_extra'] = 0
@@ -70,8 +72,10 @@ class FourLangParser(GraphPreproc):
         use_existing_concept_ids = kwargs['use_existing_concept_ids'] if 'use_existing_concept_ids' in kwargs else False
         max_num_nodes = kwargs['max_num_nodes'] if 'max_num_nodes' in kwargs else None
         expand = kwargs['expand'] if 'expand' in kwargs else None
+        add_edge_types = kwargs['add_edge_types'] if 'add_edge_types' in kwargs else False
+        _add_edge_types_str = "_et" if 'add_edge_types' in kwargs and add_edge_types else ""
 
-        edges_path = LOC['4lang_parses'] + self.folder_path + f'cose_{split}_{str(num_samples)}_{qa_join}.json'
+        edges_path = LOC['4lang_parses'] + self.folder_path + f'cose_{split}_{str(num_samples)}_{qa_join}{_add_edge_types_str}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
@@ -83,7 +87,8 @@ class FourLangParser(GraphPreproc):
                 qa_join=qa_join, 
                 use_existing_concept_ids=use_existing_concept_ids, 
                 max_num_nodes=max_num_nodes, 
-                expand=expand
+                expand=expand,
+                add_edge_types=add_edge_types
             )
             if use_cache:
                 # save edges
@@ -92,7 +97,7 @@ class FourLangParser(GraphPreproc):
         
         return edges
 
-    def extract_edges(self, dataset, num_samples=-1, qa_join='none', use_existing_concept_ids=False, max_num_nodes=None, expand=None):
+    def extract_edges(self, dataset, num_samples=-1, qa_join='none', use_existing_concept_ids=False, max_num_nodes=None, expand=None, add_edge_types=False):
         edges = []
         maps = []
         concepts = []
@@ -153,8 +158,18 @@ class FourLangParser(GraphPreproc):
                 corr_map = dict(zip(ordered_names, range(len(ordered_names))))
                 relative_edges = [(corr_map[x], corr_map[y]) for x,y in largest_parse.edges]
 
+                # get edge types
+                if add_edge_types:
+                    edge_types = list(nx.get_edge_attributes(largest_parse,'color').values())
+
+                # get node types
+                pass
+
                 # append
-                grouped_edges.append(list(relative_edges))
+                if add_edge_types: 
+                    grouped_edges.append((list(relative_edges), edge_types))
+                else: 
+                    grouped_edges.append(list(relative_edges))
                 grouped_maps.append(nodes_to_qa_tokens)
                 grouped_concepts.append(list(names.values()))
             
