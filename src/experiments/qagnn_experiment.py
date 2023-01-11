@@ -10,9 +10,11 @@ from argparse import Namespace
 import torch.nn as nn
 try: from transformers import (ConstantLRSchedule, WarmupLinearSchedule, WarmupConstantSchedule)
 except: from transformers import get_constant_schedule, get_constant_schedule_with_warmup,  get_linear_schedule_with_warmup
+from transformers import RobertaTokenizer, RobertaForMaskedLM
 from tqdm import tqdm
 from copy import deepcopy
 from torchmetrics import Accuracy, Recall, Precision
+from collections import OrderedDict
 
 from experiments.final_experiment import FinalExperiment
 from data.locations import LOC
@@ -214,11 +216,78 @@ class QagnnExperiment(FinalExperiment):
 
         self.graph_parser.save_concepts() # TODO put this in save?
 
+        # node relevance scoring
+        node_relevance_train = self.node_relevance_scoring(self.flang_train, self.train_statements)
+        node_relevance_dev = self.node_relevance_scoring(self.flang_dev, self.dev_statements)
+        node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
+
+        # add adj data to dataset
         *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types)
-        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types)
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_dev)
         *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types)
 
         return dataset, dataset.train(), dataset.dev(), dataset.test()
+    
+    def node_relevance_scoring(self, flang, set):
+        TOKENIZER = RobertaTokenizer.from_pretrained('roberta-large')
+        LM_MODEL = RobertaForMaskedLMwithLoss.from_pretrained('roberta-large')
+        LM_MODEL.cuda()
+        LM_MODEL.eval()
+
+        results = []
+        for s, (X, concepts) in tqdm(enumerate(zip(set, flang[2])), desc="node relevance scoring"):
+            grouped_results = []
+            for a,qac in enumerate(concepts):
+
+                # Tokenize
+                sents = []
+                qac.insert(0, "Z_VEC")
+                for c, conc in enumerate(qac):
+                    if conc == "Z_VEC": sent = X['question']
+                    else: sent = f"{X['question'].lower()} {conc}."
+                    sents.append(TOKENIZER.encode(sent, add_special_tokens=True))
+            
+                # Rank in Batches
+                scores = []
+                n_cids = len(qac)
+                cur_idx = 0
+                batch_size = 50
+                while cur_idx < n_cids:
+
+                    # Prepare batch
+                    input_ids = sents[cur_idx: cur_idx+batch_size]
+                    max_len = max([len(seq) for seq in input_ids])
+                    for j, seq in enumerate(input_ids):
+                        seq += [TOKENIZER.pad_token_id] * (max_len-len(seq))
+                        input_ids[j] = seq
+                    input_ids = torch.tensor(input_ids).cuda() #[B, seqlen]
+                    mask = (input_ids!=1).long() #[B, seq_len]
+
+                    # Get LM score
+                    with torch.no_grad():
+                        outputs = LM_MODEL(input_ids, attention_mask=mask, masked_lm_labels=input_ids)
+                        loss = outputs[0] #[B, ]
+                        _scores = list(-loss.detach().cpu().numpy()) #list of float
+                    scores += _scores
+                    cur_idx += batch_size
+
+                assert len(sents) == len(scores) == len(qac)
+                cid2score = OrderedDict(sorted(list(zip(qac, scores)), key=lambda x: -x[1])) #score: from high to low
+                grouped_results.append(cid2score)
+
+            results.append(grouped_results)
+
+        '''
+        # neural scoring
+        results = []
+        for _sent in tqdm(sents, desc="node relevance scoring - lm scoring"):
+            with torch.no_grad():
+                input_ids = torch.tensor(_sent).unsqueeze(0).cuda()
+                mask = torch.ones(input_ids.shape).long().cuda()
+                score, _, _ = LM_MODEL(input_ids, attention_mask=mask, masked_lm_labels=input_ids)
+                results.append(score.item())
+        '''
+        return results
     
     # load data used by qagnn and parse into compatible format
     def prepare_qagnn_data(self, path):
@@ -247,13 +316,13 @@ class QagnnExperiment(FinalExperiment):
            
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
-    def add_4lang_adj_data(self, target_flang, target_set, add_edge_types=False):
+    def add_4lang_adj_data(self, target_flang, target_set, add_edge_types=False, relevance_scores=None):
         N = len(target_set)
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
 
         concept_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
         node_type_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
-        node_scores = torch.ones(N, 5, max_num_nodes, 1) # [n,nc,n_nodes,1] = [8459, 5, 200, 1]
+        node_scores = torch.ones(N, 5, max_num_nodes, 1).long() # [n,nc,n_nodes,1] = [8459, 5, 200, 1]
         adj_lengths = torch.zeros(N,5) # [n,nc]
         edge_index = [] # [n,nc,[2,e]] list(list(tensor)))
         edge_types = [] # [n,nc,e] list(list(tensor))
@@ -281,12 +350,14 @@ class QagnnExperiment(FinalExperiment):
                     node_type_ids[i,a,qm_i+1] = 0
 
                 # CONCEPT IDS
-                concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] for c in concept_names]).long()
+                concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else -1 for c in concept_names]).long()
                 concept_ids[i,a] = F.pad(concept_tensor, (0,  max_num_nodes-len(concept_tensor)), 'constant', 1)
                 pass
 
-                # NODE SCORES ?
-                pass
+                # NODE SCORES
+                sample_relevance_scores = relevance_scores[i][a]
+                for c, cname in enumerate(concept_names):
+                    node_scores[i,a,c] = np.float64(sample_relevance_scores[cname])
 
                 # ADJ LENGTHS
                 adj_lengths[i,a] = len(concept_names) + 1
@@ -651,6 +722,7 @@ class QagnnExperiment(FinalExperiment):
 
     # def save(self): raise NotImplementedError()
 
+
 def evaluate_accuracy(eval_set, model):
     n_samples, n_correct = 0, 0
     model.eval()
@@ -660,3 +732,25 @@ def evaluate_accuracy(eval_set, model):
             n_correct += (logits.argmax(1) == labels).sum().item()
             n_samples += labels.size(0)
     return n_correct / n_samples
+
+
+class RobertaForMaskedLMwithLoss(RobertaForMaskedLM):
+    #
+    def __init__(self, config):
+        super().__init__(config)
+    #
+    def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, masked_lm_labels=None):
+        #
+        assert attention_mask is not None
+        outputs = self.roberta(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, position_ids=position_ids, head_mask=head_mask)
+        sequence_output = outputs[0] #hidden_states of final layer (batch_size, sequence_length, hidden_size)
+        prediction_scores = self.lm_head(sequence_output)
+        outputs = (prediction_scores, sequence_output) + outputs[2:]
+        if masked_lm_labels is not None:
+            loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+            bsize, seqlen = input_ids.size()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1)).view(bsize, seqlen)
+            masked_lm_loss = (masked_lm_loss * attention_mask).sum(dim=1)
+            outputs = (masked_lm_loss,) + outputs
+            # (masked_lm_loss), prediction_scores, sequence_output, (hidden_states), (attentions)
+        return outputs
