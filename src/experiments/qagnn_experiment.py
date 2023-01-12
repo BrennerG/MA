@@ -113,8 +113,8 @@ class QagnnExperiment(FinalExperiment):
             self.eval_output = None
         
         # VIZ
-        print('visualizing...')
-        self.viz_output = self.viz()
+        print('saving viz data for qualitative analysis...')
+        self.viz_output = self.qualitative_analysis()
 
         # SAVE / PERSIST
         print('saving...')
@@ -126,6 +126,43 @@ class QagnnExperiment(FinalExperiment):
         else:
             print(self.eval_output)
         return self
+    
+    def qualitative_analysis(self):
+        dataset = self.complete_set
+
+        # PREDICT
+        prediction_params = deepcopy(self.params)
+        # prediction_params['softmax_logits'] = True # TODO neecessary?
+        prediction_params['detail'] = True
+        preds = []
+        with torch.no_grad():
+            for qids, labels, *input_data in tqdm(dataset.test()):
+                preds.append(self.model(*input_data, **prediction_params))
+
+        # DEBATCH
+        _val_pred = list(zip(*preds)) # 0:logits, 1:attn, 2:concept_ids, 3:node_type_ids, 4:edge_index_orig, 5:edge_type_orig
+        logits, _, concept_ids, node_type_ids, edge_index_orig, edge_type_orig = [[item for sublist in list for item in sublist] for list in _val_pred] # flatten
+        attn = torch.cat(_val_pred[1]).view(1238,2,5,200)
+
+        # ADD SOME MORE FLANG DATA
+        edges, node2qa_map, concept_names = self.flang_test
+        id2concept = self.graph_parser.id2concept
+
+        # create a beautiful bulky dictionary
+        return {
+            'statement_data':self.test_statements,
+            'logits': [x.tolist() for x in logits],
+            'attn': attn.tolist(),
+            'concept_ids': [x.tolist() for x in concept_ids],
+            'node_type_ids': [x.tolist() for x in node_type_ids],
+            'edge_index_orig': [[x.tolist() for x in edges] for edges in edge_index_orig],
+            'edge_type_orig': [[x.tolist() for x in edges] for edges in edge_type_orig],
+            '4L_edges': edges,
+            '4L_map': node2qa_map,
+            '4L_concept_names': concept_names,
+            '4L_id2concept': id2concept
+        }
+        return res_dic
 
     def parse_params_to_args(self, params, **kwargs):
         args = Namespace(**params)
@@ -353,7 +390,7 @@ class QagnnExperiment(FinalExperiment):
                 qm_idx = [x for x in range(len(concept_names)) if concept_names[x] not in answer_concepts]
                 assert len(qm_idx) < 200
                 for qm_i in qm_idx:
-                    node_type_ids[i,a,qm_i+1] = 0
+                    node_type_ids[i,a,qm_i+1] = 0 # TODO this threw an error for node_relevance scoring on trou (12.01.22)
 
                 # CONCEPT IDS
                 concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else -1 for c in concept_names]).long()
@@ -706,6 +743,7 @@ class QagnnExperiment(FinalExperiment):
                 elif len(top_idx) == len(tokens): # attn is non-0 everywhere!
                     comp_statements[idx][a] = stmnt # everything is selected for comp
                     suff_statements[idx][a] = X['answers'][a] # nothing is in suff, so backup
+
         # save erased statements bc QAGNN_DataLoader class needs it
         persist_statements(comp_statements, 'comp') 
         persist_statements(suff_statements, 'suff') 
@@ -727,8 +765,14 @@ class QagnnExperiment(FinalExperiment):
         er_results = E.create_results(doc_ids, pred, comp_pred, suff_pred, attn, aopc_thresholded_scores=None) 
         return E.classification_scores(results=er_results, mode='custom', aopc_thresholds=self.params['aopc_thresholds'], with_ids=doc_ids)
 
-    # def save(self): raise NotImplementedError()
+    def save(self):
+        # WRITING VIZ DATA
+        viz_path = f"{self.params['save_loc']}viz_data.json"
+        with open(viz_path, 'w') as file:
+            json.dump(self.viz_output, file)
+        print(f"wrote viz data to {viz_path}")
 
+        return True
 
 def evaluate_accuracy(eval_set, model):
     n_samples, n_correct = 0, 0
@@ -739,7 +783,6 @@ def evaluate_accuracy(eval_set, model):
             n_correct += (logits.argmax(1) == labels).sum().item()
             n_samples += labels.size(0)
     return n_correct / n_samples
-
 
 class RobertaForMaskedLMwithLoss(RobertaForMaskedLM):
     #

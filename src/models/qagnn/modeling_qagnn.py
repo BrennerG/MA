@@ -219,7 +219,7 @@ class LM_QAGNN(nn.Module):
         # get params
         layer_id = -1
         cache_output = False
-        detail = False
+        detail = kwargs['detail'] if 'detail' in kwargs else False
 
         bs, nc = inputs[0].size(0), inputs[0].size(1)
 
