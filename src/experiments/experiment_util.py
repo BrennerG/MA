@@ -92,7 +92,9 @@ DEFAULT_PARAMS = {
         'eval_batch_size': 16,
         'encoder': 'bert-large-uncased', # TODO same as 'embedding' ...
         'drop_partial_batch': False,
-        'fill_partial_batch': False
+        'fill_partial_batch': False,
+        # NEW
+        'node_relevance': True
     }
 }
 

@@ -171,6 +171,8 @@ class QagnnExperiment(FinalExperiment):
         args.train_adj = None
         args.dev_adj = None
         args.test_adj = None
+        add_edge_types = args.num_relation == 3
+        node_relevance = args.node_relevance
         
         # LOAD DATA
         dataset = LM_QAGNN_DataLoader(
@@ -200,7 +202,6 @@ class QagnnExperiment(FinalExperiment):
         self.test_statements = self.prepare_qagnn_data(path=LOC['qagnn_statements_test'])
 
         # parse all splits
-        add_edge_types = args.num_relation == 3
         self.flang_train, self.flang_dev, self.flang_test = [
             self.graph_parser(
                 ds, 
@@ -217,9 +218,14 @@ class QagnnExperiment(FinalExperiment):
         self.graph_parser.save_concepts() # TODO put this in save?
 
         # node relevance scoring
-        node_relevance_train = self.node_relevance_scoring(self.flang_train, self.train_statements)
-        node_relevance_dev = self.node_relevance_scoring(self.flang_dev, self.dev_statements)
-        node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
+        if node_relevance:
+            node_relevance_train = self.node_relevance_scoring(self.flang_train, self.train_statements)
+            node_relevance_dev = self.node_relevance_scoring(self.flang_dev, self.dev_statements)
+            node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
+        else:
+            node_relevance_train = None
+            node_relevance_dev = None
+            node_relevance_test = None
 
         # add adj data to dataset
         *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_train)
@@ -355,9 +361,10 @@ class QagnnExperiment(FinalExperiment):
                 pass
 
                 # NODE SCORES
-                sample_relevance_scores = relevance_scores[i][a]
-                for c, cname in enumerate(concept_names):
-                    node_scores[i,a,c] = np.float64(sample_relevance_scores[cname])
+                if relevance_scores != None:
+                    sample_relevance_scores = relevance_scores[i][a]
+                    for c, cname in enumerate(concept_names):
+                        node_scores[i,a,c] = np.float64(sample_relevance_scores[cname])
 
                 # ADJ LENGTHS
                 adj_lengths[i,a] = len(concept_names) + 1
