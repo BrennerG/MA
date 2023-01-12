@@ -222,9 +222,9 @@ class QagnnExperiment(FinalExperiment):
         node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
 
         # add adj data to dataset
-        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types)
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_train)
         *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_dev)
-        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types)
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_test)
 
         return dataset, dataset.train(), dataset.dev(), dataset.test()
     
