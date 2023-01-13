@@ -707,6 +707,8 @@ class QagnnExperiment(FinalExperiment):
 
         # predicts erased datasets and statements
         def predict(dataset, dev_statements):
+
+            add_edge_types = self.params['num_relation'] == 3 if 'num_relation' in self.params else False
             
             # ADD 4LANG ADJ DATA (=DECODER DATA)
             flang_dev = self.graph_parser(
@@ -717,9 +719,12 @@ class QagnnExperiment(FinalExperiment):
                 use_cache=False,
                 max_num_nodes=max_num_nodes,
                 expand=expand,
+                add_edge_types=add_edge_types,
                 use_existing_concept_ids=True
-            )
-            *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=flang_dev, target_set=dev_statements)
+            ) # 2h (local PC)
+
+            node_relevance_dev = self.node_relevance_scoring(flang_dev, dev_statements) # 30 minutes (local PC)
+            *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=flang_dev, target_set=dev_statements, relevance_scores=node_relevance_dev)
 
             # PREDICT
             prediction_params = deepcopy(self.params)
