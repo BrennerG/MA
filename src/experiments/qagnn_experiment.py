@@ -148,11 +148,10 @@ class QagnnExperiment(FinalExperiment):
         edges, node2qa_map, concept_names = self.flang_test
         id2concept = self.graph_parser.id2concept
 
-        # TODO pass node relevance too!
-
         # create a beautiful bulky dictionary
         return {
             'statement_data':self.test_statements,
+            'node_scores': self.node_relevance_test,
             'logits': [x.tolist() for x in logits],
             'attn': attn.tolist(),
             'concept_ids': [x.tolist() for x in concept_ids],
@@ -164,7 +163,6 @@ class QagnnExperiment(FinalExperiment):
             '4L_concept_names': concept_names,
             '4L_id2concept': id2concept
         }
-        return res_dic
 
     def parse_params_to_args(self, params, **kwargs):
         args = Namespace(**params)
@@ -258,18 +256,18 @@ class QagnnExperiment(FinalExperiment):
 
         # node relevance scoring
         if node_relevance:
-            node_relevance_train = self.node_relevance_scoring(self.flang_train, self.train_statements)
-            node_relevance_dev = self.node_relevance_scoring(self.flang_dev, self.dev_statements)
-            node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
+            self.node_relevance_train = self.node_relevance_scoring(self.flang_train, self.train_statements)
+            self.node_relevance_dev = self.node_relevance_scoring(self.flang_dev, self.dev_statements)
+            self.node_relevance_test = self.node_relevance_scoring(self.flang_test, self.test_statements)
         else:
-            node_relevance_train = None
-            node_relevance_dev = None
-            node_relevance_test = None
+            self.node_relevance_train = None
+            self.node_relevance_dev = None
+            self.node_relevance_test = None
 
         # add adj data to dataset
-        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_train)
-        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_dev)
-        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_test)
+        *dataset.train_decoder_data, dataset.train_adj_data = self.add_4lang_adj_data(target_flang=self.flang_train, target_set=self.train_statements, add_edge_types=add_edge_types, relevance_scores=self.node_relevance_train)
+        *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=self.flang_dev, target_set=self.dev_statements, add_edge_types=add_edge_types, relevance_scores=self.node_relevance_dev)
+        *dataset.test_decoder_data, dataset.test_adj_data = self.add_4lang_adj_data(target_flang=self.flang_test, target_set=self.test_statements, add_edge_types=add_edge_types, relevance_scores=self.node_relevance_test)
 
         return dataset, dataset.train(), dataset.dev(), dataset.test()
     
@@ -662,6 +660,8 @@ class QagnnExperiment(FinalExperiment):
         }
 
     def eval_explainability(self, pred=None, attn=None, skip_aopc=False): 
+
+        # TODO add node_relevance scoring for erased predictions!!
 
         # PARAMS
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else None
