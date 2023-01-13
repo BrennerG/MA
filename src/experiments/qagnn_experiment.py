@@ -148,6 +148,8 @@ class QagnnExperiment(FinalExperiment):
         edges, node2qa_map, concept_names = self.flang_test
         id2concept = self.graph_parser.id2concept
 
+        # TODO pass node relevance too!
+
         # create a beautiful bulky dictionary
         return {
             'statement_data':self.test_statements,
@@ -365,7 +367,7 @@ class QagnnExperiment(FinalExperiment):
 
         concept_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
         node_type_ids = torch.zeros(N, 5, max_num_nodes).long() # [n,nc,n_node]
-        node_scores = torch.ones(N, 5, max_num_nodes, 1).long() # [n,nc,n_nodes,1] = [8459, 5, 200, 1]
+        node_scores = torch.ones(N, 5, max_num_nodes, 1) # [n,nc,n_nodes,1] = [8459, 5, 200, 1]
         adj_lengths = torch.zeros(N,5) # [n,nc]
         edge_index = [] # [n,nc,[2,e]] list(list(tensor)))
         edge_types = [] # [n,nc,e] list(list(tensor))
@@ -377,6 +379,9 @@ class QagnnExperiment(FinalExperiment):
 
             for a in range(5):
 
+                if 'Z_VEC' in X_flang_concepts[a]: # doesn't happen when loaded from memory!
+                    X_flang_concepts[a].remove('Z_VEC')
+
                 # NODE TYPE IDS
                 concept_names = X_flang_concepts[a]
                 answer_concepts = X_og['answers'][a].split()
@@ -385,12 +390,12 @@ class QagnnExperiment(FinalExperiment):
                 # set answer type
                 am_idx = [concept_names.index(ac) for ac in answer_concepts if ac in concept_names]
                 for am_i in am_idx:
-                    node_type_ids[i,a,am_i+1] = 1
+                    node_type_ids[i,a,am_i] = 1
                 # set question type
-                qm_idx = [x for x in range(len(concept_names)) if concept_names[x] not in answer_concepts]
+                qm_idx = [x for x in range(1, len(concept_names)) if concept_names[x] not in answer_concepts]
                 assert len(qm_idx) < 200
                 for qm_i in qm_idx:
-                    node_type_ids[i,a,qm_i+1] = 0 # TODO this threw an error for node_relevance scoring on trou (12.01.22)
+                    node_type_ids[i,a,qm_i] = 0
 
                 # CONCEPT IDS
                 concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else -1 for c in concept_names]).long()
