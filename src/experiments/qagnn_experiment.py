@@ -148,6 +148,12 @@ class QagnnExperiment(FinalExperiment):
         edges, node2qa_map, concept_names = self.flang_test
         id2concept = self.graph_parser.id2concept
 
+        # PARSE NODE_SCORES TO FLOAT
+        for X in self.node_relevance_test:
+            for A in X:
+                for key, value in A.items():
+                    A[key] = float(value)
+
         # create a beautiful bulky dictionary
         return {
             'statement_data':self.test_statements,
