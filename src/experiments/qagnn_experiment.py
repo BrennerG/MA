@@ -594,19 +594,19 @@ class QagnnExperiment(FinalExperiment):
                 eval_set = dataset.test()
                 total_acc = []
                 count = 0
-                preds_path = os.path.join(args.save_dir, 'test_e{}_preds.csv'.format(epoch_id))
-                with open(preds_path, 'w') as f_preds:
-                    with torch.no_grad():
-                        for qids, labels, *input_data in tqdm(eval_set):
-                            count += 1
-                            logits, _, concept_ids, node_type_ids, edge_index, edge_type = self.model(*input_data, detail=True)
-                            predictions = logits.argmax(1) #[bsize, ]
-                            preds_ranked = (-logits).argsort(1) #[bsize, n_choices]
-                            for i, (qid, label, pred, _preds_ranked, cids, ntype, edges, etype) in enumerate(zip(qids, labels, predictions, preds_ranked, concept_ids, node_type_ids, edge_index, edge_type)):
-                                acc = int(pred.item()==label.item())
-                                print ('{},{}'.format(qid, chr(ord('A') + pred.item())), file=f_preds)
-                                f_preds.flush()
-                                total_acc.append(acc)
+                #preds_path = os.path.join(args.save_dir, 'test_e{}_preds.csv'.format(epoch_id))
+                #with open(preds_path, 'w') as f_preds:
+                with torch.no_grad():
+                    for qids, labels, *input_data in tqdm(eval_set):
+                        count += 1
+                        logits, _, concept_ids, node_type_ids, edge_index, edge_type = self.model(*input_data, detail=True)
+                        predictions = logits.argmax(1) #[bsize, ]
+                        preds_ranked = (-logits).argsort(1) #[bsize, n_choices]
+                        for i, (qid, label, pred, _preds_ranked, cids, ntype, edges, etype) in enumerate(zip(qids, labels, predictions, preds_ranked, concept_ids, node_type_ids, edge_index, edge_type)):
+                            acc = int(pred.item()==label.item())
+                            #print ('{},{}'.format(qid, chr(ord('A') + pred.item())), file=f_preds)
+                            #f_preds.flush()
+                            total_acc.append(acc)
                 test_acc = float(sum(total_acc))/len(total_acc)
 
             # LOG
@@ -745,11 +745,13 @@ class QagnnExperiment(FinalExperiment):
         suff_statements = deepcopy(dev_statements)
 
         # ERASE
+        stats = []
         for idx,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
             for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
                 tokens = stmnt.split()
                 assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
                 top_idx = [i for i,x in enumerate(attn) if x>0]
+                stats.append(top_idx, [x for x in range(len(tokens)) if x not in top_idx])
                 if 0 < len(top_idx) < len(tokens): # default case
                     comp_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
                     suff_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])

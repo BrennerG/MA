@@ -81,7 +81,7 @@ DEFAULT_PARAMS = {
         'fp16': False,
         'max_grad_norm': 1.0,
         'log_interval': 10,
-        'save_model': False,
+        'save_model': True,
         'save_dir': './saved_models/qagnn/', # in params
         'max_epochs_before_stop': 10, # in params
         # DATALOADER

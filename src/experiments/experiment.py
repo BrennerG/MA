@@ -153,7 +153,30 @@ class Experiment(ABC):
                 p_fc=args.dropout
             )
             if 'load_from' in self.params:
-                raise AttributeError('ERR: no loading for qagnn implemented yet!')
+                model_path = self.params['load_from']
+                model_state_dict, old_args = torch.load(model_path, map_location=torch.device('cpu'))
+                model = LM_QAGNN(
+                    old_args, 
+                    old_args.encoder, 
+                    k=old_args.k, 
+                    n_ntype=4, 
+                    n_etype=old_args.num_relation,
+                    n_concept=concept_num,
+                    concept_dim=old_args.gnn_dim,
+                    concept_in_dim=concept_dim,
+                    n_attention_head=old_args.att_head_num, 
+                    fc_dim=old_args.fc_dim, 
+                    n_fc_layer=old_args.fc_layer_num,
+                    p_emb=old_args.dropouti, 
+                    p_gnn=old_args.dropoutg, 
+                    p_fc=old_args.dropoutf,
+                    pretrained_concept_emb=cp_emb,
+                    freeze_ent_emb=old_args.freeze_ent_emb,
+                    init_range=old_args.init_range,
+                    encoder_config={}
+                )
+                model.load_state_dict(model_state_dict)
+
         else:
             raise AttributeError('model_type: "' + type + '" is unknown!')
         return model
