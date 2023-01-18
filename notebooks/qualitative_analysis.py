@@ -165,6 +165,23 @@ def show_graph(G, jiggle=True):
     HtmlFile = open(graph_path, 'r', encoding='utf-8')
     components.html(HtmlFile.read(), height=610)
 
+def filter_for_special_nodes(G, hops=0):
+    selection = []
+    for n,ndic in G.nodes(data=True):
+        if ndic['color'] != 'blue':
+            selection.append(n)
+    
+    for h in range(hops):
+        extension = []
+        for s in selection:
+            extension.extend(list(G.neighbors(s)))
+        selection.extend(extension)
+
+    def node_filter(n):
+        return n in selection
+    
+    return nx.subgraph_view(G, node_filter)
+
 
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
@@ -195,14 +212,20 @@ LEFT_C, RIGHT_C = st.columns(2, gap='medium')
 with LEFT_C:
     st.subheader("cpnet + QA-GNN")
     data, id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
+    hops = st.slider('hops?', 0, 5, 0, key='lhops')
+
     net = create_og_graph(data,option_id)
+    net = filter_for_special_nodes(net, hops=hops)
     show_graph(net)
     
 ################## ################## SEPARATOR ################## ##################
 
 with RIGHT_C:
     st.subheader("4Lang + QA-GNN")
+    hops = st.slider('hops?', 0, 5, 0, key='rhops')
+
     net = create_4L_graph(SAMPLE)
+    net = filter_for_special_nodes(net, hops=hops)
     show_graph(net)
 
 st.balloons()
