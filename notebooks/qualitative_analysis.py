@@ -12,12 +12,13 @@ import streamlit.components.v1 as components
 
 # PARAMS
 EXPERIMENT = "default"
-FILE = f"../data/experiments/{EXPERIMENT}/viz_data.json"
-RND_SAMPLE_FILE = "../random_quali_select_from_test.json"
+MA_FILE = f"notebooks/data//viz_data.json"
+RND_SAMPLE_FILE = "notebooks/data/random_quali_select_from_test.json"
+OG_FILE = f"notebooks/data/SAVED_DIC.json"
 
 # METHODS
 @st.cache(allow_output_mutation=True)
-def load_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
+def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     # load random file
     with open(rnd_sample_file, 'r') as file:
         rnd_sample_ids = json.load(file)
@@ -61,12 +62,121 @@ def load_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
 
     return rnd_sample_ids, data, id2concept
 
+@st.cache()
+def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
+    # load random file
+    with open(rnd_sample_file, 'r') as file:
+        rnd_sample_ids = json.load(file)
+    rnd_sample_ids = rnd_sample_ids[:10] # TODO change (first 10 samples are for debugging)
+
+    # load samples
+    with open(datafile, 'r') as file:
+        raw_data = json.load(file)
+
+    # load statement data
+    STATEMENT_FILE = 'notebooks/data/test.statement.jsonl'
+    statement_data = []
+    with open(STATEMENT_FILE, 'r') as file:
+        for line in file:
+            statement_data.append(json.loads(line))
+
+    raw_data['statement_data'] = statement_data
+    rnd_sample_idx = [x['id'] for x in raw_data['statement_data']]
+    rnd_sample_idx = [rnd_sample_idx.index(x) for x in rnd_sample_ids]
+
+    raw_data.pop('id2concept')
+    st.write(raw_data.keys())
+    data = {k:[x for i,x in enumerate(v) if i in rnd_sample_idx] for k,v in raw_data.items()}
+
+    # load id2concept
+    CONCEPT_FILE = 'notebooks/data/concept.txt'
+    with open(CONCEPT_FILE) as _file_:
+        id2concept = [line for line in _file_]
+
+    return data, id2concept
+
+def create_og_graph(data, option_id):
+    C = np.argmax(data['logits'][option_id]) # choice
+    st.write(f"choice = {C} : {data['statement_data'][option_id]['question']['choices'][C]['text']}")
+
+    # nodes
+    concept_ids = data['concept_ids'][option_id][C]
+    concept_names = [id2concept[x] for x in concept_ids]
+    node_type_ids = data['node_type_ids'][option_id][C]
+    node_scores = [x[0] for x in data['node_scores'][option_id][C]]
+    colors = ['red', 'green', 'blue', 'purple']
+    colorcode = [colors[x] for x in node_type_ids]
+    N = len(concept_ids)
+
+    # edges
+    raw_edges = data['edge_index_orig'][option_id][C]
+    edges = [(raw_edges[0][i], raw_edges[1][i]) for i in range(len(raw_edges[0]))]
+    E = len(edges)
+
+    # graph
+    st.write(f"N={N}, E={E}")
+    net = Network(notebook=True)
+    net.add_nodes(
+        range(N),
+        value = node_scores,
+        title = concept_names,
+        label = concept_names,
+        color = colorcode
+    )
+    for e in edges: net.add_edge(*e)
+
+    return net
+
+def create_4L_graph(sample):
+
+    # choice
+    logits = sample['logits']
+    choice = np.argmax(logits)
+    st.write(f"choice = {choice} : { sample['answers'][choice]}")
+
+    # nodes
+    node_scores = sample['node_scores'][choice]
+    if 'Z_VEC' in node_scores: node_scores.pop('Z_VEC')
+    concept_names = sample['4L_concept_names'][choice]
+    assert len(node_scores) == len(concept_names)
+    N = len(node_scores)
+
+    # edges
+    edges = sample['4L_edges'][choice][0]
+    edge_types = sample['4L_edges'][choice][1]
+    E = len(edges)
+
+    # colors
+    flq_map = SAMPLE['4L_map'][choice]
+    colorcode = ['red' if x != None else 'blue' for x in flq_map]
+    
+    # construct graph
+    st.write(f"N={N}, E={E}")
+    net = Network(notebook=True)
+    net.add_nodes(
+        range(N),
+        value=list([node_scores[x] for x in concept_names]),
+        title=concept_names,
+        label=concept_names,
+        color=colorcode
+    )
+    for e in edges: net.add_edge(*e)
+
+    return net
+
+def show_graph(net, jiggle=True):
+    graph_path = 'notebooks/tmp/fl_graph.html'
+    net.toggle_physics(jiggle)
+    net.show(graph_path)
+    HtmlFile = open(graph_path, 'r', encoding='utf-8')
+    components.html(HtmlFile.read(), height=610)
+
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
 ################## ################## ################## ##################
 
 st.set_page_config(layout="wide")
-sel_ids, data, id2concept = load_data(FILE)
+sel_ids, data, id2concept = load_ma_data(MA_FILE)
 
 ################## ################## SIDEBAR ################## ##################
 
@@ -78,7 +188,7 @@ with st.sidebar:
 ################## ################## HEADER ################## ##################
 
 with st.container():
-    st.write(pd.DataFrame(data))
+    #st.write(pd.DataFrame(data))
     SAMPLE = {k:v[option_id] for k,v in data.items()}
     st.title(SAMPLE['question']) # TODO use real question here
     st.write({k:v for k,v in SAMPLE.items() if k in ['question', 'answers', 'label']})
@@ -89,56 +199,15 @@ LEFT_C, RIGHT_C = st.columns(2, gap='medium')
 
 with LEFT_C:
     st.subheader("cpnet + QA-GNN")
-    st.write("Nothing here yet...")
+    data, id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
+    net = create_og_graph(data,option_id)
+    show_graph(net)
+    
+################## ################## SEPARATOR ################## ##################
 
 with RIGHT_C:
     st.subheader("4Lang + QA-GNN")
-
-    # def draw_graph(..):
-
-    # choice
-    logits = SAMPLE['logits']
-    choice = np.argmax(logits)
-
-    # nodes
-    node_scores = SAMPLE['node_scores'][choice]
-    if 'Z_VEC' in node_scores: node_scores.pop('Z_VEC')
-    concept_names = SAMPLE['4L_concept_names'][choice]
-    assert len(node_scores) == len(concept_names)
-    N = len(node_scores)
-    concept_names = SAMPLE['4L_concept_names'][choice]
-
-    # edges
-    edges = SAMPLE['4L_edges'][choice][0]
-    E = len(edges)
-    edge_types = SAMPLE['4L_edges'][choice][1]
-
-    # colors
-    flq_map = SAMPLE['4L_map'][choice]
-    node_type_ids = SAMPLE['node_type_ids'][choice]
-    colorcode = ['red' if x != None else 'blue' for x in flq_map]
-    colorcode[0] = 'purple'
-    for i,nt in enumerate(node_type_ids):
-        if nt == 1:
-            colorcode[i] = 'green'
-
-    # PRINTY PRINTY TEST TEST TEST
-
-    # plot graph
-    st.write(f"choice = {choice} : {SAMPLE['answers'][choice]}")
-    net = Network(notebook=True)
-    net.add_nodes(
-        range(N),
-        value=list([node_scores[x] for x in concept_names]),
-        title=concept_names,
-        label=concept_names,
-        color=colorcode
-    )
-    for e in edges: net.add_edge(*e)
-
-    net.show('fl_graph.html')
-    HtmlFile = open('fl_graph.html', 'r', encoding='utf-8')
-    components.html(HtmlFile.read(), height=610)
-    pass
+    net = create_4L_graph(SAMPLE)
+    show_graph(net)
 
 st.balloons()
