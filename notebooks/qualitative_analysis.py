@@ -113,19 +113,14 @@ def create_og_graph(data, option_id):
     edges = [(raw_edges[0][i], raw_edges[1][i]) for i in range(len(raw_edges[0]))]
     E = len(edges)
 
-    # graph
+    # construct graph
     st.write(f"N={N}, E={E}")
-    net = Network(notebook=True)
-    net.add_nodes(
-        range(N),
-        value = node_scores,
-        title = concept_names,
-        label = concept_names,
-        color = colorcode
+    G = nx.Graph()
+    G.add_nodes_from(
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
     )
-    for e in edges: net.add_edge(*e)
-
-    return net
+    G.add_edges_from(edges)
+    return G
 
 def create_4L_graph(sample):
 
@@ -149,27 +144,27 @@ def create_4L_graph(sample):
     # colors
     flq_map = SAMPLE['4L_map'][choice]
     colorcode = ['red' if x != None else 'blue' for x in flq_map]
-    
+
     # construct graph
     st.write(f"N={N}, E={E}")
-    net = Network(notebook=True)
-    net.add_nodes(
-        range(N),
-        value=list([node_scores[x] for x in concept_names]),
-        title=concept_names,
-        label=concept_names,
-        color=colorcode
+    G = nx.Graph()
+    G.add_nodes_from(
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores.values(), concept_names, colorcode))]
     )
-    for e in edges: net.add_edge(*e)
+    G.add_edges_from(edges)
+    return G
 
-    return net
-
-def show_graph(net, jiggle=True):
+def show_graph(G, jiggle=True):
     graph_path = 'notebooks/tmp/fl_graph.html'
+
+    net = Network(notebook=True)
+    net.from_nx(G)
     net.toggle_physics(jiggle)
     net.show(graph_path)
+
     HtmlFile = open(graph_path, 'r', encoding='utf-8')
     components.html(HtmlFile.read(), height=610)
+
 
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
