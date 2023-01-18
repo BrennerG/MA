@@ -132,48 +132,56 @@ class Experiment(ABC):
                     print(f"load_from location {self.params['load_from']} either not found or empty!")
 
         elif type == "qagnn":
-            args = Namespace(**self.params)
-            num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
-            # if 'offset_concepts' in self.params and self.params['offset_concepts']: num_concepts += 2 # TODO why doesn't this work?
-            assert num_concepts != None
-            model = LM_QAGNN( # TODO have these as defaults in params for args, so that don't have to hardcode params here!
-                args=args,
-                model_name='bert-large-uncased',
-                k=args.k,
-                n_ntype=args.num_node_types,
-                n_etype=args.num_relation,
-                n_concept=num_concepts,
-                concept_dim=args.gat_hidden_dim, # TODO this the correct args for the param?
-                concept_in_dim=args.concept_dim,
-                n_attention_head=args.num_heads,
-                fc_dim=args.clf_layer_dim,
-                n_fc_layer=args.clf_layer_depth,
-                p_emb=args.dropout,
-                p_gnn=args.dropout,
-                p_fc=args.dropout
-            )
-            if 'load_from' in self.params:
+            if 'load_from' not in self.params:
+                args = Namespace(**self.params)
+                num_concepts = self.params['num_concepts'] if 'num_concepts' in self.params else None
+                # if 'offset_concepts' in self.params and self.params['offset_concepts']: num_concepts += 2 # TODO why doesn't this work?
+                assert num_concepts != None
+                model = LM_QAGNN( # TODO have these as defaults in params for args, so that don't have to hardcode params here!
+                    args=args,
+                    model_name='bert-large-uncased',
+                    k=args.k,
+                    n_ntype=args.num_node_types,
+                    n_etype=args.num_relation,
+                    n_concept=num_concepts,
+                    concept_dim=args.gat_hidden_dim, # TODO this the correct args for the param?
+                    concept_in_dim=args.concept_dim,
+                    n_attention_head=args.num_heads,
+                    fc_dim=args.clf_layer_dim,
+                    n_fc_layer=args.clf_layer_depth,
+                    p_emb=args.dropout,
+                    p_gnn=args.dropout,
+                    p_fc=args.dropout
+                )
+            elif 'load_from' in self.params:
                 model_path = self.params['load_from']
                 model_state_dict, old_args = torch.load(model_path, map_location=torch.device('cpu'))
+
+                # overwrite class parameters with old_args
+                overwriteable = ['wandb_logging', 'skip_training']
+                for k,v in old_args.__dict__.items():
+                    if k in self.params and self.params[k] != v and k not in overwriteable:
+                        self.params[k] = v
+
                 model = LM_QAGNN(
                     old_args, 
                     old_args.encoder, 
                     k=old_args.k, 
-                    n_ntype=4, 
+                    n_ntype=old_args.num_node_types, 
                     n_etype=old_args.num_relation,
-                    n_concept=concept_num,
-                    concept_dim=old_args.gnn_dim,
-                    concept_in_dim=concept_dim,
-                    n_attention_head=old_args.att_head_num, 
-                    fc_dim=old_args.fc_dim, 
-                    n_fc_layer=old_args.fc_layer_num,
-                    p_emb=old_args.dropouti, 
-                    p_gnn=old_args.dropoutg, 
-                    p_fc=old_args.dropoutf,
-                    pretrained_concept_emb=cp_emb,
-                    freeze_ent_emb=old_args.freeze_ent_emb,
-                    init_range=old_args.init_range,
-                    encoder_config={}
+                    n_concept=old_args.num_concepts,
+                    concept_dim=old_args.gat_hidden_dim,
+                    concept_in_dim=old_args.concept_dim,
+                    n_attention_head=old_args.num_heads, 
+                    fc_dim=old_args.clf_layer_dim, 
+                    n_fc_layer=old_args.clf_layer_depth,
+                    p_emb=old_args.dropout, 
+                    p_gnn=old_args.dropout, 
+                    p_fc=old_args.dropout
+                    #pretrained_concept_emb=cp_emb,
+                    #freeze_ent_emb=old_args.freeze_ent_emb,
+                    #init_range=old_args.init_range,
+                    #encoder_config={}
                 )
                 model.load_state_dict(model_state_dict)
 

@@ -31,11 +31,19 @@ import evaluation.eval_util as E
 class QagnnExperiment(FinalExperiment):
 
     def __init__(self, params:{}):
-        # overwrite
-        self.params = params
-        self.params['offset_concepts'] = True
-        self.params['max_num_nodes'] = params['max_node_num'] # TODO stupid synonym
-        self.params['expand'] = None # TODO why do I have to do this?
+        # load
+        if 'load_from' in params:
+            model_path = params['load_from']
+            _ , old_args = torch.load(model_path, map_location=torch.device('cpu'))
+            self.params = old_args.__dict__
+            self.params['wandb_logging'] = params # so that wandb_logging can be taken from the args** overwrites
+        else:
+            self.params = params
+            # class specific overwrites
+            self.params['offset_concepts'] = True
+            self.params['max_num_nodes'] = params['max_node_num'] # TODO stupid synonym
+            self.params['expand'] = None # TODO why do I have to do this?
+
         torch.manual_seed(self.params['rnd_seed'])
         wandb.init(
             config=self.params, 
@@ -745,13 +753,13 @@ class QagnnExperiment(FinalExperiment):
         suff_statements = deepcopy(dev_statements)
 
         # ERASE
-        #stats = []
+        stats = []
         for idx,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
             for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
                 tokens = stmnt.split()
                 assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
                 top_idx = [i for i,x in enumerate(attn) if x>0]
-                #stats.append(top_idx, [x for x in range(len(tokens)) if x not in top_idx])
+                stats.append(top_idx, [x for x in range(len(tokens)) if x not in top_idx])
                 if 0 < len(top_idx) < len(tokens): # default case
                     comp_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
                     suff_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])

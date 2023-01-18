@@ -29,13 +29,13 @@ class FourLangParser(GraphPreproc):
         offset_concepts = params['offset_concepts'] if 'offset_concepts' in params else False
 
         if max_num_nodes == None and expand != None:
-            self.folder_path = f"X{expand}/"
+            self.folder_path = f"X{expand}"
         elif max_num_nodes != None and expand == None:
-            self.folder_path = f"MAX{max_num_nodes}/"
+            self.folder_path = f"MAX{max_num_nodes}"
         else:
             raise AttributeError("Either max_num_nodes or expand must be set for 4Lang preprocessing")
-        self.concept2id_path = LOC['4lang_parses'] + self.folder_path + 'concept2id.json'
-        self.id2concept_path = LOC['4lang_parses'] + self.folder_path + 'id2concept.json'
+        self.concept2id_path = LOC['4lang_parses'] + self.folder_path + '/concept2id.json'
+        self.id2concept_path = LOC['4lang_parses'] + self.folder_path + '/id2concept.json'
 
         if os.path.exists(self.concept2id_path) and use_cache:
             with open(self.concept2id_path) as f:
@@ -75,7 +75,7 @@ class FourLangParser(GraphPreproc):
         add_edge_types = kwargs['add_edge_types'] if 'add_edge_types' in kwargs else False
         _add_edge_types_str = "_et" if 'add_edge_types' in kwargs and add_edge_types else ""
 
-        edges_path = LOC['4lang_parses'] + self.folder_path + f'cose_{split}_{str(num_samples)}_{qa_join}{_add_edge_types_str}.json'
+        edges_path = LOC['4lang_parses'] + f"{self.folder_path}{_add_edge_types_str}/" + f'cose_{split}_{str(num_samples)}_{qa_join}{_add_edge_types_str}.json'
         if os.path.exists(edges_path) and use_cache:
             print(f'4Lang_Parsing: Accessing cached file: {edges_path}')
             with open(edges_path) as f:
