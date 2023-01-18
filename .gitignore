@@ -139,6 +139,7 @@ cache
 data/glove/*
 data/qa_gnn/*
 wandb/*
-data/4lang_parses/X2/*
-data/4lang_parses/X3/*
-data/4lang_parses/MAX200/*
+data/4lang_parses/*
+*.pt.*
+data/node_relevance_scores
+notebooks/data/*
