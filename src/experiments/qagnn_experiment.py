@@ -770,7 +770,7 @@ class QagnnExperiment(FinalExperiment):
                     comp_statements[idx][a] = stmnt # everything is selected for comp
                     suff_statements[idx][a] = X['answers'][a] # nothing is in suff, so backup
         
-        with open(LOC['save_loc']+ 'eval_expl_stats.json', 'w') as _FILE_:
+        with open(self.params['save_loc']+ 'eval_expl_stats.json', 'w') as _FILE_:
             json.dump(stats, _FILE_)
 
         # save erased statements bc QAGNN_DataLoader class needs it
