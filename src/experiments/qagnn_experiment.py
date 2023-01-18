@@ -745,13 +745,13 @@ class QagnnExperiment(FinalExperiment):
         suff_statements = deepcopy(dev_statements)
 
         # ERASE
-        stats = []
+        #stats = []
         for idx,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
             for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
                 tokens = stmnt.split()
                 assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
                 top_idx = [i for i,x in enumerate(attn) if x>0]
-                stats.append(top_idx, [x for x in range(len(tokens)) if x not in top_idx])
+                #stats.append(top_idx, [x for x in range(len(tokens)) if x not in top_idx])
                 if 0 < len(top_idx) < len(tokens): # default case
                     comp_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
                     suff_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
