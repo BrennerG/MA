@@ -27,7 +27,7 @@ class FourLangParser(GraphPreproc):
         expand = params['expand'] if 'expand' in params else None
         max_num_nodes = params['max_num_nodes'] if 'max_num_nodes' in params else None
         offset_concepts = params['offset_concepts'] if 'offset_concepts' in params else False
-        add_edge_types = params['num_relation'] if 'num_relation' in params else False
+        add_edge_types = params['num_relation']==3 if 'num_relation' in params else False
         _add_edge_types_str = "_et" if add_edge_types else ""
 
         if max_num_nodes == None and expand != None:
