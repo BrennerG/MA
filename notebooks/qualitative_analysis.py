@@ -97,7 +97,7 @@ def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
 
 def create_og_graph(data, option_id):
     C = np.argmax(data['logits'][option_id]) # choice
-    st.write(f"choice = {C} : {data['statement_data'][option_id]['question']['choices'][C]['text']}")
+    #st.write(f"choice = {C} : {data['statement_data'][option_id]['question']['choices'][C]['text']}")
 
     # nodes
     concept_ids = data['concept_ids'][option_id][C]
@@ -114,7 +114,7 @@ def create_og_graph(data, option_id):
     E = len(edges)
 
     # construct graph
-    st.write(f"N={N}, E={E}")
+    #st.write(f"N={N}, E={E}")
     G = nx.Graph()
     G.add_nodes_from(
         [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
@@ -122,12 +122,31 @@ def create_og_graph(data, option_id):
     G.add_edges_from(edges)
     return G
 
+def create_4L_graph_alt(sample, id2concept):
+    C = np.argmax(sample['logits']) # choice
+
+    # nodes
+    concept_ids = sample['concept_ids'][C]
+    concept_names = [id2concept[x].strip() for x in concept_ids]
+    node_type_ids = sample['node_type_ids'][C]
+    node_scores_dict = sample['node_scores'][C]
+    node_scores = None
+
+    # something is wrong with the node_scores, concept_ids and or id2concept! congratz
+
+    st.write(
+        'well fuck'
+    )
+
+    G = nx.Graph()
+    return G
+
 def create_4L_graph(sample):
 
     # choice
     logits = sample['logits']
     choice = np.argmax(logits)
-    st.write(f"choice = {choice} : { sample['answers'][choice]}")
+    #st.write(f"choice = {choice} : { sample['answers'][choice]}")
 
     # nodes
     node_scores = sample['node_scores'][choice]
@@ -146,7 +165,7 @@ def create_4L_graph(sample):
     colorcode = ['red' if x != None else 'blue' for x in flq_map]
 
     # construct graph
-    st.write(f"N={N}, E={E}")
+    #st.write(f"N={N}, E={E}")
     G = nx.Graph()
     G.add_nodes_from(
         [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores.values(), concept_names, colorcode))]
@@ -182,6 +201,13 @@ def filter_for_special_nodes(G, hops=0):
     
     return nx.subgraph_view(G, node_filter)
 
+def filter_by_node_relevance(G, n=200):
+    sorted_nodes = sorted(G.nodes(), key=lambda n: G.nodes[n]['value'], reverse=True)[:n]
+
+    def node_filter(n):
+        return n in sorted_nodes
+
+    return nx.subgraph_view(G, node_filter)
 
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
@@ -213,9 +239,12 @@ with LEFT_C:
     st.subheader("cpnet + QA-GNN")
     data, id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
     hops = st.slider('hops?', 0, 5, 0, key='lhops')
+    cutoff = st.slider('cutoff?', 0, 200, 200, key='lcutoff')
 
     net = create_og_graph(data,option_id)
     net = filter_for_special_nodes(net, hops=hops)
+    net = filter_by_node_relevance(net, n=cutoff)
+    st.write(len(net.nodes), len(net.edges))
     show_graph(net)
     
 ################## ################## SEPARATOR ################## ##################
@@ -223,9 +252,12 @@ with LEFT_C:
 with RIGHT_C:
     st.subheader("4Lang + QA-GNN")
     hops = st.slider('hops?', 0, 5, 0, key='rhops')
+    cutoff = st.slider('cutoff?', 0, 200, 200, key='rcutoff')
 
-    net = create_4L_graph(SAMPLE)
+    net = create_4L_graph(SAMPLE) #net = create_4L_graph_alt(SAMPLE, id2concept)
     net = filter_for_special_nodes(net, hops=hops)
+    net = filter_by_node_relevance(net, n=cutoff)
+    st.write(len(net.nodes), len(net.edges))
     show_graph(net)
 
 st.balloons()
