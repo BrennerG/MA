@@ -27,6 +27,8 @@ class FourLangParser(GraphPreproc):
         expand = params['expand'] if 'expand' in params else None
         max_num_nodes = params['max_num_nodes'] if 'max_num_nodes' in params else None
         offset_concepts = params['offset_concepts'] if 'offset_concepts' in params else False
+        add_edge_types = params['num_relation'] if 'num_relation' in params else False
+        _add_edge_types_str = "_et" if add_edge_types else ""
 
         if max_num_nodes == None and expand != None:
             self.folder_path = f"X{expand}"
@@ -34,8 +36,9 @@ class FourLangParser(GraphPreproc):
             self.folder_path = f"MAX{max_num_nodes}"
         else:
             raise AttributeError("Either max_num_nodes or expand must be set for 4Lang preprocessing")
-        self.concept2id_path = LOC['4lang_parses'] + self.folder_path + '/concept2id.json'
-        self.id2concept_path = LOC['4lang_parses'] + self.folder_path + '/id2concept.json'
+
+        self.concept2id_path = LOC['4lang_parses'] + f"{self.folder_path}{_add_edge_types_str}" + '/concept2id.json'
+        self.id2concept_path = LOC['4lang_parses'] + f"{self.folder_path}{_add_edge_types_str}" + '/id2concept.json'
 
         if os.path.exists(self.concept2id_path) and use_cache:
             with open(self.concept2id_path) as f:
