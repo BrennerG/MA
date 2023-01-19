@@ -101,7 +101,7 @@ def create_og_graph(data, option_id, id2concept, value="node_relevance"):
 
     # nodes
     concept_ids = data['concept_ids'][option_id][C]
-    concept_names = [id2concept[x] for x in concept_ids]
+    concept_names = [id2concept[x-1] for x in concept_ids]
     node_type_ids = data['node_type_ids'][option_id][C]
     if value=='node_relevance':
         node_scores = [x[0] for x in data['node_scores'][option_id][C]]
@@ -159,7 +159,7 @@ def create_4L_graph(sample, value='node_relevance'):
         if 'Z_VEC' in node_scores: node_scores.pop('Z_VEC')
         node_scores = list(node_scores.values()) # right order?
     elif value=='attn':
-        node_scores = np.array(sample['attn']).mean(axis=0)[C][:N]
+        node_scores = np.array(sample['attn']).mean(axis=0)[choice][:N]
 
     # edges
     edges = sample['4L_edges'][choice][0]
