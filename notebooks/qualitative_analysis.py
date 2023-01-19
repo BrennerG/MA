@@ -95,7 +95,7 @@ def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
 
     return data, id2concept
 
-def create_og_graph(data, option_id):
+def create_og_graph(data, option_id, id2concept, value="node_relevance"):
     C = np.argmax(data['logits'][option_id]) # choice
     #st.write(f"choice = {C} : {data['statement_data'][option_id]['question']['choices'][C]['text']}")
 
@@ -103,7 +103,10 @@ def create_og_graph(data, option_id):
     concept_ids = data['concept_ids'][option_id][C]
     concept_names = [id2concept[x] for x in concept_ids]
     node_type_ids = data['node_type_ids'][option_id][C]
-    node_scores = [x[0] for x in data['node_scores'][option_id][C]]
+    if value=='node_relevance':
+        node_scores = [x[0] for x in data['node_scores'][option_id][C]]
+    elif value=='attn':
+        node_scores = data['attn'][option_id][C]
     colors = ['red', 'green', 'blue', 'purple']
     colorcode = [colors[x] for x in node_type_ids]
     N = len(concept_ids)
@@ -141,7 +144,7 @@ def create_4L_graph_alt(sample, id2concept):
     G = nx.Graph()
     return G
 
-def create_4L_graph(sample):
+def create_4L_graph(sample, value='node_relevance'):
 
     # choice
     logits = sample['logits']
@@ -149,11 +152,14 @@ def create_4L_graph(sample):
     #st.write(f"choice = {choice} : { sample['answers'][choice]}")
 
     # nodes
-    node_scores = sample['node_scores'][choice]
-    if 'Z_VEC' in node_scores: node_scores.pop('Z_VEC')
     concept_names = sample['4L_concept_names'][choice]
-    assert len(node_scores) == len(concept_names)
-    N = len(node_scores)
+    N = len(concept_names)
+    if value=='node_relevance':
+        node_scores = sample['node_scores'][choice]
+        if 'Z_VEC' in node_scores: node_scores.pop('Z_VEC')
+        node_scores = list(node_scores.values()) # right order?
+    elif value=='attn':
+        node_scores = np.array(sample['attn']).mean(axis=0)[C][:N]
 
     # edges
     edges = sample['4L_edges'][choice][0]
@@ -168,7 +174,7 @@ def create_4L_graph(sample):
     #st.write(f"N={N}, E={E}")
     G = nx.Graph()
     G.add_nodes_from(
-        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores.values(), concept_names, colorcode))]
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
     )
     G.add_edges_from(edges)
     return G
@@ -201,7 +207,7 @@ def filter_for_special_nodes(G, hops=0):
     
     return nx.subgraph_view(G, node_filter)
 
-def filter_by_node_relevance(G, n=200):
+def filter_by_value(G, n=200):
     sorted_nodes = sorted(G.nodes(), key=lambda n: G.nodes[n]['value'], reverse=True)[:n]
 
     def node_filter(n):
@@ -214,7 +220,7 @@ def filter_by_node_relevance(G, n=200):
 ################## ################## ################## ##################
 
 st.set_page_config(layout="wide")
-sel_ids, data, id2concept = load_ma_data(MA_FILE)
+sel_ids, data, fl_id2concept = load_ma_data(MA_FILE)
 
 ################## ################## SIDEBAR ################## ##################
 
@@ -236,28 +242,44 @@ with st.container():
 LEFT_C, RIGHT_C = st.columns(2, gap='medium')
 
 with LEFT_C:
+
+    ############################ GRAPH ###############################
     st.subheader("cpnet + QA-GNN")
-    data, id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
+    data, og_id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
     hops = st.slider('hops?', 0, 5, 0, key='lhops')
     cutoff = st.slider('cutoff?', 0, 200, 200, key='lcutoff')
+    value_shown = st.selectbox("node_values? attn / node_relevance", ['attn', 'node_relevance'], key='lvalue')
 
-    net = create_og_graph(data,option_id)
+    net = create_og_graph(data, option_id, og_id2concept, value=value_shown)
     net = filter_for_special_nodes(net, hops=hops)
-    net = filter_by_node_relevance(net, n=cutoff)
+    net = filter_by_value(net, n=cutoff)
     st.write(len(net.nodes), len(net.edges))
     show_graph(net)
-    
+
+    ############################ ATTN ###############################
+    st.subheader("Attention")
+    #O = option_id
+    #C = np.argmax(data['logits'][O])
+    #st.write(data['concept_ids'][O][C])
+    #st.write(data['attn'][O][C])
+
 ################## ################## SEPARATOR ################## ##################
 
 with RIGHT_C:
+
+    ############################ GRAPH ###############################
     st.subheader("4Lang + QA-GNN")
     hops = st.slider('hops?', 0, 5, 0, key='rhops')
     cutoff = st.slider('cutoff?', 0, 200, 200, key='rcutoff')
+    value_shown = st.selectbox("node_values? attn / node_relevance", ['attn', 'node_relevance'], key='rvalue')
 
-    net = create_4L_graph(SAMPLE) #net = create_4L_graph_alt(SAMPLE, id2concept)
+    net = create_4L_graph(SAMPLE, value=value_shown) #net = create_4L_graph_alt(SAMPLE, id2concept)
     net = filter_for_special_nodes(net, hops=hops)
-    net = filter_by_node_relevance(net, n=cutoff)
+    net = filter_by_value(net, n=cutoff)
     st.write(len(net.nodes), len(net.edges))
     show_graph(net)
+
+    ############################ ATTN ###############################
+    st.subheader("Attention")
 
 st.balloons()
