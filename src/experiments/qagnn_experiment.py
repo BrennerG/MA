@@ -757,13 +757,11 @@ class QagnnExperiment(FinalExperiment):
         suff_statements = deepcopy(dev_statements)
 
         # ERASE
-        stats = [] # TODO remove me after stats collecting
         for idx,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
             for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
                 tokens = stmnt.split()
                 assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
                 top_idx = [i for i,x in enumerate(attn) if x>0] 
-                stats.append((top_idx, [x for x in range(len(tokens)) if x not in top_idx])) # TODO remove me after stats collecting
                 if 0 < len(top_idx) < len(tokens): # default case
                     comp_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
                     suff_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
@@ -774,9 +772,6 @@ class QagnnExperiment(FinalExperiment):
                     comp_statements[idx]['statements'][a] = stmnt # everything is selected for comp
                     suff_statements[idx]['statements'][a] = X['answers'][a] # nothing is in suff, so backup
         
-        with open(self.params['save_loc']+ 'eval_expl_stats.json', 'w') as _FILE_:
-            json.dump(stats, _FILE_)
-
         # save erased statements bc QAGNN_DataLoader class needs it
         persist_statements(comp_statements, 'comp')
         persist_statements(suff_statements, 'suff')
