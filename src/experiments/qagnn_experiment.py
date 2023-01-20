@@ -717,6 +717,7 @@ class QagnnExperiment(FinalExperiment):
         def predict(dataset, dev_statements):
 
             add_edge_types = self.params['num_relation'] == 3 if 'num_relation' in self.params else False
+            node_relevance = 'node_relevance' in self.params and self.params['node_relevance']
             
             # ADD 4LANG ADJ DATA (=DECODER DATA)
             flang_dev = self.graph_parser(
@@ -731,7 +732,10 @@ class QagnnExperiment(FinalExperiment):
                 use_existing_concept_ids=True
             ) # 2h (local PC)
 
-            node_relevance_dev = self.node_relevance_scoring(flang_dev, dev_statements) # 30 minutes (local PC)
+            if node_relevance:
+                node_relevance_dev = self.node_relevance_scoring(flang_dev, dev_statements) # 30 minutes (local PC)
+            else:
+                node_relevance_dev = None
             *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=flang_dev, target_set=dev_statements, relevance_scores=node_relevance_dev)
 
             # PREDICT
@@ -761,14 +765,14 @@ class QagnnExperiment(FinalExperiment):
                 top_idx = [i for i,x in enumerate(attn) if x>0] 
                 stats.append((top_idx, [x for x in range(len(tokens)) if x not in top_idx])) # TODO remove me after stats collecting
                 if 0 < len(top_idx) < len(tokens): # default case
-                    comp_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
-                    suff_statements[idx][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
+                    comp_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
+                    suff_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
                 elif len(top_idx) == 0: # attn is all 0
-                    comp_statements[idx][a] = X['answers'][a] # backup method or comp is empty
-                    suff_statements[idx][a] = stmnt # everything is selected for suff
+                    comp_statements[idx]['statements'][a] = X['answers'][a] # backup method or comp is empty
+                    suff_statements[idx]['statements'][a] = stmnt # everything is selected for suff
                 elif len(top_idx) == len(tokens): # attn is non-0 everywhere!
-                    comp_statements[idx][a] = stmnt # everything is selected for comp
-                    suff_statements[idx][a] = X['answers'][a] # nothing is in suff, so backup
+                    comp_statements[idx]['statements'][a] = stmnt # everything is selected for comp
+                    suff_statements[idx]['statements'][a] = X['answers'][a] # nothing is in suff, so backup
         
         with open(self.params['save_loc']+ 'eval_expl_stats.json', 'w') as _FILE_:
             json.dump(stats, _FILE_)
