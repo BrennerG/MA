@@ -736,7 +736,7 @@ class QagnnExperiment(FinalExperiment):
                 node_relevance_dev = self.node_relevance_scoring(flang_dev, dev_statements) # 30 minutes (local PC)
             else:
                 node_relevance_dev = None
-            *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=flang_dev, target_set=dev_statements, relevance_scores=node_relevance_dev)
+            *dataset.dev_decoder_data, dataset.dev_adj_data = self.add_4lang_adj_data(target_flang=flang_dev, target_set=dev_statements, add_edge_types=add_edge_types, relevance_scores=node_relevance_dev)
 
             # PREDICT
             prediction_params = deepcopy(self.params)
