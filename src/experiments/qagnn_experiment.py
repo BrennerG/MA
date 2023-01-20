@@ -686,7 +686,7 @@ class QagnnExperiment(FinalExperiment):
         # writes erased statements to files (coz dataset class needs files)
         def persist_statements(statements, name):
             int_to_label = {0:'A', 1:'B', 2:'C', 3:'D', 4:'E'}
-            path = f"{self.params['save_loc']}/{name}.dev.statement.jsonl"
+            path = f"{self.params['save_loc']}{name}.dev.statement.jsonl"
             file = open(path, "w")
 
             for sample in statements: 
