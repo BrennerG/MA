@@ -198,14 +198,6 @@ class FourLangParser(GraphPreproc):
                             self.id2concept[pos] = x
                             self.concept2id[x] = pos
                 
-                # breakpoint
-                res_e = [(self.id2concept[a], self.id2concept[b]) for (a,b) in largest_parse.edges]
-                res_r = [(list(names.values())[a], list(names.values())[b]) for (a,b) in relative_edges]
-                #assert res_e == res_r
-                if res_e != res_r:
-                    for i in range(len(res_e)): # res_e[285] == (X, UNK), res_r[285] == (X, socialist)
-                        assert (res_e[i] == res_r[i] or 'UNK' in res_e[i])
-
             assert all([len(x) for x in grouped_edges]), 'ASSERTION ERROR: a 4L qa_graph has 0 edges D:' # check if #edges are >0 for all qa_graphs!
             edges.append(grouped_edges)
             maps.append(grouped_maps)
