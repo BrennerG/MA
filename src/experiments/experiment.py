@@ -143,7 +143,7 @@ class Experiment(ABC):
                     k=args.k,
                     n_ntype=args.num_node_types,
                     n_etype=args.num_relation,
-                    n_concept=num_concepts,
+                    n_concept=num_concepts+3,
                     concept_dim=args.gat_hidden_dim, # TODO this the correct args for the param?
                     concept_in_dim=args.concept_dim,
                     n_attention_head=args.num_heads,

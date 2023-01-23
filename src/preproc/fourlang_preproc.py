@@ -52,6 +52,13 @@ class FourLangParser(GraphPreproc):
                 self.id2concept = {int(k):v for k,v in self.id2concept.items()}
         else:
             self.id2concept = {}
+
+        # create an entry for UNK
+        if 'UNK' not in self.concept2id:
+            self.concept2id = {k:v+1 for k,v in self.concept2id.items()}
+            self.concept2id['UNK'] = 0
+            self.id2concept = {k+1:v for k,v in self.id2concept.items()}
+            self.id2concept[0] = 'UNK'
         
         if offset_concepts==True:
             if self.concept2id == {} and self.id2concept == {}:
@@ -62,12 +69,16 @@ class FourLangParser(GraphPreproc):
                 self.id2concept[1] = 'ab_intra'
                 '''
             else:
-                self.concept2id = {k:v+2 for k,v in self.concept2id.items()}
-                self.concept2id['ab_extra'] = 0
-                self.concept2id['ab_intra'] = 1
-                self.id2concept = {k+2:v for k,v in self.id2concept.items()}
-                self.id2concept[0] = 'ab_extra'
-                self.id2concept[1] = 'ab_intra'
+                if not 'ab_extra' in self.concept2id and not 'ab_intra' in self.concept2id:
+                    self.concept2id = {k:v+2 for k,v in self.concept2id.items()}
+                    self.concept2id['ab_extra'] = 0
+                    self.concept2id['ab_intra'] = 1
+                if not 'ab_extra' in self.id2concept.values() and not 'ab_intra' in self.id2concept.values():
+                    self.id2concept = {k+2:v for k,v in self.id2concept.items()}
+                    self.id2concept[0] = 'ab_extra'
+                    self.id2concept[1] = 'ab_intra'
+        
+        pass
     
     # __call__
     def parse(self, dataset, num_samples, split, qa_join, **kwargs):
@@ -142,10 +153,10 @@ class FourLangParser(GraphPreproc):
                         if x in self.concept2id:
                             old_ids.append(self.concept2id[x])
                         else:
-                            pos = max(self.id2concept)+1
-                            self.id2concept[pos] = x
-                            self.concept2id[x] = pos
+                            pos = self.concept2id['UNK']
+                            #self.concept2id[x] = pos
                             old_ids.append(pos)
+
                     map_to_existing = dict(zip(list(largest_parse.nodes), old_ids))
                     largest_parse = nx.relabel_nodes(largest_parse, map_to_existing)
 
@@ -177,19 +188,23 @@ class FourLangParser(GraphPreproc):
                 grouped_concepts.append(list(names.values()))
             
                 # save voc
-                for n,x in names.items():
-                    if x not in self.concept2id:
-                        if n in self.id2concept and self.id2concept[n] != x:
-                            pos = max(self.id2concept)+1
-                        else: 
-                            pos = n
-                        self.id2concept[pos] = x
-                        self.concept2id[x] = pos
+                if not use_existing_concept_ids:
+                    for n,x in names.items():
+                        if x not in self.concept2id:
+                            if n in self.id2concept and self.id2concept[n] != x:
+                                pos = max(self.id2concept)+1
+                            else: 
+                                pos = n
+                            self.id2concept[pos] = x
+                            self.concept2id[x] = pos
                 
                 # breakpoint
                 res_e = [(self.id2concept[a], self.id2concept[b]) for (a,b) in largest_parse.edges]
                 res_r = [(list(names.values())[a], list(names.values())[b]) for (a,b) in relative_edges]
-                assert res_e == res_r
+                #assert res_e == res_r
+                if res_e != res_r:
+                    for i in range(len(res_e)): # res_e[285] == (X, UNK), res_r[285] == (X, socialist)
+                        assert (res_e[i] == res_r[i] or 'UNK' in res_e[i])
 
             assert all([len(x) for x in grouped_edges]), 'ASSERTION ERROR: a 4L qa_graph has 0 edges D:' # check if #edges are >0 for all qa_graphs!
             edges.append(grouped_edges)
