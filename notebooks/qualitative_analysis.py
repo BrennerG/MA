@@ -5,16 +5,22 @@ import streamlit as st
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 from pyvis.network import Network
 import streamlit.components.v1 as components
 
 
 # PARAMS
-EXPERIMENT = "default"
-MA_FILE = f"notebooks/data//viz_data.json"
-RND_SAMPLE_FILE = "notebooks/data/random_quali_select_from_test.json"
-OG_FILE = f"notebooks/data/SAVED_DIC.json"
+EXPERIMENT = "test"
+MA_FILE = f"notebooks/data/{EXPERIMENT}/viz_data.json"
+RND_SAMPLE_FILE = f"notebooks/data/{EXPERIMENT}/random_quali_select_from_test.json"
+OG_FILE = f"notebooks/data/{EXPERIMENT}/SAVED_DIC.json"
+STATEMENT_FILE = f"notebooks/data/{EXPERIMENT}/test.statement.jsonl"
+CONCEPT_FILE = f"notebooks/data/{EXPERIMENT}/concept.txt"
+OG_DATA_TRAIN = f"data/csqa_raw/train_rand_split.jsonl"
+OG_DATA_DEV = f"data/csqa_raw/dev_rand_split.jsonl"
+OG_DATA_TEST= f"data/csqa_raw/test_rand_split_no_answers.jsonl"
 
 # METHODS
 @st.cache(allow_output_mutation=True)
@@ -31,6 +37,10 @@ def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     # apply random selection
     rnd_sample_idx = [x['id'] for x in raw_data['statement_data']]
     rnd_sample_idx = [rnd_sample_idx.index(x) for x in rnd_sample_ids]
+    sample_dic = {k:v for k,v in dict(zip(rnd_sample_idx, rnd_sample_ids)).items()}
+    sample_dic = {key:sample_dic[key] for key in sorted(sample_dic.keys())}
+    rnd_sample_idx = sample_dic.keys()
+    rnd_sample_ids = sample_dic.values()
 
     # separate concepts and raw_data
     id2concept = raw_data.pop('4L_id2concept')
@@ -60,7 +70,7 @@ def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     for k,v in extension.items():
         data[k] = v
 
-    return rnd_sample_ids, data, id2concept
+    return list(sample_dic.values()), data, id2concept
 
 @st.cache()
 def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
@@ -74,7 +84,6 @@ def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
         raw_data = json.load(file)
 
     # load statement data
-    STATEMENT_FILE = 'notebooks/data/test.statement.jsonl'
     statement_data = []
     with open(STATEMENT_FILE, 'r') as file:
         for line in file:
@@ -85,11 +94,10 @@ def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     rnd_sample_idx = [rnd_sample_idx.index(x) for x in rnd_sample_ids]
 
     raw_data.pop('id2concept')
-    st.write(raw_data.keys())
+    #st.write(raw_data.keys())
     data = {k:[x for i,x in enumerate(v) if i in rnd_sample_idx] for k,v in raw_data.items()}
 
     # load id2concept
-    CONCEPT_FILE = 'notebooks/data/concept.txt'
     with open(CONCEPT_FILE) as _file_:
         id2concept = [line for line in _file_]
 
@@ -215,6 +223,34 @@ def filter_by_value(G, n=200):
 
     return nx.subgraph_view(G, node_filter)
 
+def get_og_sample(sid):
+    all_raw = []
+    with open(OG_DATA_TRAIN, 'r') as file:
+        for line in file:
+            all_raw.append(json.loads(line))
+    with open(OG_DATA_DEV, 'r') as file:
+        for line in file:
+            all_raw.append(json.loads(line))
+    with open(OG_DATA_TEST, 'r') as file:
+        for line in file:
+            all_raw.append(json.loads(line))
+    for sample in all_raw:
+        if sample['id'] == sid:
+            return sample
+    st.write(f"SAMPLE {sid} NOT FOUND! :(")
+
+def draw_attn_bar_plot(_map, attn, question_tokens):
+    res = {n:a for n,a in zip(_map, attn) if n != None}
+    viz = [(x,res[i]) if i in res else (x,0) for i,x in enumerate(question_tokens)]
+    df = pd.DataFrame(viz, columns=['tokens', 'attn'])
+    fig = px.bar(df,
+                title="...",
+                x='tokens', 
+                y='attn')
+    fig.update_xaxes(tickangle=45)
+    st.plotly_chart(fig, use_container_width=True)
+    return True
+
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
 ################## ################## ################## ##################
@@ -234,7 +270,8 @@ with st.sidebar:
 with st.container():
     #st.write(pd.DataFrame(data))
     SAMPLE = {k:v[option_id] for k,v in data.items()}
-    st.title(SAMPLE['question']) # TODO use real question here
+    OG_SAMPLE = get_og_sample(option)
+    st.title(OG_SAMPLE['question']['stem']) # TODO use real question here
     st.write({k:v for k,v in SAMPLE.items() if k in ['question', 'answers', 'label']})
 
 ################## ################## COLS ################## ##################
@@ -258,10 +295,16 @@ with LEFT_C:
 
     ############################ ATTN ###############################
     st.subheader("Attention")
-    #O = option_id
-    #C = np.argmax(data['logits'][O])
-    #st.write(data['concept_ids'][O][C])
-    #st.write(data['attn'][O][C])
+    LSAMPLE = {k:v[option_id] for k,v in data.items()}
+    C = np.argmax(LSAMPLE['logits'])
+    _attn = np.array(LSAMPLE['attn']).reshape(5,2,200)
+    attn = _attn[C].mean(axis=0)
+    id2concept = og_id2concept
+    concept_ids = LSAMPLE['concept_ids'][C]
+    concept_names = [id2concept[x-1].strip() for x in concept_ids]
+    question_tokens = LSAMPLE['statement_data']['question']['stem'].split()
+    og_map = [question_tokens.index(x) if x in question_tokens else None for x in concept_names]
+    draw_attn_bar_plot(og_map, attn, question_tokens)
 
 ################## ################## SEPARATOR ################## ##################
 
@@ -281,5 +324,12 @@ with RIGHT_C:
 
     ############################ ATTN ###############################
     st.subheader("Attention")
+    C = np.argmax(SAMPLE['logits'])
+    _attn = np.array([x[C] for x in SAMPLE['attn']])
+    attn = np.mean(_attn, axis=0)
+    concepts = SAMPLE['4L_concept_names'][C]
+    fl_map = SAMPLE['4L_map'][C]
+    question_tokens = SAMPLE['question'].split()
+    draw_attn_bar_plot(fl_map, attn, question_tokens)
 
 st.balloons()
