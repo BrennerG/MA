@@ -21,6 +21,7 @@ CONCEPT_FILE = f"notebooks/data/{EXPERIMENT}/concept.txt"
 OG_DATA_TRAIN = f"data/csqa_raw/train_rand_split.jsonl"
 OG_DATA_DEV = f"data/csqa_raw/dev_rand_split.jsonl"
 OG_DATA_TEST= f"data/csqa_raw/test_rand_split_no_answers.jsonl"
+NODE_COLORS = ['red', 'green', 'blue', 'purple']
 
 # METHODS
 @st.cache(allow_output_mutation=True)
@@ -115,8 +116,7 @@ def create_og_graph(data, option_id, id2concept, value="node_relevance"):
         node_scores = [x[0] for x in data['node_scores'][option_id][C]]
     elif value=='attn':
         node_scores = data['attn'][option_id][C]
-    colors = ['red', 'green', 'blue', 'purple']
-    colorcode = [colors[x] for x in node_type_ids]
+    colorcode = [NODE_COLORS[x] for x in node_type_ids]
     N = len(concept_ids)
 
     # edges
@@ -133,23 +133,31 @@ def create_og_graph(data, option_id, id2concept, value="node_relevance"):
     G.add_edges_from(edges)
     return G
 
-def create_4L_graph_alt(sample, id2concept):
+def create_4L_graph_alt(sample, id2concept, value='attention'):
     C = np.argmax(sample['logits']) # choice
 
     # nodes
     concept_ids = sample['concept_ids'][C]
-    concept_names = [id2concept[x].strip() for x in concept_ids]
+    concept_names = [id2concept[str(x)].strip() for x in concept_ids]
     node_type_ids = sample['node_type_ids'][C]
-    node_scores_dict = sample['node_scores'][C]
-    node_scores = None
+    if value=='node_relevance':
+        node_scores = sample['node_scores'][C]
+    elif value=='attn':
+        _attn = [x[C] for x in sample['attn']]
+        node_scores = np.array(_attn).mean(axis=0)
+    colorcode = [NODE_COLORS[x] for x in node_type_ids]
+    N = len(concept_ids)
 
-    # something is wrong with the node_scores, concept_ids and or id2concept! congratz
-
-    st.write(
-        'well fuck'
-    )
+    # edges
+    raw_edges = sample['edge_index_orig'][C]
+    edges = [(raw_edges[0][i], raw_edges[1][i]) for i in range(len(raw_edges[0]))]
+    E = len(edges)
 
     G = nx.Graph()
+    G.add_nodes_from(
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
+    )
+    G.add_edges_from(edges)
     return G
 
 def create_4L_graph(sample, value='node_relevance'):
@@ -324,7 +332,7 @@ with RIGHT_C:
     cutoff = st.slider('cutoff?', 0, 200, 200, key='rcutoff')
     value_shown = st.selectbox("node_values? attn / node_relevance", ['attn', 'node_relevance'], key='rvalue')
 
-    net = create_4L_graph(SAMPLE, value=value_shown) #net = create_4L_graph_alt(SAMPLE, id2concept)
+    net = create_4L_graph_alt(SAMPLE, fl_id2concept, value=value_shown)
     net = filter_for_special_nodes(net, hops=hops)
     net = filter_by_value(net, n=cutoff)
     st.write(len(net.nodes), len(net.edges))
