@@ -251,9 +251,32 @@ def draw_attn_bar_plot(_map, attn, question_tokens):
     st.plotly_chart(fig, use_container_width=True)
     return True
 
+def get_viz_data_for_og(sample, id2concept):
+    C = np.argmax(sample['logits'])
+    _attn = np.array(sample['attn']).reshape(5,2,200)
+    attn = _attn[C].mean(axis=0)
+    concept_ids = sample['concept_ids'][C]
+    concept_names = [id2concept[x-1].strip() for x in concept_ids]
+    question_tokens = sample['statement_data']['question']['stem'].split()
+    og_map = [question_tokens.index(x) if x in question_tokens else None for x in concept_names]
+    res = {n:a for n,a in zip(og_map, attn) if n != None}
+    viz = [(x,res[i]) if i in res else (x,0) for i,x in enumerate(question_tokens)]
+    return viz
+
+def get_viz_data_for_fl(sample):
+    C = np.argmax(SAMPLE['logits'])
+    _attn = np.array([x[C] for x in SAMPLE['attn']])
+    attn = np.mean(_attn, axis=0)
+    concepts = SAMPLE['4L_concept_names'][C]
+    fl_map = SAMPLE['4L_map'][C]
+    question_tokens = SAMPLE['question'].split()
+    res = {n:a for n,a in zip(fl_map, attn) if n != None}
+    viz = [(x,res[i]) if i in res else (x,0) for i,x in enumerate(question_tokens)]
+    return viz
+
 ################## ################## ################## ##################
 ################## ############### MAIN ################ ##################
-################## ################## ################## ##################
+################## ################# ################### ##################
 
 st.set_page_config(layout="wide")
 sel_ids, data, fl_id2concept = load_ma_data(MA_FILE)
@@ -279,8 +302,6 @@ with st.container():
 LEFT_C, RIGHT_C = st.columns(2, gap='medium')
 
 with LEFT_C:
-
-    ############################ GRAPH ###############################
     st.subheader("cpnet + QA-GNN")
     data, og_id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
     hops = st.slider('hops?', 0, 5, 0, key='lhops')
@@ -293,24 +314,11 @@ with LEFT_C:
     st.write(len(net.nodes), len(net.edges))
     show_graph(net)
 
-    ############################ ATTN ###############################
-    st.subheader("Attention")
     LSAMPLE = {k:v[option_id] for k,v in data.items()}
-    C = np.argmax(LSAMPLE['logits'])
-    _attn = np.array(LSAMPLE['attn']).reshape(5,2,200)
-    attn = _attn[C].mean(axis=0)
-    id2concept = og_id2concept
-    concept_ids = LSAMPLE['concept_ids'][C]
-    concept_names = [id2concept[x-1].strip() for x in concept_ids]
-    question_tokens = LSAMPLE['statement_data']['question']['stem'].split()
-    og_map = [question_tokens.index(x) if x in question_tokens else None for x in concept_names]
-    draw_attn_bar_plot(og_map, attn, question_tokens)
 
 ################## ################## SEPARATOR ################## ##################
 
 with RIGHT_C:
-
-    ############################ GRAPH ###############################
     st.subheader("4Lang + QA-GNN")
     hops = st.slider('hops?', 0, 5, 0, key='rhops')
     cutoff = st.slider('cutoff?', 0, 200, 200, key='rcutoff')
@@ -322,14 +330,29 @@ with RIGHT_C:
     st.write(len(net.nodes), len(net.edges))
     show_graph(net)
 
-    ############################ ATTN ###############################
+################## ################## SEPARATOR ################## ##################
+
+with st.container():
     st.subheader("Attention")
-    C = np.argmax(SAMPLE['logits'])
-    _attn = np.array([x[C] for x in SAMPLE['attn']])
-    attn = np.mean(_attn, axis=0)
-    concepts = SAMPLE['4L_concept_names'][C]
-    fl_map = SAMPLE['4L_map'][C]
-    question_tokens = SAMPLE['question'].split()
-    draw_attn_bar_plot(fl_map, attn, question_tokens)
+    og_viz = get_viz_data_for_og(LSAMPLE, og_id2concept)
+    fl_viz = get_viz_data_for_fl(SAMPLE)
+    og_viz_dict = {k:v for (k,v) in og_viz}
+    _viz = [(k,v,og_viz_dict[k]) if k in og_viz_dict else (k,v,0) for k,v in fl_viz]
+    viz = []
+    for (token, og, fl) in _viz:
+        viz.append((token,og,'w. cpnet'))
+        viz.append((token,fl,'w. 4Lang'))
+    df = pd.DataFrame(
+        viz, columns=['token', 'attn', 'type']
+    )
+    fig = px.bar(
+        df,
+        x='token',
+        y='attn',
+        color='type',
+        barmode='group'
+    )
+    fig.update_xaxes(tickangle=315)
+    st.plotly_chart(fig, use_container_width=True)
 
 st.balloons()
