@@ -408,16 +408,15 @@ class QagnnExperiment(FinalExperiment):
                 # NEW NODE TYPE IDS
                 nti = torch.Tensor([2] * 200).long() # expanded nodes and padding(?) are (=2)
                 nti[0] = 3 # znode (=3)
-                concept_names = X_flang_concepts[a]
-                _concept_names = [None] + X_flang_concepts[a]
+                concept_names = ['ab_extra'] + X_flang_concepts[a] #concept_names = X_flang_concepts[a]
                 idx_from_mapping = [i for i,x in enumerate([None]+X_flang_mapping[a]) if x != None] # idx from 4L map
-                # am_idx = [_concept_names.index(x) for x in X_og['answers'][a].split() if x in _concept_names]
+                # am_idx = [concept_names.index(x) for x in X_og['answers'][a].split() if x in concept_names]
                 am_idx = []
                 for x in X_og['answers'][a].split():
-                    if x in _concept_names:
-                        am_idx.append(_concept_names.index(x))
-                    elif lemmatize(x) in _concept_names:
-                        am_idx.append(_concept_names.index(lemmatize(x)))
+                    if x in concept_names:
+                        am_idx.append(concept_names.index(x))
+                    elif lemmatize(x) in concept_names:
+                        am_idx.append(concept_names.index(lemmatize(x)))
                     else:
                         #print(f"WARNING: concept {x} not found in test.{i}.{a}") 
                         pass
@@ -432,7 +431,6 @@ class QagnnExperiment(FinalExperiment):
                 concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else self.graph_parser.concept2id['UNK'] for c in concept_names]).long() # TODO might put "UNK" spot here instead of -1!
                 concept_ids[i,a] = F.pad(concept_tensor, (0,  max_num_nodes-len(concept_tensor)), 'constant', 1)
                 assert concept_tensor.min() >= 0
-                pass
 
                 # NODE SCORES
                 if relevance_scores != None:
@@ -441,13 +439,14 @@ class QagnnExperiment(FinalExperiment):
                         node_scores[i,a,c] = np.float64(sample_relevance_scores[cname])
 
                 # ADJ LENGTHS
-                adj_lengths[i,a] = len(concept_names) + 1
+                assert len(concept_names) == concept_tensor.shape[0]
+                adj_lengths[i,a] = len(concept_names)
 
                 # EDGE INDEX
                 if add_edge_types:
-                    c_edges = torch.Tensor(X_flang_edges[a][0]).view(2,-1).long()
+                    c_edges = torch.Tensor(X_flang_edges[a][0]).view(2,-1).long() +1# because of z-node!
                 else:
-                    c_edges = torch.Tensor(X_flang_edges[a]).view(2,-1).long()
+                    c_edges = torch.Tensor(X_flang_edges[a]).view(2,-1).long() +1# because of z-node!
                 c_edge_index[a] = c_edges
 
                 # EDGE TYPES
@@ -456,6 +455,18 @@ class QagnnExperiment(FinalExperiment):
                     assert c_edge_types[a].shape[0] == c_edges.shape[1]
                 else:
                     c_edge_types[a] = torch.zeros(c_edges.shape[1]).long()
+
+                # INSERT Z-EDGES
+                z_edges = [(0,x) for x in idx_from_mapping]
+                _c_edges = c_edges.T.tolist()
+                _c_edge_types_a = c_edge_types[a].tolist()
+                for ze in z_edges:
+                    if ze not in _c_edges:
+                        _c_edges.append(ze)
+                        _c_edge_types_a.append(0)
+
+                c_edge_index[a] = torch.Tensor(_c_edges).long().T
+                c_edge_types[a] = torch.Tensor(_c_edge_types_a).long()
             
             edge_index.append(c_edge_index)
             edge_types.append(c_edge_types)
