@@ -36,7 +36,10 @@ class QagnnExperiment(FinalExperiment):
             model_path = params['load_from']
             _ , old_args = torch.load(model_path, map_location=torch.device('cpu'))
             self.params = old_args.__dict__
-            self.params['wandb_logging'] = params # so that wandb_logging can be taken from the args** overwrites
+            # so that params can be taken from the args** as overwrites
+            self.params['wandb_logging'] = params['wandb_logging']
+            self.params['skip_training'] = params['skip_training']
+            self.params['node_relevance'] = params['node_relevance']
         else:
             self.params = params
             # class specific overwrites
