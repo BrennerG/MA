@@ -375,6 +375,13 @@ class QagnnExperiment(FinalExperiment):
     # this overwrites the graph data in the qagnn dataloader with 4lang graph data
     # overwrite: *dataset.{split}_decoder_data, dataset.{split}_adj_data # split = {train, dev, test}
     def add_4lang_adj_data(self, target_flang, target_set, add_edge_types=False, relevance_scores=None):
+
+        import stanza
+        nlp = stanza.Pipeline(lang='en', processors='tokenize,lemma', lemma_pretagged=True, tokenize_pretokenized=True)
+        def lemmatize(word, nlp=self.graph_parser.tfl.nlp):
+            parse = nlp(word)
+            return parse.sentences[0]._words[0].lemma 
+
         N = len(target_set)
         max_num_nodes = self.params['max_num_nodes'] if 'max_num_nodes' in self.params else 200
 
@@ -395,20 +402,28 @@ class QagnnExperiment(FinalExperiment):
                 if 'Z_VEC' in X_flang_concepts[a]: # doesn't happen when loaded from memory!
                     X_flang_concepts[a].remove('Z_VEC')
 
-                # NODE TYPE IDS
+                # NEW NODE TYPE IDS
+                nti = torch.Tensor([2] * 200).long() # expanded nodes and padding(?) are (=2)
+                nti[0] = 3 # znode (=3)
                 concept_names = X_flang_concepts[a]
-                answer_concepts = X_og['answers'][a].split()
-                # set context node
-                node_type_ids[i,a,0] = 3
-                # set answer type
-                am_idx = [concept_names.index(ac) for ac in answer_concepts if ac in concept_names]
-                for am_i in am_idx:
-                    node_type_ids[i,a,am_i] = 1
-                # set question type
-                qm_idx = [x for x in range(1, len(concept_names)) if concept_names[x] not in answer_concepts]
-                assert len(qm_idx) < 200
-                for qm_i in qm_idx:
-                    node_type_ids[i,a,qm_i] = 0
+                _concept_names = [None] + X_flang_concepts[a]
+                idx_from_mapping = [i for i,x in enumerate([None]+X_flang_mapping[a]) if x != None] # idx from 4L map
+                # am_idx = [_concept_names.index(x) for x in X_og['answers'][a].split() if x in _concept_names]
+                am_idx = []
+                for x in X_og['answers'][a].split():
+                    if x in _concept_names:
+                        am_idx.append(_concept_names.index(x))
+                    elif lemmatize(x) in _concept_names:
+                        am_idx.append(_concept_names.index(lemmatize(x)))
+                    else:
+                        #print(f"WARNING: concept {x} not found in test.{i}.{a}") 
+                        pass
+                qm_idx = [x for x in idx_from_mapping if x not in am_idx]
+                for n,x in enumerate(nti):
+                    if n in qm_idx: nti[n]=0 # qnodes (=0)
+                    elif n in am_idx: nti[n]=1 # anodes (=1) (mostly a single node)
+                
+                node_type_ids[i,a] = nti
 
                 # CONCEPT IDS
                 concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else self.graph_parser.concept2id['UNK'] for c in concept_names]).long() # TODO might put "UNK" spot here instead of -1!
