@@ -143,3 +143,4 @@ data/4lang_parses/*
 *.pt.*
 data/node_relevance_scores
 notebooks/data/*
+*viz_data.json
