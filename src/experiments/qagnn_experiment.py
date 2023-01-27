@@ -406,10 +406,11 @@ class QagnnExperiment(FinalExperiment):
                 if 'Z_VEC' in X_flang_concepts[a]: # doesn't happen when loaded from memory!
                     X_flang_concepts[a].remove('Z_VEC')
 
+                concept_names = X_flang_concepts[a]
+
                 # NEW NODE TYPE IDS
                 nti = torch.Tensor([2] * 200).long() # expanded nodes and padding(?) are (=2)
                 nti[0] = 3 # znode (=3)
-                concept_names = ['ab_extra'] + X_flang_concepts[a] #concept_names = X_flang_concepts[a]
                 idx_from_mapping = [i for i,x in enumerate([None]+X_flang_mapping[a]) if x != None] # idx from 4L map
                 # am_idx = [concept_names.index(x) for x in X_og['answers'][a].split() if x in concept_names]
                 am_idx = []
