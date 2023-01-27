@@ -303,9 +303,9 @@ class QagnnExperiment(FinalExperiment):
 
                 # Tokenize
                 sents = []
-                qac.insert(0, "Z_VEC")
+                qac.insert(0, "ab_extra")
                 for c, conc in enumerate(qac):
-                    if conc == "Z_VEC": sent = X['question']
+                    if conc == "ab_extra": sent = X['question']
                     else: sent = f"{X['question'].lower()} {conc}."
                     sents.append(TOKENIZER.encode(sent, add_special_tokens=True))
             
