@@ -87,6 +87,7 @@ class QagnnExperiment(FinalExperiment):
             # need to softmax logits for evaluation (actually only ERASER)
             prediction_params = deepcopy(self.params)
             prediction_params['softmax_logits'] = True
+            #prediction_params['save'] = 'PREDS_DATA.jsonl'
             preds = []
             with torch.no_grad():
                 for qids, labels, *input_data in tqdm(self.val_set):
@@ -745,7 +746,7 @@ class QagnnExperiment(FinalExperiment):
             return None
 
         # predicts erased datasets and statements
-        def predict(dataset, dev_statements):
+        def predict(dataset, dev_statements, save_file=None):
 
             add_edge_types = self.params['num_relation'] == 3 if 'num_relation' in self.params else False
             node_relevance = 'node_relevance' in self.params and self.params['node_relevance']
@@ -772,6 +773,8 @@ class QagnnExperiment(FinalExperiment):
             # PREDICT
             prediction_params = deepcopy(self.params)
             prediction_params['softmax_logits'] = True
+            if save_file != None:
+                prediction_params['save'] = save_file
             preds = []
             with torch.no_grad():
                 for qids, labels, *input_data in tqdm(dataset.dev()):
@@ -812,8 +815,8 @@ class QagnnExperiment(FinalExperiment):
         suff_dataset = self.load_qagnn_dataset(dev_statements="data/experiments/default/suff.dev.statement.jsonl")
 
         # PREDICT
-        comp_logits = predict(comp_dataset, comp_statements)
-        suff_logits = predict(suff_dataset, suff_statements)
+        comp_logits = predict(comp_dataset, comp_statements)#, save_file='COMP_DATA.jsonl')
+        suff_logits = predict(suff_dataset, suff_statements)#, save_file='SUFF_DATA.jsonl')
     
         doc_ids = [x['id'] for x in self.dev_statements]
         pred = self.val_pred[0]

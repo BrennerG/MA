@@ -138,7 +138,7 @@ class QAGNN(nn.Module):
             module.weight.data.fill_(1.0)
 
 
-    def forward(self, sent_vecs, concept_ids, node_type_ids, node_scores, adj_lengths, adj, emb_data=None, cache_output=False):
+    def forward(self, sent_vecs, concept_ids, node_type_ids, node_scores, adj_lengths, adj, emb_data=None, cache_output=False, save=None):
         """
         sent_vecs: (batch_size, dim_sent)
         concept_ids: (batch_size, n_node)
@@ -185,6 +185,12 @@ class QAGNN(nn.Module):
             self.pool_attn = pool_attn
 
         concat = self.dropout_fc(torch.cat((graph_vecs, sent_vecs, Z_vecs), 1))
+
+        # TODO save for inspection
+        if save != None:
+            with open(save, 'w') as save_file:
+                print('{},{},{}'.format(graph_vecs.tolist(), sent_vecs.tolist(), Z_vecs.tolist()),file=save_file)
+
         logits = self.fc(concat)
         return logits, pool_attn
 
@@ -235,7 +241,7 @@ class LM_QAGNN(nn.Module):
         logits, attn = self.decoder(sent_vecs.to(node_type_ids.device),
                                     concept_ids,
                                     node_type_ids, node_scores, adj_lengths, adj,
-                                    emb_data=None, cache_output=cache_output)
+                                    emb_data=None, cache_output=cache_output, save=kwargs['save'] if 'save' in kwargs else None)
         logits = logits.view(bs, nc)
 
         # edit by gbreiner 05.01.23
