@@ -740,7 +740,7 @@ class QagnnExperiment(FinalExperiment):
                         ],
                         "stem": sample['erased_stem'] if 'erased_stem' in sample else sample['question'],
                     },
-                    "statements": [{'label':bool(_labels[i]), 'statement':sample['statements'][i]} for i in range(4)]
+                    "statements": [{'label':bool(_labels[i]), 'statement':sample['statements'][i]} for i in range(5)]
                 }
                 print(json.dumps(res_sample), file=file)
 
@@ -833,8 +833,8 @@ class QagnnExperiment(FinalExperiment):
         suff_dataset = self.load_qagnn_dataset(dev_statements="data/experiments/default/suff.dev.statement.jsonl")
 
         # PREDICT
-        comp_logits = predict(comp_dataset, comp_statements)#, save_file='COMP_DATA.jsonl')
-        suff_logits = predict(suff_dataset, suff_statements)#, save_file='SUFF_DATA.jsonl')
+        comp_logits = predict(comp_dataset, comp_statements, save_file='COMP_DATA.jsonl')
+        suff_logits = predict(suff_dataset, suff_statements, save_file='SUFF_DATA.jsonl')
     
         doc_ids = [x['id'] for x in self.dev_statements]
         pred = self.val_pred[0]
