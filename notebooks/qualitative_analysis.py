@@ -12,15 +12,18 @@ import streamlit.components.v1 as components
 
 
 # PARAMS
-EXPERIMENT = "test"
-MA_FILE = f"notebooks/data/{EXPERIMENT}/viz_data.json"
-RND_SAMPLE_FILE = f"notebooks/data/{EXPERIMENT}/random_quali_select_from_test.json"
-OG_FILE = f"notebooks/data/{EXPERIMENT}/SAVED_DIC.json"
-STATEMENT_FILE = f"notebooks/data/{EXPERIMENT}/test.statement.jsonl"
-CONCEPT_FILE = f"notebooks/data/{EXPERIMENT}/concept.txt"
+EXPERIMENT = "sweet-rabbit-21"
+MA_FILE = f"data/experiments/{EXPERIMENT}/viz_data.json"
+# GENERAL
+RND_SAMPLE_FILE = f"notebooks/data/general/random_quali_select_from_test.json"
+STATEMENT_FILE = f"notebooks/data/general/test.statement.jsonl"
+# QAGNN DATA
+CONCEPT_FILE = f"notebooks/data/og_qagnn/concept.txt"
 OG_DATA_TRAIN = f"data/csqa_raw/train_rand_split.jsonl"
 OG_DATA_DEV = f"data/csqa_raw/dev_rand_split.jsonl"
 OG_DATA_TEST= f"data/csqa_raw/test_rand_split_no_answers.jsonl"
+OG_FILE = f"notebooks/data/og_qagnn/SAVED_DIC.json"
+# SCRIPT CONSTANTS
 NODE_COLORS = ['red', 'green', 'blue', 'purple']
 
 # METHODS
@@ -110,7 +113,7 @@ def create_og_graph(data, option_id, id2concept, value="node_relevance"):
 
     # nodes
     concept_ids = data['concept_ids'][option_id][C]
-    concept_names = [id2concept[x-1] for x in concept_ids]
+    concept_names = [id2concept[x-1] if x!=0 else id2concept[0] for x in concept_ids]
     node_type_ids = data['node_type_ids'][option_id][C]
     if value=='node_relevance':
         node_scores = [x[0] for x in data['node_scores'][option_id][C]]
