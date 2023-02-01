@@ -12,7 +12,7 @@ import streamlit.components.v1 as components
 
 
 # PARAMS
-EXPERIMENT = "sweet-rabbit-21"
+EXPERIMENT = "bright-kumquat-28"
 MA_FILE = f"data/experiments/{EXPERIMENT}/viz_data.json"
 # GENERAL
 RND_SAMPLE_FILE = f"notebooks/data/general/random_quali_select_from_test.json"
@@ -48,8 +48,15 @@ def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
 
     # separate concepts and raw_data
     id2concept = raw_data.pop('4L_id2concept')
-    data = {k:[x for i,x in enumerate(v) if i in rnd_sample_idx] for k,v in raw_data.items()}
-
+    data = {k:[] for k in raw_data.keys()}
+    for k,v in raw_data.items():
+        if v != None:
+            for i,x in enumerate(v):
+                if i in rnd_sample_idx:
+                    data[k].append(x)
+        else:
+            data[k] = [None] * len(rnd_sample_idx)
+    
     # Pandas DataFrame
     #df = pd.DataFrame(data)
     ## extend with statement_data data
@@ -73,7 +80,7 @@ def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     # extend data's entries
     for k,v in extension.items():
         data[k] = v
-
+    
     return list(sample_dic.values()), data, id2concept
 
 @st.cache()
