@@ -188,8 +188,9 @@ class QAGNN(nn.Module):
 
         # TODO save for inspection
         if save != None:
-            with open(save, 'w') as save_file:
-                print('{},{},{}'.format(graph_vecs.tolist(), sent_vecs.tolist(), Z_vecs.tolist()),file=save_file)
+            with open(save, 'a+') as save_file:
+                print(json.dumps({"graph_vecs": graph_vecs.tolist(), "sent_vecs": sent_vecs.tolist(), "z_vecs": Z_vecs.tolist()}), file=save_file)
+                save_file.flush()
 
         logits = self.fc(concat)
         return logits, pool_attn
