@@ -738,7 +738,7 @@ class QagnnExperiment(FinalExperiment):
                             {"label": "D", "text": sample['answers'][2]},
                             {"label": "E", "text": sample['answers'][3]}
                         ],
-                        "stem": sample['question'],
+                        "stem": sample['erased_stem'] if 'erased_stem' in sample else sample['question'],
                     },
                     "statements": [{'label':bool(_labels[i]), 'statement':sample['statements'][i]} for i in range(4)]
                 }
@@ -793,19 +793,36 @@ class QagnnExperiment(FinalExperiment):
 
         # ERASE
         for idx,(X,ans_attn) in enumerate(zip(dev_statements, attentions)):
+
+            comp_statements[idx]['erased_stem'] = [X['question']] * 5
+            suff_statements[idx]['erased_stem'] = [X['question']] * 5
+            
             for a,(stmnt,attn) in enumerate(zip(X['statements'],ans_attn)):
                 tokens = stmnt.split()
+                _tokens = tokens[:-len(X['answers'][a].split())] # only use question stem without answer-ending
                 assert len(tokens) == len(attn), "some form of sample mismatch has happened (where?)"
-                top_idx = [i for i,x in enumerate(attn) if x>0] 
+                top_idx = [i for i,x in enumerate(attn) if x>0]
+                _top_idx = [i for i,x in enumerate(attn) if x>0 and i<len(_tokens)] # topidx without ids for answers
                 if 0 < len(top_idx) < len(tokens): # default case
+                    # comp
                     comp_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i in top_idx])
+                    comp_statements[idx]['erased_stem'][a] = " ".join([x for i,x in enumerate(_tokens) if i in _top_idx])
+                    # suff
                     suff_statements[idx]['statements'][a] = " ".join([x for i,x in enumerate(tokens) if i not in top_idx])
+                    suff_statements[idx]['erased_stem'][a] = " ".join([x for i,x in enumerate(_tokens) if i not in _top_idx])
                 elif len(top_idx) == 0: # attn is all 0
                     comp_statements[idx]['statements'][a] = X['answers'][a] # backup method or comp is empty
+                    comp_statements[idx]['erased_stem'][a] = ""
                     suff_statements[idx]['statements'][a] = stmnt # everything is selected for suff
+                    suff_statements[idx]['erased_stem'][a] = X['question']
                 elif len(top_idx) == len(tokens): # attn is non-0 everywhere!
                     comp_statements[idx]['statements'][a] = stmnt # everything is selected for comp
+                    comp_statements[idx]['erased_stem'][a] = X['question']
                     suff_statements[idx]['statements'][a] = X['answers'][a] # nothing is in suff, so backup
+                    suff_statements[idx]['erased_stem'][a] = "" # nothing is in suff, so backup
+                
+                #assert comp_statements[idx]['statements'][a] == f"{comp_statements[idx]['erased_stem'][a].replace('?','')} {X['answers'][a]}"
+                #assert suff_statements[idx]['statements'][a] == f"{suff_statements[idx]['erased_stem'][a].replace('?','')} {X['answers'][a]}"
         
         # save erased statements bc QAGNN_DataLoader class needs it
         persist_statements(comp_statements, 'comp')

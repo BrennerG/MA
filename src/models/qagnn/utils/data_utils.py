@@ -314,7 +314,11 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
             for line in f.readlines():
                 json_dic = json.loads(line)
                 label = ord(json_dic["answerKey"]) - ord("A") if 'answerKey' in json_dic else 0
-                contexts = json_dic["question"]["stem"]
+                stem = json_dic['question']['stem']
+                if isinstance(stem, str):
+                    contexts = [stem] * len(json_dic["question"]["choices"])
+                elif isinstance(stem,list):
+                    contexts = stem
                 if "para" in json_dic:
                     contexts = json_dic["para"] + " " + contexts
                 if "fact1" in json_dic:
@@ -322,11 +326,11 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 examples.append(
                     InputExample(
                         example_id=json_dic["id"],
-                        contexts=[contexts] * len(json_dic["question"]["choices"]),
+                        contexts=contexts,
                         question="",
                         endings=[ending["text"] for ending in json_dic["question"]["choices"]],
                         label=label
-                    ))
+                ))
         return examples
 
     def convert_examples_to_features(examples, label_list, max_seq_length,
