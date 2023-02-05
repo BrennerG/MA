@@ -47,23 +47,24 @@ def difference(data1, data2):
     return {k:np.array(v).mean() for k,v in diff.items()}
 
 with st.container():
-    #pred_data = load(PREDS_PATH)
-    #comp_data = load(COMP_PATH)
-    #suff_data = load(SUFF_PATH)
-
-    #st.write(
-    #    difference(pred_data, pred_data),
-    #    difference(pred_data, comp_data),
-    #    difference(pred_data, suff_data),
-    #    difference(comp_data, suff_data),
-    #)
-
-    og_statements = [json.loads(line) for line in open('data/qa_gnn/dev.statement.jsonl')]
-    comp_statements = [json.loads(line) for line in open('data/experiments/default/comp.dev.statement.jsonl')]
-    suff_statements = [json.loads(line) for line in open('data/experiments/default/suff.dev.statement.jsonl')]
+    pred_data = load(PREDS_PATH)
+    comp_data = load(COMP_PATH)
+    suff_data = load(SUFF_PATH)
 
     st.write(
-        og_statements[0],
-        comp_statements[0],
-        suff_statements[0]
+        difference(pred_data, pred_data),
+        difference(pred_data, comp_data),
+        difference(pred_data, suff_data),
+        difference(comp_data, suff_data),
+    )
+
+    og_statements = [json.loads(line) for line in open('data/qa_gnn/dev.statement.jsonl')]
+    comp_statements = [json.loads(line) for line in open('notebooks/data/comp_vs_suff/comp.dev.statement.jsonl')]
+    suff_statements = [json.loads(line) for line in open('notebooks/data/comp_vs_suff/suff.dev.statement.jsonl')]
+
+    i = 201
+    st.write(
+        og_statements[i],
+        comp_statements[i],
+        suff_statements[i]
     )
