@@ -32,7 +32,7 @@ def load_ma_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     # load random file
     with open(rnd_sample_file, 'r') as file:
         rnd_sample_ids = json.load(file)
-    rnd_sample_ids = rnd_sample_ids[:10] # TODO change (first 10 samples are for debugging)
+    rnd_sample_ids = rnd_sample_ids[10:] # TODO change (first 10 samples are for debugging)
 
     # load samples
     with open(datafile, 'r') as file:
@@ -88,7 +88,7 @@ def load_og_data(datafile, rnd_sample_file=RND_SAMPLE_FILE):
     # load random file
     with open(rnd_sample_file, 'r') as file:
         rnd_sample_ids = json.load(file)
-    rnd_sample_ids = rnd_sample_ids[:10] # TODO change (first 10 samples are for debugging)
+    rnd_sample_ids = rnd_sample_ids[10:] # TODO change (first 10 samples are for debugging)
 
     # load samples
     with open(datafile, 'r') as file:
@@ -138,7 +138,7 @@ def create_og_graph(data, option_id, id2concept, value="node_relevance"):
     #st.write(f"N={N}, E={E}")
     G = nx.Graph()
     G.add_nodes_from(
-        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color, 'type':type}) for i, (val, name, color, type) in enumerate(zip(node_scores, concept_names, colorcode, node_type_ids))]
     )
     G.add_edges_from(edges)
     return G
@@ -165,7 +165,7 @@ def create_4L_graph_alt(sample, id2concept, value='attention'):
 
     G = nx.Graph()
     G.add_nodes_from(
-        [(i,{'value':val, 'title':name, 'label':name, 'color':color}) for i, (val, name, color) in enumerate(zip(node_scores, concept_names, colorcode))]
+        [(i,{'value':val, 'title':name, 'label':name, 'color':color, 'type':type}) for i, (val, name, color, type) in enumerate(zip(node_scores, concept_names, colorcode, node_type_ids))]
     )
     G.add_edges_from(edges)
     return G
@@ -217,9 +217,10 @@ def show_graph(G, jiggle=True):
     components.html(HtmlFile.read(), height=610)
 
 def filter_for_special_nodes(G, hops=0):
+    #0 == question entity; 1 == answer choice entity; 2 == other node; 3 == context node
     selection = []
     for n,ndic in G.nodes(data=True):
-        if ndic['color'] != 'blue':
+        if ndic['type'] != 2:
             selection.append(n)
     
     for h in range(hops):
@@ -233,11 +234,17 @@ def filter_for_special_nodes(G, hops=0):
     
     return nx.subgraph_view(G, node_filter)
 
-def filter_by_value(G, n=200):
-    sorted_nodes = sorted(G.nodes(), key=lambda n: G.nodes[n]['value'], reverse=True)[:n]
+def filter_by_value(G, n=200, keep_base_nodes=True):
+    fixed = [i for i,n in G.nodes(data=True) if n['type']!=2]
+    sorted_nodes = sorted(G.nodes(), key=lambda n: G.nodes[n]['value'], reverse=True)
 
-    def node_filter(n):
-        return n in sorted_nodes
+    selection = []
+    if keep_base_nodes: selection.extend(fixed)
+    selection.extend(sorted_nodes)
+    selection = selection[:n]
+
+    def node_filter(x):
+        return x in selection
 
     return nx.subgraph_view(G, node_filter)
 
@@ -320,8 +327,10 @@ with st.container():
 LEFT_C, RIGHT_C = st.columns(2, gap='medium')
 
 with LEFT_C:
-    st.subheader("cpnet + QA-GNN")
     data, og_id2concept = load_og_data(OG_FILE, RND_SAMPLE_FILE)
+    LSAMPLE = {k:v[option_id] for k,v in data.items()}
+
+    st.subheader(f"cpnet = {np.argmax(LSAMPLE['logits'])} {SAMPLE['answers'][np.argmax(LSAMPLE['logits'])]}")
     hops = st.slider('hops?', 0, 5, 0, key='lhops')
     cutoff = st.slider('cutoff?', 0, 200, 200, key='lcutoff')
     value_shown = st.selectbox("node_values? attn / node_relevance", ['attn', 'node_relevance'], key='lvalue')
@@ -332,12 +341,10 @@ with LEFT_C:
     st.write(len(net.nodes), len(net.edges))
     show_graph(net)
 
-    LSAMPLE = {k:v[option_id] for k,v in data.items()}
-
 ################## ################## SEPARATOR ################## ##################
 
 with RIGHT_C:
-    st.subheader("4Lang + QA-GNN")
+    st.subheader(f"4lang = {np.argmax(SAMPLE['logits'])} {SAMPLE['answers'][np.argmax(SAMPLE['logits'])]}")
     hops = st.slider('hops?', 0, 5, 0, key='rhops')
     cutoff = st.slider('cutoff?', 0, 200, 200, key='rcutoff')
     value_shown = st.selectbox("node_values? attn / node_relevance", ['attn', 'node_relevance'], key='rvalue')
