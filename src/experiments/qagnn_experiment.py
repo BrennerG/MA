@@ -408,6 +408,8 @@ class QagnnExperiment(FinalExperiment):
                 
                 if 'ab_extra' not in X_flang_concepts[a]:
                     concept_names = ['ab_extra'] + X_flang_concepts[a]
+                else:
+                    concept_names = X_flang_concepts[a]
 
                 # NEW NODE TYPE IDS
                 nti = torch.Tensor([2] * 200).long() # expanded nodes and padding(?) are (=2)
