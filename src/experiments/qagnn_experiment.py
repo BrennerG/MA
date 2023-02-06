@@ -405,8 +405,9 @@ class QagnnExperiment(FinalExperiment):
 
                 if 'Z_VEC' in X_flang_concepts[a]: # doesn't happen when loaded from memory!
                     X_flang_concepts[a].remove('Z_VEC')
-
-                concept_names = X_flang_concepts[a]
+                
+                if 'ab_extra' not in X_flang_concepts[a]:
+                    concept_names = ['ab_extra'] + X_flang_concepts[a]
 
                 # NEW NODE TYPE IDS
                 nti = torch.Tensor([2] * 200).long() # expanded nodes and padding(?) are (=2)
@@ -430,7 +431,7 @@ class QagnnExperiment(FinalExperiment):
                 node_type_ids[i,a] = nti
 
                 # CONCEPT IDS
-                concept_tensor = torch.Tensor([0] + [self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else self.graph_parser.concept2id['UNK'] for c in concept_names]).long() # TODO might put "UNK" spot here instead of -1!
+                concept_tensor = torch.Tensor([self.graph_parser.concept2id[c] if c in self.graph_parser.concept2id else self.graph_parser.concept2id['UNK'] for c in concept_names]).long() # TODO might put "UNK" spot here instead of -1!
                 assert concept_tensor.shape[0] <= 200
                 concept_ids[i,a] = F.pad(concept_tensor, (0,  max_num_nodes-len(concept_tensor)), 'constant', 1)
                 assert concept_tensor.min() >= 0
