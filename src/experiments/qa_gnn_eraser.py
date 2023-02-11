@@ -16,13 +16,13 @@ import evaluation.eval_util as E
 
 CPNET_VOC_PATH = "data/qa_gnn/concept.txt"
 
-TRAIN_PREDS_PATH = 'data/qa_gnn/NEW_train_preds_20221027145654.csv'
-DEV_PREDS_PATH = 'data/qa_gnn/NEW_dev_preds_20221027151911.csv'
-TEST_PREDS_PATH = 'data/qa_gnn/NEW_test_preds_20221027151244.csv'
+TRAIN_PREDS_PATH = 'data/qa_gnn/NEW_train_preds_20230211131227.csv'
+DEV_PREDS_PATH = 'data/qa_gnn/NEW_dev_preds_20230211133627.csv'
+TEST_PREDS_PATH = 'data/qa_gnn/NEW_test_preds_20230211133959.csv'
 
-TRAIN_SET_PATH = 'data/qa_gnn/train_set.pickle'
-DEV_SET_PATH = 'data/qa_gnn/dev_set.pickle'
-TEST_SET_PATH = 'data/qa_gnn/test_set.pickle'
+TRAIN_SET_PATH = 'data/qa_gnn/train_set_trim.pickle'
+DEV_SET_PATH = 'data/qa_gnn/dev_set_trim.pickle'
+TEST_SET_PATH = 'data/qa_gnn/test_set_trim.pickle'
 
 GROUNDED_TRAIN_PATH = 'data/qa_gnn/train.grounded.jsonl'
 GROUNDED_DEV_PATH = 'data/qa_gnn/dev.grounded.jsonl'
